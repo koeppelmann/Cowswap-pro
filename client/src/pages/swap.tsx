@@ -193,7 +193,7 @@ export default function SwapPage() {
 
                 {/* LEVERAGE OVERLAY - Compact & High */}
                 {showLeverage && (
-                    <div className="absolute top-2 left-2 right-2 z-20">
+                    <div className="absolute top-1 left-2 right-2 z-20">
                         <div className="bg-[#1a1d3d]/95 backdrop-blur-md border border-primary/20 rounded-xl shadow-lg p-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
                             <div className="flex items-center gap-3">
                                 <div className="flex flex-col gap-0.5 min-w-[60px]">
@@ -207,7 +207,7 @@ export default function SwapPage() {
                                     <Slider 
                                         value={leverage} 
                                         onValueChange={setLeverage} 
-                                        min={1.1} 
+                                        min={1.0} 
                                         max={5} 
                                         step={0.1}
                                         className="py-2"
