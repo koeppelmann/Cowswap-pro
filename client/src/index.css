@@ -9,36 +9,36 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   
-  /* CowSwap Dark Theme Colors */
-  --color-background: hsl(235 60% 6%); /* Deep Dark Blue #060918 */
-  --color-foreground: hsl(0 0% 100%);
+  /* CowSwap Dark Theme Colors - Polished */
+  --color-background: #060a16; /* Deep dark blue, almost black */
+  --color-foreground: #ffffff;
   
-  --color-card: hsl(232 40% 12%); /* Card bg #12152b */
-  --color-card-foreground: hsl(0 0% 100%);
+  --color-card: #12152b; /* Slightly lighter blue-ish background */
+  --color-card-foreground: #ffffff;
   
-  --color-popover: hsl(232 40% 12%);
-  --color-popover-foreground: hsl(0 0% 100%);
+  --color-popover: #12152b;
+  --color-popover-foreground: #ffffff;
   
-  --color-primary: hsl(217 91% 60%); /* CowSwap Blue #4C82FB */
-  --color-primary-foreground: hsl(0 0% 100%);
+  --color-primary: #59dcfc; /* Cyan/Light Blue */
+  --color-primary-foreground: #000000;
   
-  --color-secondary: hsl(232 30% 20%);
-  --color-secondary-foreground: hsl(0 0% 100%);
+  --color-secondary: #2c304e; /* Darker blue for inputs/backgrounds */
+  --color-secondary-foreground: #ffffff;
   
-  --color-muted: hsl(232 30% 20%);
-  --color-muted-foreground: hsl(215 20% 65%);
+  --color-muted: #2c304e;
+  --color-muted-foreground: #9ca3af;
   
-  --color-accent: hsl(232 30% 25%);
-  --color-accent-foreground: hsl(0 0% 100%);
+  --color-accent: #2c304e;
+  --color-accent-foreground: #ffffff;
   
-  --color-destructive: hsl(0 84% 60%);
-  --color-destructive-foreground: hsl(0 0% 100%);
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
   
-  --color-border: hsl(232 30% 20%);
-  --color-input: hsl(232 30% 15%);
-  --color-ring: hsl(217 91% 60%);
+  --color-border: #1e223a;
+  --color-input: #1e223a;
+  --color-ring: #59dcfc;
 
-  --radius: 1rem;
+  --radius: 1.5rem; /* More rounded corners */
   --font-sans: 'Inter', sans-serif;
 }
 
@@ -49,7 +49,7 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
     background-image: 
-      radial-gradient(circle at 10% 20%, rgba(76, 130, 251, 0.03) 0%, transparent 40%),
-      radial-gradient(circle at 90% 80%, rgba(76, 130, 251, 0.03) 0%, transparent 40%);
+      radial-gradient(circle at 15% 15%, rgba(45, 212, 191, 0.03) 0%, transparent 45%),
+      radial-gradient(circle at 85% 85%, rgba(76, 130, 251, 0.03) 0%, transparent 45%);
   }
 }
