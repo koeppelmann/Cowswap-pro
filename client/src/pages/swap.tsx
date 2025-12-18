@@ -179,14 +179,22 @@ export default function SwapPage() {
                   </Button>
                 </div>
                 
-                <div className="flex items-center gap-2 mt-2">
-                     <span className="text-green-400 text-sm">≈ {formattedUsdValue}</span>
+                <div className="flex flex-col gap-1 mt-2">
+                     <div className="flex items-center gap-2">
+                        <span className="text-green-400 text-sm">≈ {formattedUsdValue}</span>
+                     </div>
+                     {showLeverage && (
+                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                            <span className="text-xs text-muted-foreground">Debt:</span>
+                            <span className="text-xs font-mono font-medium text-orange-400">{formattedDebt}</span>
+                        </div>
+                     )}
                 </div>
 
                 {/* LEVERAGE OVERLAY */}
                 {showLeverage && (
-                    <div className="absolute top-16 left-0 right-0 z-20 mx-2">
-                        <div className="bg-[#1a1d3d] border border-primary/20 rounded-xl shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="absolute top-24 left-0 right-0 z-20 mx-2 mt-4">
+                        <div className="bg-[#1a1d3d]/95 backdrop-blur-md border border-primary/20 rounded-xl shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-200">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-2">
                                     <span className="text-sm font-medium text-white">Leverage</span>
@@ -217,13 +225,6 @@ export default function SwapPage() {
                                     step={0.1}
                                     className="py-4"
                                 />
-                            </div>
-
-                            <div className="flex justify-between items-center bg-black/20 rounded-lg p-2 mt-2 border border-white/5">
-                                <span className="text-xs text-muted-foreground">Debt (USDC Borrowed)</span>
-                                <span className="text-xs font-mono font-medium text-orange-400">
-                                    {formattedDebt}
-                                </span>
                             </div>
                         </div>
                     </div>
