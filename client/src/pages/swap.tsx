@@ -39,6 +39,12 @@ export default function SwapPage() {
   const formattedBuyAmount = leveragedBuyAmount.toFixed(4);
   const formattedUsdValue = (parseFloat(payAmount || "0") * activeLeverage).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
   
+  // Debt Calculation
+  // Debt = Total Position Value - Collateral (Pay Amount)
+  // Debt = (Pay Amount * Leverage) - Pay Amount
+  const debtAmount = (parseFloat(payAmount || "0") * activeLeverage) - parseFloat(payAmount || "0");
+  const formattedDebt = debtAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
   // Liquidation Price Calculation
   // P_liq = (Entry_Price * (Leverage - 1)) / (Leverage * Liquidation_Threshold)
   const liquidationThreshold = 0.81;
