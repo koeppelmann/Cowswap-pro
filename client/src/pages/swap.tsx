@@ -194,11 +194,11 @@ export default function SwapPage() {
                      </div>
                      {showLeverage && (
                         <div className="flex items-center gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
-                            <div className="flex items-center gap-1.5 text-orange-400">
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
                                 <span className="text-xs font-medium">Debt:</span>
                                 <span className="text-xs font-mono font-bold">{formattedDebt}</span>
                             </div>
-                            <div className="flex items-center gap-1.5 text-red-400">
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
                                 <span className="text-xs font-medium">Liquidation:</span>
                                 <span className="text-xs font-mono font-bold">
                                     {formattedLiquidationPrice}
