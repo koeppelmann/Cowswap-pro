@@ -19,7 +19,7 @@ import { ConfirmSwapDialog } from "@/components/confirm-swap-dialog";
 
 export default function SwapPage() {
   const [payAmount, setPayAmount] = useState<string>("10000");
-  const [leverage, setLeverage] = useState<number[]>([2]); // Default 2x
+  const [leverage, setLeverage] = useState<number[]>([1]); // Default 1x (inactive)
   const [showLeverage, setShowLeverage] = useState(false);
   const [ethPrice, setEthPrice] = useState(2823.35);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -53,7 +53,7 @@ export default function SwapPage() {
   // User asked: "hidden by default (but there should be some blinking option to open it, by default 2x)"
   // This implies when you open it, it starts at 2x. When closed, it's 1x (standard swap).
   
-  const activeLeverage = showLeverage ? leverage[0] : 1;
+  const activeLeverage = leverage[0];
   const leveragedBuyAmount = rawBuyAmount * activeLeverage;
   
   const formattedBuyAmount = leveragedBuyAmount.toFixed(4);
@@ -181,12 +181,20 @@ export default function SwapPage() {
                             <button 
                                 onClick={() => {
                                     setShowLeverage(true);
-                                    setLeverage([2]); // Default to 2x when opened
+                                    if (leverage[0] === 1) {
+                                      setLeverage([2]); // Default to 2x when opened IF currently 1x
+                                    }
                                 }}
-                                className="group relative flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 hover:bg-primary/20 transition-all border border-primary/20 hover:border-primary/50 animate-pulse hover:animate-none"
+                                className={`group relative flex items-center gap-1.5 px-2 py-0.5 rounded-full transition-all border ${
+                                  leverage[0] > 1 
+                                    ? "bg-primary text-white border-primary hover:bg-primary/90"
+                                    : "bg-primary/10 hover:bg-primary/20 border-primary/20 hover:border-primary/50 animate-pulse hover:animate-none"
+                                }`}
                             >
-                                <TrendingUp className="w-3 h-3 text-primary" />
-                                <span className="text-[10px] font-bold text-primary">Add Leverage</span>
+                                <TrendingUp className={`w-3 h-3 ${leverage[0] > 1 ? "text-white" : "text-primary"}`} />
+                                <span className={`text-[10px] font-bold ${leverage[0] > 1 ? "text-white" : "text-primary"}`}>
+                                    {leverage[0] > 1 ? `${leverage[0]}x Leverage` : "Add Leverage"}
+                                </span>
                             </button>
                         )}
                     </div>
