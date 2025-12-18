@@ -1,0 +1,104 @@
+{
+  "colorScheme": "light",
+  "fonts": [
+    {
+      "family": "sans-serif",
+      "count": 38
+    },
+    {
+      "family": "Arial",
+      "count": 28
+    },
+    {
+      "family": "Inter var",
+      "count": 24
+    },
+    {
+      "family": "studiofeixen",
+      "count": 14
+    },
+    {
+      "family": "Inter",
+      "count": 14
+    }
+  ],
+  "colors": {
+    "primary": "#004293",
+    "accent": "#CCF8FF",
+    "background": "#FFFFFF",
+    "textPrimary": "#23191A",
+    "link": "#CCF8FF"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "studiofeixen",
+      "heading": "studiofeixen"
+    },
+    "fontStacks": {
+      "body": [
+        "studiofeixen",
+        "Inter var",
+        "Inter",
+        "Arial",
+        "sans-serif",
+        "Arial",
+        "sans-serif"
+      ],
+      "heading": [
+        "studiofeixen",
+        "Inter var",
+        "Inter",
+        "Arial",
+        "sans-serif",
+        "Arial",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "Inter var",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "16px",
+      "h2": "34px",
+      "body": "16px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "16px"
+  },
+  "components": {},
+  "images": {
+    "logo": "File saved at: attached_assets/logo.svg",
+    "favicon": "File saved at: attached_assets/favicon.png",
+    "ogImage": "File saved at: attached_assets/ogImage.png"
+  },
+  "__framework_hints": [
+    "bootstrap"
+  ],
+  "__llm_logo_reasoning": {
+    "selectedIndex": 0,
+    "reasoning": "Logo rejected: Red flags detected (small square icon). Heuristic fallback: Weak indicators: no link (brand logos usually link to homepage, penalty), visible, highest logo on page, src contains logo, class contains logo, small square icon (likely UI icon, heavy penalty), body location without header (penalty). Score: 0. LLM validation recommended (close scores: top=0, second=0)",
+    "confidence": 0.30000000000000004,
+    "rejected": true
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": -1,
+      "text": "N/A",
+      "reasoning": "LLM failed"
+    },
+    "secondary": {
+      "index": -1,
+      "text": "N/A",
+      "reasoning": "LLM failed"
+    },
+    "confidence": 0
+  },
+  "confidence": {
+    "buttons": 0,
+    "colors": 0,
+    "overall": 0
+  }
+}
