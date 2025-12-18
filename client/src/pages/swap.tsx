@@ -203,7 +203,7 @@ export default function SwapPage() {
                                 <span className="text-xs font-mono font-bold">
                                     {formattedLiquidationPrice}
                                     <span className="ml-1 opacity-80 font-sans font-normal">
-                                        (-{liquidationDrop.toFixed(0)}%)
+                                        (-{liquidationDrop.toFixed(2)}%)
                                     </span>
                                 </span>
                             </div>
