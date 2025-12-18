@@ -15,12 +15,14 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import logo from "@assets/logo.svg";
+import { ConfirmSwapDialog } from "@/components/confirm-swap-dialog";
 
 export default function SwapPage() {
   const [payAmount, setPayAmount] = useState<string>("10000");
   const [leverage, setLeverage] = useState<number[]>([2]); // Default 2x
   const [showLeverage, setShowLeverage] = useState(false);
   const [ethPrice, setEthPrice] = useState(2823.35);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   
   // Calculate buy amount based on leverage
   // Normal amount = payAmount / ethPrice
@@ -263,7 +265,10 @@ export default function SwapPage() {
                  </div>
               </div>
 
-              <Button className="w-full h-14 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 shadow-[0_0_20px_rgba(76,130,251,0.3)] mt-2 transition-all">
+              <Button 
+                onClick={() => setIsConfirmOpen(true)}
+                className="w-full h-14 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 shadow-[0_0_20px_rgba(76,130,251,0.3)] mt-2 transition-all"
+              >
                 {activeLeverage > 1 ? `Swap with ${activeLeverage}x Leverage` : 'Swap'}
               </Button>
 
@@ -285,6 +290,18 @@ export default function SwapPage() {
               </p>
           </div>
         </div>
+        
+        <ConfirmSwapDialog 
+            open={isConfirmOpen} 
+            onOpenChange={setIsConfirmOpen}
+            payAmount={payAmount}
+            buyAmount={formattedBuyAmount}
+            leverage={activeLeverage}
+            ethPrice={ethPrice}
+            debt={formattedDebt}
+            liquidationPrice={formattedLiquidationPrice}
+            liquidationDrop={liquidationDrop}
+        />
       </main>
     </div>
   );
