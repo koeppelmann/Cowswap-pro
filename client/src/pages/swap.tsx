@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Settings, ChevronDown, RefreshCw, Wallet, ArrowDown, Info, ExternalLink } from "lucide-react";
+import { Settings, ChevronDown, RefreshCw, Wallet, ArrowDown, Info, ExternalLink, X, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,24 +13,37 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import logo from "@assets/logo.svg";
 
 export default function SwapPage() {
   const [payAmount, setPayAmount] = useState<string>("10000");
-  const [leverage, setLeverage] = useState<number[]>([1]);
+  const [leverage, setLeverage] = useState<number[]>([2]); // Default 2x
+  const [showLeverage, setShowLeverage] = useState(false);
   const [ethPrice, setEthPrice] = useState(2823.35);
   
   // Calculate buy amount based on leverage
   // Normal amount = payAmount / ethPrice
-  // Leveraged amount = (payAmount * leverage) / ethPrice (simplified)
-  // In reality, leverage usually means you borrow to buy more.
-  // For this mockup, we'll simulate the UI of "Buying Power"
+  // Leveraged amount = (payAmount * leverage) / ethPrice
   
   const rawBuyAmount = parseFloat(payAmount || "0") / ethPrice;
-  const leveragedBuyAmount = rawBuyAmount * leverage[0];
+  
+  // If leverage is shown, we use the leverage multiplier. If not shown (but technically default is 2), 
+  // we might want to reset to 1x when closed? Or persist? 
+  // User asked: "hidden by default (but there should be some blinking option to open it, by default 2x)"
+  // This implies when you open it, it starts at 2x. When closed, it's 1x (standard swap).
+  
+  const activeLeverage = showLeverage ? leverage[0] : 1;
+  const leveragedBuyAmount = rawBuyAmount * activeLeverage;
   
   const formattedBuyAmount = leveragedBuyAmount.toFixed(4);
-  const formattedUsdValue = (parseFloat(payAmount || "0") * leverage[0]).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  const formattedUsdValue = (parseFloat(payAmount || "0") * activeLeverage).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  
+  // Debt Calculation
+  // Debt = Total Position Value - Collateral (Pay Amount)
+  // Debt = (Pay Amount * Leverage) - Pay Amount
+  const debtAmount = (parseFloat(payAmount || "0") * activeLeverage) - parseFloat(payAmount || "0");
+  const formattedDebt = debtAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
@@ -131,11 +144,26 @@ export default function SwapPage() {
               </div>
 
               {/* Buy Section */}
-              <div className="bg-[#0b0e1e] rounded-2xl p-4 pt-6 transition-colors hover:bg-[#0b0e1e]/80">
+              <div className="bg-[#0b0e1e] rounded-2xl p-4 pt-6 transition-colors hover:bg-[#0b0e1e]/80 relative">
                 <div className="flex justify-between mb-2">
-                    <label className="text-muted-foreground text-sm font-medium">Buy</label>
+                    <div className="flex items-center gap-2">
+                        <label className="text-muted-foreground text-sm font-medium">Buy</label>
+                        {!showLeverage && (
+                            <button 
+                                onClick={() => {
+                                    setShowLeverage(true);
+                                    setLeverage([2]); // Default to 2x when opened
+                                }}
+                                className="group relative flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 hover:bg-primary/20 transition-all border border-primary/20 hover:border-primary/50 animate-pulse hover:animate-none"
+                            >
+                                <TrendingUp className="w-3 h-3 text-primary" />
+                                <span className="text-[10px] font-bold text-primary">Add Leverage</span>
+                            </button>
+                        )}
+                    </div>
                     <span className="text-muted-foreground text-sm">Balance: 0 WETH</span>
                 </div>
+                
                 <div className="flex items-center justify-between gap-4">
                   <Input 
                     readOnly
@@ -150,51 +178,56 @@ export default function SwapPage() {
                     <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
                 </div>
+                
                 <div className="flex items-center gap-2 mt-2">
                      <span className="text-green-400 text-sm">≈ {formattedUsdValue}</span>
-                     <span className="text-green-400/60 text-xs bg-green-400/10 px-1.5 py-0.5 rounded ml-1">
-                        {(parseFloat(payAmount || "0") * (leverage[0] - 1) * -0.01).toFixed(2)}$ fee
-                     </span>
                 </div>
 
-                {/* LEVERAGE SLIDER FEATURE */}
-                <div className="mt-6 pt-4 border-t border-white/5">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-white">Leverage</span>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Multiply your exposure to ETH price movements.</p>
-                                </TooltipContent>
-                            </Tooltip>
+                {/* LEVERAGE OVERLAY */}
+                {showLeverage && (
+                    <div className="absolute top-16 left-0 right-0 z-20 mx-2">
+                        <div className="bg-[#1a1d3d] border border-primary/20 rounded-xl shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-200">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-white">Leverage</span>
+                                    <span className="text-xs text-muted-foreground">(Aave V3)</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-primary font-bold font-mono bg-primary/10 px-2 py-0.5 rounded text-sm">
+                                        {leverage[0]}x
+                                    </span>
+                                    <button 
+                                        onClick={() => {
+                                            setShowLeverage(false);
+                                            setLeverage([1]);
+                                        }}
+                                        className="text-muted-foreground hover:text-white transition-colors"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div className="px-1 mb-2">
+                                <Slider 
+                                    value={leverage} 
+                                    onValueChange={setLeverage} 
+                                    min={1.1} 
+                                    max={5} 
+                                    step={0.1}
+                                    className="py-4"
+                                />
+                            </div>
+
+                            <div className="flex justify-between items-center bg-black/20 rounded-lg p-2 mt-2 border border-white/5">
+                                <span className="text-xs text-muted-foreground">Debt (USDC Borrowed)</span>
+                                <span className="text-xs font-mono font-medium text-orange-400">
+                                    {formattedDebt}
+                                </span>
+                            </div>
                         </div>
-                        <span className="text-primary font-bold font-mono bg-primary/10 px-2 py-0.5 rounded text-sm">
-                            {leverage[0]}x
-                        </span>
                     </div>
-                    
-                    <div className="px-1">
-                        <Slider 
-                            value={leverage} 
-                            onValueChange={setLeverage} 
-                            min={1} 
-                            max={5} 
-                            step={0.1}
-                            className="py-4"
-                        />
-                    </div>
-                    
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1 px-1">
-                        <span>1x</span>
-                        <span>2x</span>
-                        <span>3x</span>
-                        <span>4x</span>
-                        <span>5x</span>
-                    </div>
-                </div>
+                )}
 
               </div>
 
@@ -211,11 +244,11 @@ export default function SwapPage() {
                  </div>
               </div>
 
-              <Button className="w-full h-14 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 shadow-[0_0_20px_rgba(76,130,251,0.3)] mt-2">
-                {leverage[0] > 1 ? `Swap with ${leverage[0]}x Leverage` : 'Swap'}
+              <Button className="w-full h-14 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 shadow-[0_0_20px_rgba(76,130,251,0.3)] mt-2 transition-all">
+                {activeLeverage > 1 ? `Swap with ${activeLeverage}x Leverage` : 'Swap'}
               </Button>
 
-              {leverage[0] > 1 && (
+              {activeLeverage > 1 && (
                   <div className="mt-3 text-center">
                     <p className="text-xs text-muted-foreground">
                         Leverage powered by <span className="text-foreground font-medium">Aave V3</span> integration.
