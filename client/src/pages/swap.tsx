@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Settings, ChevronDown, RefreshCw, Wallet, ArrowDown, Info, ExternalLink, X, TrendingUp, AlertTriangle, Maximize2 } from "lucide-react";
+import { Settings, ChevronDown, RefreshCw, Wallet, ArrowDown, Info, ExternalLink, X, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,21 +17,36 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import logo from "@assets/logo.svg";
 
 export default function SwapPage() {
-  const [payAmount, setPayAmount] = useState<string>("100000");
+  const [payAmount, setPayAmount] = useState<string>("10000");
   const [leverage, setLeverage] = useState<number[]>([2]); // Default 2x
   const [showLeverage, setShowLeverage] = useState(false);
   const [ethPrice, setEthPrice] = useState(2823.35);
   
+  // Calculate buy amount based on leverage
+  // Normal amount = payAmount / ethPrice
+  // Leveraged amount = (payAmount * leverage) / ethPrice
+  
   const rawBuyAmount = parseFloat(payAmount || "0") / ethPrice;
+  
+  // If leverage is shown, we use the leverage multiplier. If not shown (but technically default is 2), 
+  // we might want to reset to 1x when closed? Or persist? 
+  // User asked: "hidden by default (but there should be some blinking option to open it, by default 2x)"
+  // This implies when you open it, it starts at 2x. When closed, it's 1x (standard swap).
+  
   const activeLeverage = showLeverage ? leverage[0] : 1;
   const leveragedBuyAmount = rawBuyAmount * activeLeverage;
   
   const formattedBuyAmount = leveragedBuyAmount.toFixed(4);
   const formattedUsdValue = (parseFloat(payAmount || "0") * activeLeverage).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
   
+  // Debt Calculation
+  // Debt = Total Position Value - Collateral (Pay Amount)
+  // Debt = (Pay Amount * Leverage) - Pay Amount
   const debtAmount = (parseFloat(payAmount || "0") * activeLeverage) - parseFloat(payAmount || "0");
   const formattedDebt = debtAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
+  // Liquidation Price Calculation
+  // P_liq = (Entry_Price * (Leverage - 1)) / (Leverage * Liquidation_Threshold)
   const liquidationThreshold = 0.81;
   const liquidationPrice = activeLeverage > 1 
     ? (ethPrice * (activeLeverage - 1)) / (activeLeverage * liquidationThreshold)
@@ -40,254 +55,235 @@ export default function SwapPage() {
   const liquidationDrop = activeLeverage > 1 ? ((ethPrice - liquidationPrice) / ethPrice) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-[#060a16] text-foreground flex flex-col font-sans">
-      {/* Navbar - Simplified and aligned */}
-      <header className="flex items-center justify-between px-6 py-4">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
+      {/* Navbar */}
+      <header className="flex items-center justify-between px-6 py-4 border-b border-border/10">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-2">
             <img src={logo} alt="CowSwap" className="w-8 h-8" />
-            <span className="text-xl font-bold tracking-tight text-white hidden sm:block">CoW Swap</span>
+            <span className="text-xl font-bold tracking-tight text-blue-100">CoW Swap</span>
           </div>
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-400">
-            <a href="#" className="text-white">Swap</a>
+          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
+            <a href="#" className="text-foreground">Swap</a>
             <a href="#" className="hover:text-primary transition-colors">Limit</a>
             <a href="#" className="hover:text-primary transition-colors">TWAP</a>
             <a href="#" className="hover:text-primary transition-colors">Yield</a>
           </nav>
         </div>
         <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 bg-[#1e223a] px-3 py-2 rounded-xl text-sm font-medium">
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                <span>Ethereum</span>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
-            </div>
-            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5">
-                <Settings className="w-5 h-5" />
-            </Button>
-            <Button className="bg-[#59dcfc] hover:bg-[#4bcceb] text-black font-semibold rounded-xl px-5 py-2.5 h-auto text-sm transition-colors">
-                Connect Wallet
-            </Button>
+          <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground mr-2">
+            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+            Ethereum
+          </div>
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+            <Settings className="w-5 h-5" />
+          </Button>
+          <Button className="bg-primary hover:bg-primary/90 text-white font-medium rounded-xl px-5">
+            Connect Wallet
+          </Button>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center p-4 relative overflow-hidden">
         
-        {/* Subtle Background Elements */}
+        {/* Background Particles/Stars Mockup */}
         <div className="absolute inset-0 pointer-events-none opacity-20">
-            <div className="absolute top-1/4 left-1/4 w-1 h-1 bg-white rounded-full opacity-50"></div>
-            <div className="absolute top-1/3 left-2/3 w-1.5 h-1.5 bg-blue-400 rounded-full blur-[1px] opacity-40"></div>
-            <div className="absolute bottom-1/4 right-1/4 w-1 h-1 bg-white rounded-full opacity-30"></div>
+            <div className="absolute top-1/4 left-1/4 w-1 h-1 bg-white rounded-full"></div>
+            <div className="absolute top-1/3 left-2/3 w-2 h-2 bg-blue-400 rounded-full blur-[1px]"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-1 h-1 bg-white rounded-full"></div>
+            <div className="absolute top-1/2 left-1/5 w-1.5 h-1.5 bg-indigo-400 rounded-full blur-[1px]"></div>
         </div>
 
         <div className="w-full max-w-[480px] space-y-4 relative z-10">
-          
-          {/* Top Controls Row */}
-          <div className="flex items-center justify-between mb-2 px-2">
-            <div className="flex items-center gap-2 bg-[#12152b] p-1 rounded-2xl border border-white/5">
-               <button className="px-4 py-2 bg-[#2c304e] rounded-xl text-sm font-semibold text-white shadow-sm transition-all">Swap</button>
-               <button className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors">Limit<span className="text-primary ml-0.5">•</span></button>
-               <button className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors">TWAP</button>
+          <div className="flex items-center justify-between mb-2 px-1">
+            <div className="flex items-center gap-4 bg-secondary/30 p-1 rounded-xl">
+               <button className="px-4 py-1.5 bg-background/50 rounded-lg text-sm font-medium text-foreground shadow-sm">Swap</button>
+               <button className="px-4 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Limit</button>
             </div>
-            <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl">
+            <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
                     <RefreshCw className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
                     <Settings className="h-4 w-4" />
                 </Button>
             </div>
           </div>
 
-          <Card className="border-0 bg-[#12152b] shadow-2xl rounded-3xl overflow-visible ring-1 ring-white/5">
-            <CardContent className="p-2 space-y-1">
+          <Card className="border-0 bg-[#12152b] shadow-2xl rounded-3xl overflow-hidden ring-1 ring-white/5">
+            <CardContent className="p-4 space-y-1">
               
               {/* Sell Section */}
-              <div className="bg-[#0b0e1e] rounded-[20px] p-5 transition-colors hover:bg-[#0b0e1e]/80 group relative z-0">
-                <div className="flex justify-between items-start mb-4 h-[72px]">
-                    <div className="flex flex-col justify-center h-full w-full mr-4">
-                        <Input 
-                            type="number" 
-                            value={payAmount}
-                            onChange={(e) => setPayAmount(e.target.value)}
-                            className="border-0 bg-transparent text-[40px] leading-tight font-medium p-0 h-auto focus-visible:ring-0 placeholder:text-gray-600 w-full text-white"
-                            placeholder="0"
-                        />
-                        <div className="text-gray-500 text-sm font-medium mt-1">
-                            ≈ ${parseFloat(payAmount || "0").toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                        </div>
+              <div className="bg-[#0b0e1e] rounded-2xl p-4 transition-colors hover:bg-[#0b0e1e]/80 group">
+                <div className="flex justify-between mb-2">
+                    <label className="text-muted-foreground text-sm font-medium">Sell</label>
+                    <span className="text-muted-foreground text-sm">Balance: 0 USDC</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <Input 
+                    type="number" 
+                    value={payAmount}
+                    onChange={(e) => setPayAmount(e.target.value)}
+                    className="border-0 bg-transparent text-4xl font-normal p-0 h-auto focus-visible:ring-0 placeholder:text-muted-foreground/50 w-full"
+                    placeholder="0"
+                  />
+                  <Button variant="secondary" className="rounded-full h-10 px-3 bg-secondary hover:bg-secondary/80 flex items-center gap-2 min-w-fit">
+                    <div className="w-6 h-6 rounded-full bg-[#2775CA] flex items-center justify-center text-[10px] text-white font-bold">
+                        $
                     </div>
-                    <div className="flex flex-col items-end gap-3 min-w-fit">
-                        <Button variant="secondary" className="rounded-full h-10 pl-2 pr-3 bg-[#2c304e] hover:bg-[#363b5f] flex items-center gap-2 min-w-fit border border-transparent hover:border-white/10 transition-all">
-                            <div className="w-6 h-6 rounded-full bg-[#26A17B] flex items-center justify-center text-[10px] text-white font-bold p-0.5">
-                                <span className="font-bold">T</span>
-                            </div>
-                            <span className="text-lg font-semibold text-white">USDT</span>
-                            <ChevronDown className="h-5 w-5 text-gray-400" />
-                        </Button>
-                        <div className="flex items-center gap-2 text-gray-400 text-sm">
-                             <span className="text-xs">500,000 USDT</span>
-                             <button className="text-[10px] font-bold bg-[#1e223a] hover:bg-[#2c304e] px-1.5 py-0.5 rounded text-primary transition-colors uppercase">
-                                MAX
-                             </button>
-                        </div>
-                    </div>
+                    <span className="text-lg font-medium text-white">USDC</span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </div>
+                <div className="text-muted-foreground text-sm mt-2">
+                    ≈ ${parseFloat(payAmount || "0").toFixed(2)}
                 </div>
               </div>
 
               {/* Arrow Connector */}
-              <div className="relative h-1 z-10">
-                <div className="absolute left-1/2 -translate-x-1/2 -top-5">
-                    <div className="bg-[#12152b] p-1.5 rounded-xl">
-                        <div className="bg-[#2c304e] p-2 rounded-lg hover:bg-[#363b5f] transition-colors cursor-pointer border-4 border-[#12152b]">
-                            <ArrowDown className="h-4 w-4 text-white" />
+              <div className="relative h-2 z-10">
+                <div className="absolute left-1/2 -translate-x-1/2 -top-4">
+                    <div className="bg-[#12152b] p-1.5 rounded-xl border-4 border-[#12152b]">
+                        <div className="bg-secondary/50 p-1.5 rounded-lg hover:bg-secondary transition-colors cursor-pointer">
+                            <ArrowDown className="h-4 w-4 text-foreground" />
                         </div>
                     </div>
                 </div>
               </div>
 
               {/* Buy Section */}
-              <div className="bg-[#0b0e1e] rounded-[20px] p-5 pt-6 transition-colors hover:bg-[#0b0e1e]/80 relative group z-0">
-                
-                {/* Leverage Button Positioned Absolutely */}
-                {!showLeverage && (
-                    <div className="absolute top-4 left-5 z-20">
-                         <button 
-                            onClick={() => {
-                                setShowLeverage(true);
-                                setLeverage([2]);
-                            }}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1a1d3d] hover:bg-[#2c304e] transition-all border border-primary/20 hover:border-primary/50 text-primary group-hover:opacity-100 opacity-80"
-                        >
-                            <TrendingUp className="w-3 h-3" />
-                            <span className="text-[10px] font-bold uppercase tracking-wide">Leverage</span>
-                        </button>
-                    </div>
-                )}
-
-                <div className="flex justify-between items-start mb-4 h-[72px] mt-2">
-                     <div className="flex flex-col justify-center h-full w-full mr-4">
-                        <Input 
-                            readOnly
-                            value={formattedBuyAmount}
-                            className="border-0 bg-transparent text-[40px] leading-tight font-medium p-0 h-auto focus-visible:ring-0 text-white w-full cursor-default"
-                        />
-                         <div className="flex items-center gap-2 mt-1">
-                             <div className="text-green-400 text-sm font-medium">≈ {formattedUsdValue}</div>
-                             <span className="text-red-400 text-xs font-medium">(-2.18%)</span>
-                         </div>
-                     </div>
-
-                    <div className="flex flex-col items-end gap-3 min-w-fit">
-                        <Button variant="secondary" className="rounded-full h-10 pl-2 pr-3 bg-[#2c304e] hover:bg-[#363b5f] flex items-center gap-2 min-w-fit border border-transparent hover:border-white/10 transition-all">
-                            <div className="w-6 h-6 rounded-full bg-[#F5D130] flex items-center justify-center p-0.5 overflow-hidden">
-                                <span className="text-black font-bold text-[8px]">COW</span>
-                            </div>
-                            <span className="text-lg font-semibold text-white">COW</span>
-                            <ChevronDown className="h-5 w-5 text-gray-400" />
-                        </Button>
-                         <div className="flex items-center gap-2 text-gray-400 text-sm">
-                             <span className="text-xs">9,056,227.19 COW</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Leverage Info Row (Only visible when leverage is active) */}
-                {showLeverage && (
-                    <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs animate-in fade-in slide-in-from-top-1 duration-200">
-                         <div className="flex items-center gap-4">
-                            <div className="flex flex-col gap-0.5">
-                                <span className="text-gray-500 font-medium">Debt</span>
-                                <span className="text-gray-300 font-mono font-medium">{formattedDebt}</span>
-                            </div>
-                            <div className="flex flex-col gap-0.5">
-                                <span className="text-gray-500 font-medium">Liquidation</span>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-gray-300 font-mono font-medium">{formattedLiquidationPrice}</span>
-                                    <span className="text-gray-500">(-{liquidationDrop.toFixed(2)}%)</span>
-                                </div>
-                            </div>
-                         </div>
-                    </div>
-                )}
-
-                {/* LEVERAGE OVERLAY - Integrated Style */}
-                {showLeverage && (
-                    <div className="absolute -top-3 left-4 right-4 z-30">
-                        <div className="bg-[#1a1d3d] border border-primary/20 rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5)] p-2.5 animate-in fade-in slide-in-from-bottom-2 duration-200 flex items-center gap-3">
-                            <div className="flex flex-col gap-0.5 min-w-[50px] pl-1">
-                                <span className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">Leverage</span>
-                                <span className="text-[#59dcfc] font-bold font-mono text-sm leading-none">
-                                    {leverage[0]}x
-                                </span>
-                            </div>
-                            
-                            <div className="flex-1 px-1">
-                                <Slider 
-                                    value={leverage} 
-                                    onValueChange={setLeverage} 
-                                    min={1.0} 
-                                    max={5} 
-                                    step={0.1}
-                                    className="py-2"
-                                />
-                            </div>
-
+              <div className="bg-[#0b0e1e] rounded-2xl p-4 pt-6 transition-colors hover:bg-[#0b0e1e]/80 relative">
+                <div className="flex justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                        <label className="text-muted-foreground text-sm font-medium">Buy</label>
+                        {!showLeverage && (
                             <button 
                                 onClick={() => {
-                                    setShowLeverage(false);
-                                    setLeverage([1]);
+                                    setShowLeverage(true);
+                                    setLeverage([2]); // Default to 2x when opened
                                 }}
-                                className="text-gray-400 hover:text-white transition-colors p-1.5 hover:bg-white/5 rounded-lg"
+                                className="group relative flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 hover:bg-primary/20 transition-all border border-primary/20 hover:border-primary/50 animate-pulse hover:animate-none"
                             >
-                                <X className="w-4 h-4" />
+                                <TrendingUp className="w-3 h-3 text-primary" />
+                                <span className="text-[10px] font-bold text-primary">Add Leverage</span>
                             </button>
+                        )}
+                    </div>
+                    <span className="text-muted-foreground text-sm">Balance: 0 WETH</span>
+                </div>
+                
+                <div className="flex items-center justify-between gap-4">
+                  <Input 
+                    readOnly
+                    value={formattedBuyAmount}
+                    className="border-0 bg-transparent text-4xl font-normal p-0 h-auto focus-visible:ring-0 text-primary w-full cursor-default"
+                  />
+                  <Button variant="secondary" className="rounded-full h-10 px-3 bg-secondary hover:bg-secondary/80 flex items-center gap-2 min-w-fit">
+                    <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center overflow-hidden p-0.5">
+                        <img src="https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=026" alt="ETH" className="w-full h-full object-contain" />
+                    </div>
+                    <span className="text-lg font-medium text-white">WETH</span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </div>
+                
+                <div className="flex flex-col gap-1 mt-2">
+                     <div className="flex items-center gap-2">
+                        <span className="text-green-400 text-sm">≈ {formattedUsdValue}</span>
+                     </div>
+                     {showLeverage && (
+                        <div className="flex items-center gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                                <span className="text-xs font-medium">Debt:</span>
+                                <span className="text-xs font-mono font-bold">{formattedDebt}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                                <span className="text-xs font-medium">Liquidation:</span>
+                                <span className="text-xs font-mono font-bold">
+                                    {formattedLiquidationPrice}
+                                    <span className="ml-1 opacity-80 font-sans font-normal">
+                                        (-{liquidationDrop.toFixed(2)}%)
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+                     )}
+                </div>
+
+                {/* LEVERAGE OVERLAY - Compact & High */}
+                {showLeverage && (
+                    <div className="absolute -top-5 left-2 right-2 z-20">
+                        <div className="bg-[#1a1d3d] border border-primary/20 rounded-xl shadow-lg p-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <div className="flex items-center gap-3">
+                                <div className="flex flex-col gap-0.5 min-w-[60px]">
+                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Leverage</span>
+                                    <span className="text-primary font-bold font-mono text-sm">
+                                        {leverage[0]}x
+                                    </span>
+                                </div>
+                                
+                                <div className="flex-1 px-1">
+                                    <Slider 
+                                        value={leverage} 
+                                        onValueChange={setLeverage} 
+                                        min={1.0} 
+                                        max={5} 
+                                        step={0.1}
+                                        className="py-2"
+                                    />
+                                </div>
+
+                                <button 
+                                    onClick={() => {
+                                        setShowLeverage(false);
+                                        setLeverage([1]);
+                                    }}
+                                    className="text-muted-foreground hover:text-white transition-colors p-1 hover:bg-white/5 rounded-md"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
 
               </div>
 
-              {/* Receive Row */}
-              <div className="flex justify-between items-center px-4 py-3 mt-1">
-                  <div className="flex items-center gap-1.5 text-sm font-medium text-gray-300">
-                      <span>Receive (incl. fees)</span>
-                      <Info className="w-3.5 h-3.5 text-gray-500" />
-                  </div>
-                  <span className="text-xl font-bold text-white tracking-tight">{parseFloat(formattedBuyAmount).toLocaleString('en-US', {maximumFractionDigits: 3})}</span>
+              {/* Quote Info */}
+              <div className="mt-2 px-2 py-3">
+                 <div className="flex justify-between items-center text-sm text-muted-foreground hover:text-foreground/80 transition-colors cursor-pointer group">
+                    <div className="flex items-center gap-1">
+                        <span>1 WETH = {ethPrice.toFixed(2)} USDC</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs">
+                        <span className="text-foreground">~$4.50</span>
+                        <ChevronDown className="h-3 w-3" />
+                    </div>
+                 </div>
               </div>
-              
+
+              <Button className="w-full h-14 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 shadow-[0_0_20px_rgba(76,130,251,0.3)] mt-2 transition-all">
+                {activeLeverage > 1 ? `Swap with ${activeLeverage}x Leverage` : 'Swap'}
+              </Button>
+
+              {activeLeverage > 1 && (
+                  <div className="mt-3 text-center">
+                    <p className="text-xs text-muted-foreground">
+                        Leverage powered by <span className="text-foreground font-medium">Aave V3</span> integration.
+                    </p>
+                  </div>
+              )}
+
             </CardContent>
           </Card>
-          
-          {/* Rate & Gas Info */}
-          <div className="flex justify-between items-center px-4 text-xs font-medium text-gray-400">
-                <div className="flex items-center gap-1 cursor-pointer hover:text-white transition-colors">
-                    <span>1 COW = 0.195447 USDT (≈ $0.2)</span>
-                </div>
-                <div className="flex items-center gap-1 cursor-pointer hover:text-white transition-colors">
-                    <span>≈ $26.43</span>
-                    <ChevronDown className="w-3 h-3" />
-                </div>
-          </div>
-          
-          {/* Warning Box */}
-          <div className="bg-[#2a2723] rounded-2xl p-4 border border-[#4a4235] relative overflow-hidden">
-               <div className="flex flex-col items-center text-center gap-2 relative z-10">
-                   <div className="w-8 h-8 rounded-full bg-[#F5D130]/20 flex items-center justify-center mb-1">
-                        <AlertTriangle className="w-5 h-5 text-[#F5D130]" fill="#F5D130" />
-                   </div>
-                   <h3 className="text-[#F5D130] font-bold text-sm">Minimize price impact with TWAP</h3>
-                   <p className="text-[#F5D130]/90 text-xs leading-relaxed max-w-[90%]">
-                       The price impact is <span className="font-bold">2.18%</span>. Consider breaking up your order using a <span className="underline cursor-pointer hover:text-white decoration-[#F5D130]/50 underline-offset-2">TWAP order</span> and possibly get a better rate.
-                   </p>
-               </div>
-          </div>
 
-          <Button className="w-full h-14 text-lg font-bold rounded-2xl bg-[#59dcfc] hover:bg-[#4bcceb] text-[#060a16] shadow-lg mt-2 transition-all">
-            {activeLeverage > 1 ? `Swap with ${activeLeverage}x Leverage` : 'Swap'}
-          </Button>
-
+          {/* Footer Info */}
+          <div className="text-center">
+              <p className="text-xs text-muted-foreground/50">
+                  CoW Protocol protects you from MEV
+              </p>
+          </div>
         </div>
       </main>
     </div>
