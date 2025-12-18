@@ -52,6 +52,7 @@ export default function SwapPage() {
     ? (ethPrice * (activeLeverage - 1)) / (activeLeverage * liquidationThreshold)
     : 0;
   const formattedLiquidationPrice = liquidationPrice.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  const liquidationDrop = activeLeverage > 1 ? ((ethPrice - liquidationPrice) / ethPrice) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
@@ -193,13 +194,18 @@ export default function SwapPage() {
                      </div>
                      {showLeverage && (
                         <div className="flex items-center gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-xs text-muted-foreground">Debt:</span>
-                                <span className="text-xs font-mono font-medium text-orange-400">{formattedDebt}</span>
+                            <div className="flex items-center gap-1.5 text-orange-400">
+                                <span className="text-xs font-medium">Debt:</span>
+                                <span className="text-xs font-mono font-bold">{formattedDebt}</span>
                             </div>
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-xs text-muted-foreground">Liquidation:</span>
-                                <span className="text-xs font-mono font-medium text-red-400">{formattedLiquidationPrice}</span>
+                            <div className="flex items-center gap-1.5 text-red-400">
+                                <span className="text-xs font-medium">Liquidation:</span>
+                                <span className="text-xs font-mono font-bold">
+                                    {formattedLiquidationPrice}
+                                    <span className="ml-1 opacity-80 font-sans font-normal">
+                                        (-{liquidationDrop.toFixed(0)}%)
+                                    </span>
+                                </span>
                             </div>
                         </div>
                      )}
