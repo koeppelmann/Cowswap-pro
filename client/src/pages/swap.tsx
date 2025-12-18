@@ -191,40 +191,38 @@ export default function SwapPage() {
                      )}
                 </div>
 
-                {/* LEVERAGE OVERLAY */}
+                {/* LEVERAGE OVERLAY - Compact & High */}
                 {showLeverage && (
-                    <div className="absolute top-24 left-0 right-0 z-20 mx-2 mt-4">
-                        <div className="bg-[#1a1d3d]/95 backdrop-blur-md border border-primary/20 rounded-xl shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-200">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-white">Leverage</span>
-                                    <span className="text-xs text-muted-foreground">(Aave V3)</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-primary font-bold font-mono bg-primary/10 px-2 py-0.5 rounded text-sm">
+                    <div className="absolute top-2 left-2 right-2 z-20">
+                        <div className="bg-[#1a1d3d]/95 backdrop-blur-md border border-primary/20 rounded-xl shadow-lg p-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <div className="flex items-center gap-3">
+                                <div className="flex flex-col gap-0.5 min-w-[60px]">
+                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Leverage</span>
+                                    <span className="text-primary font-bold font-mono text-sm">
                                         {leverage[0]}x
                                     </span>
-                                    <button 
-                                        onClick={() => {
-                                            setShowLeverage(false);
-                                            setLeverage([1]);
-                                        }}
-                                        className="text-muted-foreground hover:text-white transition-colors"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
                                 </div>
-                            </div>
-                            
-                            <div className="px-1 mb-2">
-                                <Slider 
-                                    value={leverage} 
-                                    onValueChange={setLeverage} 
-                                    min={1.1} 
-                                    max={5} 
-                                    step={0.1}
-                                    className="py-4"
-                                />
+                                
+                                <div className="flex-1 px-1">
+                                    <Slider 
+                                        value={leverage} 
+                                        onValueChange={setLeverage} 
+                                        min={1.1} 
+                                        max={5} 
+                                        step={0.1}
+                                        className="py-2"
+                                    />
+                                </div>
+
+                                <button 
+                                    onClick={() => {
+                                        setShowLeverage(false);
+                                        setLeverage([1]);
+                                    }}
+                                    className="text-muted-foreground hover:text-white transition-colors p-1 hover:bg-white/5 rounded-md"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
                             </div>
                         </div>
                     </div>
