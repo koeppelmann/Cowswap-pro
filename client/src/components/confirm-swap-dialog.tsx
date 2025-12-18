@@ -95,7 +95,7 @@ export function ConfirmSwapDialog({
                         <span className="font-mono text-orange-400 font-medium">{debt}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Liquidation Price</span>
+                        <span className="text-muted-foreground">Deleverage Price</span>
                         <div className="text-right">
                              <span className="font-mono text-red-400 font-medium block">{liquidationPrice}</span>
                              <span className="text-[10px] text-muted-foreground">(-{liquidationDrop.toFixed(2)}%)</span>

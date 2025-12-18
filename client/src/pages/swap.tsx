@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { Settings, ChevronDown, RefreshCw, Wallet, ArrowDown, Info, ExternalLink, X, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,24 @@ export default function SwapPage() {
   const [ethPrice, setEthPrice] = useState(2823.35);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   
+  const leverageOverlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (leverageOverlayRef.current && !leverageOverlayRef.current.contains(event.target as Node)) {
+        setShowLeverage(false);
+      }
+    }
+
+    if (showLeverage) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showLeverage]);
+
   // Calculate buy amount based on leverage
   // Normal amount = payAmount / ethPrice
   // Leveraged amount = (payAmount * leverage) / ethPrice
@@ -201,7 +219,7 @@ export default function SwapPage() {
                                 <span className="text-xs font-mono font-bold">{formattedDebt}</span>
                             </div>
                             <div className="flex items-center gap-1.5 text-muted-foreground">
-                                <span className="text-xs font-medium">Liquidation:</span>
+                                <span className="text-xs font-medium">Deleverage Price:</span>
                                 <span className="text-xs font-mono font-bold">
                                     {formattedLiquidationPrice}
                                     <span className="ml-1 opacity-80 font-sans font-normal">
@@ -215,7 +233,7 @@ export default function SwapPage() {
 
                 {/* LEVERAGE OVERLAY - Compact & High */}
                 {showLeverage && (
-                    <div className="absolute -top-5 left-2 right-2 z-20">
+                    <div className="absolute -top-5 left-2 right-2 z-20" ref={leverageOverlayRef}>
                         <div className="bg-[#1a1d3d] border border-primary/20 rounded-xl shadow-lg p-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
                             <div className="flex items-center gap-3">
                                 <div className="flex flex-col gap-0.5 min-w-[60px]">
