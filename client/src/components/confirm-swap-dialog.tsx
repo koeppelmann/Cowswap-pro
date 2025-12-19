@@ -102,7 +102,7 @@ export function ConfirmSwapDialog({
                         <span className="text-muted-foreground">Deleverage Price</span>
                         <div className="text-right">
                              <span className="font-mono text-red-400 font-medium block">{liquidationPrice}</span>
-                             <span className="text-[10px] text-muted-foreground">(-{liquidationDrop.toFixed(2)}%)</span>
+                             <span className="text-[10px] text-muted-foreground">({liquidationDrop > 0 ? "+" : ""}{liquidationDrop.toFixed(2)}%)</span>
                         </div>
                     </div>
                 </div>

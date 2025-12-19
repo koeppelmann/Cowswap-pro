@@ -107,32 +107,33 @@ export default function SwapPage() {
   const buyRank = getMoneynessRank(buyToken.symbol);
   
   let displayLiquidationPrice = "";
-  let displayLiquidationLabel = "Deleverage Price";
+  let numericLiqPrice = 0;
+  let numericCurrentPrice = 0;
 
   // We want to express price of "Other" (Higher Rank Value) in terms of "More Money" (Lower Rank Value).
   // liquidationPrice variable is "Price of BuyToken in SellToken terms" (SellToken per BuyToken)
   
   if (sellRank < buyRank) {
     // Sell is "More Money" (e.g. USDC). Buy is "Other" (e.g. ETH).
-    // We want Price of Other(Buy) in Money(Sell).
-    // This is exactly what liquidationPrice represents (Sell per Buy).
-    // e.g. 2800 USDC per 1 ETH.
+    numericLiqPrice = liquidationPrice;
+    numericCurrentPrice = ethPrice;
     displayLiquidationPrice = `${liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${sellToken.symbol}`;
-    // Label could optionally indicate the "Other" token: "ETH Deleverage Price"
   } else if (buyRank < sellRank) {
     // Buy is "More Money" (e.g. USDC). Sell is "Other" (e.g. ETH).
-    // liquidationPrice is "Sell per Buy" (e.g. 0.0003 ETH per USDC).
-    // We want Price of Other(Sell) in Money(Buy).
-    // This is 1 / liquidationPrice (e.g. 3000 USDC per ETH).
-    const invPrice = liquidationPrice > 0 ? 1 / liquidationPrice : 0;
-    displayLiquidationPrice = `${invPrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${buyToken.symbol}`;
+    numericLiqPrice = liquidationPrice > 0 ? 1 / liquidationPrice : 0;
+    numericCurrentPrice = ethPrice > 0 ? 1 / ethPrice : 0;
+    displayLiquidationPrice = `${numericLiqPrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${buyToken.symbol}`;
   } else {
     // Equal moneyness (e.g. USDC vs USDT). Default to standard (Sell per Buy).
+    numericLiqPrice = liquidationPrice;
+    numericCurrentPrice = ethPrice;
     displayLiquidationPrice = `${liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${sellToken.symbol}`;
   }
 
   const formattedLiquidationPrice = displayLiquidationPrice;
-  const liquidationDrop = activeLeverage > 1 ? ((ethPrice - liquidationPrice) / ethPrice) * 100 : 0;
+  const liquidationDrop = activeLeverage > 1 && numericCurrentPrice > 0
+    ? ((numericLiqPrice - numericCurrentPrice) / numericCurrentPrice) * 100 
+    : 0;
 
   // Quote Exchange Rate Display Logic
   let displayQuote = "";
@@ -350,7 +351,7 @@ export default function SwapPage() {
                                 <span className="text-xs font-mono font-bold">
                                     {formattedLiquidationPrice}
                                     <span className="ml-1 opacity-80 font-sans font-normal">
-                                        (-{liquidationDrop.toFixed(2)}%)
+                                        ({liquidationDrop > 0 ? "+" : ""}{liquidationDrop.toFixed(2)}%)
                                     </span>
                                 </span>
                             </div>
