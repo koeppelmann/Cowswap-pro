@@ -21,7 +21,9 @@ export function ConfirmSwapDialog({
   ethPrice,
   debt,
   liquidationPrice,
-  liquidationDrop
+  liquidationDrop,
+  sellToken,
+  buyToken
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -32,6 +34,8 @@ export function ConfirmSwapDialog({
   debt: string;
   liquidationPrice: string;
   liquidationDrop: number;
+  sellToken: { symbol: string; icon: string };
+  buyToken: { symbol: string; icon: string };
 }) {
   const priceImpact = -0.13;
   const protocolFee = 0.000071;
@@ -57,11 +61,11 @@ export function ConfirmSwapDialog({
             <div className="flex items-center gap-2">
                 <div className="flex-1 bg-[#12152b] rounded-2xl p-4 text-center space-y-2 border border-white/5">
                     <span className="text-xs text-muted-foreground block mb-1">Sell amount</span>
-                    <div className="w-10 h-10 rounded-full bg-[#2775CA] flex items-center justify-center text-sm font-bold text-white mx-auto">
-                        $
+                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold text-white mx-auto overflow-hidden p-1">
+                        <img src={sellToken.icon} alt={sellToken.symbol} className="w-full h-full object-contain" />
                     </div>
                     <div>
-                        <div className="text-lg font-medium">{parseFloat(payAmount).toLocaleString()} USDT</div>
+                        <div className="text-lg font-medium">{parseFloat(payAmount).toLocaleString()} {sellToken.symbol}</div>
                         <div className="text-xs text-muted-foreground">≈ ${parseFloat(payAmount).toLocaleString()}</div>
                     </div>
                 </div>
@@ -75,11 +79,11 @@ export function ConfirmSwapDialog({
                         </div>
                     )}
                     <span className="text-xs text-muted-foreground block mb-1">Receive (est.)</span>
-                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center p-1 mx-auto">
-                        <img src="https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=026" alt="ETH" className="w-full h-full object-contain" />
+                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center p-1 mx-auto overflow-hidden">
+                        <img src={buyToken.icon} alt={buyToken.symbol} className="w-full h-full object-contain" />
                     </div>
                     <div>
-                        <div className="text-lg font-medium text-primary">{buyAmount} WETH</div>
+                        <div className="text-lg font-medium text-primary">{buyAmount} {buyToken.symbol}</div>
                         <div className="text-xs text-muted-foreground">
                             ≈ ${(parseFloat(payAmount) * leverage).toLocaleString()} <span className="text-red-400">({priceImpact}%)</span>
                         </div>
@@ -108,24 +112,24 @@ export function ConfirmSwapDialog({
             <div className="space-y-3 text-sm">
                 <div className="flex justify-between text-muted-foreground">
                     <span>Price</span>
-                    <span className="text-foreground">1 WETH = {ethPrice.toFixed(2)} USDT</span>
+                    <span className="text-foreground">1 {buyToken.symbol} = {ethPrice.toFixed(2)} {sellToken.symbol}</span>
                 </div>
                 
                 <div className="flex justify-between text-muted-foreground">
                     <span>Protocol fee (0.02%)</span>
-                    <span className="text-foreground">{protocolFee} WETH (≈ $0.2)</span>
+                    <span className="text-foreground">{protocolFee} {buyToken.symbol} (≈ $0.2)</span>
                 </div>
 
                 <div className="flex justify-between text-muted-foreground">
                     <span>Network costs (est.)</span>
-                    <span className="text-foreground">{networkCost} WETH + gas (≈ $0.6)</span>
+                    <span className="text-foreground">{networkCost} {buyToken.symbol} + gas (≈ $0.6)</span>
                 </div>
                 
                 <Separator className="bg-white/10 my-2" />
                 
                 <div className="flex justify-between font-medium">
                     <span className="text-muted-foreground">Expected to receive</span>
-                    <span>{buyAmount} WETH</span>
+                    <span>{buyAmount} {buyToken.symbol}</span>
                 </div>
 
                 <div className="flex justify-between text-muted-foreground mt-4 pt-2 border-t border-white/5">
@@ -135,7 +139,7 @@ export function ConfirmSwapDialog({
                 
                 <div className="flex justify-between font-medium">
                     <span className="text-muted-foreground">Minimum receive</span>
-                    <span>{(parseFloat(buyAmount) * (1 - slippage/100)).toFixed(6)} WETH</span>
+                    <span>{(parseFloat(buyAmount) * (1 - slippage/100)).toFixed(6)} {buyToken.symbol}</span>
                 </div>
             </div>
 

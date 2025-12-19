@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { Settings, ChevronDown, RefreshCw, Wallet, ArrowDown, Info, ExternalLink, X, TrendingUp } from "lucide-react";
+import { Settings, ChevronDown, RefreshCw, Wallet, ArrowDown, Info, ExternalLink, X, TrendingUp, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,18 +12,48 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import logo from "@assets/logo.svg";
 import { ConfirmSwapDialog } from "@/components/confirm-swap-dialog";
 
+type Token = {
+  symbol: string;
+  name: string;
+  icon: string;
+  price: number;
+};
+
+const TOKENS: Token[] = [
+  { symbol: "USDC", name: "USD Coin", icon: "https://cryptologos.cc/logos/usd-coin-usdc-logo.svg?v=026", price: 1.0 },
+  { symbol: "WETH", name: "Wrapped Ether", icon: "https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=026", price: 2823.35 },
+  { symbol: "WBTC", name: "Wrapped Bitcoin", icon: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg?v=026", price: 92450.0 },
+  { symbol: "DAI", name: "Dai Stablecoin", icon: "https://cryptologos.cc/logos/multi-collateral-dai-dai-logo.svg?v=026", price: 1.0 },
+  { symbol: "USDT", name: "Tether USD", icon: "https://cryptologos.cc/logos/tether-usdt-logo.svg?v=026", price: 1.0 },
+  { symbol: "GNO", name: "Gnosis", icon: "https://cryptologos.cc/logos/gnosis-gno-gno-logo.svg?v=026", price: 340.0 },
+];
+
 export default function SwapPage() {
   const [payAmount, setPayAmount] = useState<string>("10000");
   const [leverage, setLeverage] = useState<number[]>([1]); // Default 1x (inactive)
   const [showLeverage, setShowLeverage] = useState(false);
-  const [ethPrice, setEthPrice] = useState(2823.35);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   
+  const [sellToken, setSellToken] = useState<Token>(TOKENS[0]); // USDC
+  const [buyToken, setBuyToken] = useState<Token>(TOKENS[1]);   // WETH
+  
+  const [isTokenSelectOpen, setIsTokenSelectOpen] = useState(false);
+  const [selectingSide, setSelectingSide] = useState<'sell' | 'buy'>('sell');
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const ethPrice = buyToken.price / sellToken.price; // Relative price
+
   const leverageOverlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,21 +73,13 @@ export default function SwapPage() {
   }, [showLeverage]);
 
   // Calculate buy amount based on leverage
-  // Normal amount = payAmount / ethPrice
-  // Leveraged amount = (payAmount * leverage) / ethPrice
-  
+  // Normal amount = payAmount / ethPrice (relative)
   const rawBuyAmount = parseFloat(payAmount || "0") / ethPrice;
-  
-  // If leverage is shown, we use the leverage multiplier. If not shown (but technically default is 2), 
-  // we might want to reset to 1x when closed? Or persist? 
-  // User asked: "hidden by default (but there should be some blinking option to open it, by default 2x)"
-  // This implies when you open it, it starts at 2x. When closed, it's 1x (standard swap).
-  
   const activeLeverage = leverage[0];
   const leveragedBuyAmount = rawBuyAmount * activeLeverage;
   
   const formattedBuyAmount = leveragedBuyAmount.toFixed(4);
-  const formattedUsdValue = (parseFloat(payAmount || "0") * activeLeverage).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  const formattedUsdValue = (parseFloat(payAmount || "0") * activeLeverage * sellToken.price).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
   
   // Debt Calculation
   // Debt = Total Position Value - Collateral (Pay Amount)
@@ -73,6 +95,32 @@ export default function SwapPage() {
     : 0;
   const formattedLiquidationPrice = liquidationPrice.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
   const liquidationDrop = activeLeverage > 1 ? ((ethPrice - liquidationPrice) / ethPrice) * 100 : 0;
+
+  const handleTokenSelect = (token: Token) => {
+    if (selectingSide === 'sell') {
+      if (token.symbol === buyToken.symbol) {
+        setBuyToken(sellToken); // Swap if same
+      }
+      setSellToken(token);
+    } else {
+      if (token.symbol === sellToken.symbol) {
+        setSellToken(buyToken); // Swap if same
+      }
+      setBuyToken(token);
+    }
+    setIsTokenSelectOpen(false);
+    setSearchQuery("");
+  };
+
+  const openTokenSelect = (side: 'sell' | 'buy') => {
+    setSelectingSide(side);
+    setIsTokenSelectOpen(true);
+  };
+
+  const filteredTokens = TOKENS.filter(t => 
+    t.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    t.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
@@ -138,7 +186,7 @@ export default function SwapPage() {
               <div className="bg-[#0b0e1e] rounded-2xl p-4 transition-colors hover:bg-[#0b0e1e]/80 group">
                 <div className="flex justify-between mb-2">
                     <label className="text-muted-foreground text-sm font-medium">Sell</label>
-                    <span className="text-muted-foreground text-sm">Balance: 0 USDC</span>
+                    <span className="text-muted-foreground text-sm">Balance: 0 {sellToken.symbol}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
                   <Input 
@@ -148,16 +196,20 @@ export default function SwapPage() {
                     className="border-0 bg-transparent text-4xl font-normal p-0 h-auto focus-visible:ring-0 placeholder:text-muted-foreground/50 w-full"
                     placeholder="0"
                   />
-                  <Button variant="secondary" className="rounded-full h-10 px-3 bg-secondary hover:bg-secondary/80 flex items-center gap-2 min-w-fit">
-                    <div className="w-6 h-6 rounded-full bg-[#2775CA] flex items-center justify-center text-[10px] text-white font-bold">
-                        $
+                  <Button 
+                    variant="secondary" 
+                    className="rounded-full h-10 px-3 bg-secondary hover:bg-secondary/80 flex items-center gap-2 min-w-fit"
+                    onClick={() => openTokenSelect('sell')}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center p-0.5 overflow-hidden">
+                         <img src={sellToken.icon} alt={sellToken.symbol} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-lg font-medium text-white">USDC</span>
+                    <span className="text-lg font-medium text-white">{sellToken.symbol}</span>
                     <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
                 </div>
                 <div className="text-muted-foreground text-sm mt-2">
-                    ≈ ${parseFloat(payAmount || "0").toFixed(2)}
+                    ≈ ${(parseFloat(payAmount || "0") * sellToken.price).toFixed(2)}
                 </div>
               </div>
 
@@ -165,7 +217,14 @@ export default function SwapPage() {
               <div className="relative h-2 z-10">
                 <div className="absolute left-1/2 -translate-x-1/2 -top-4">
                     <div className="bg-[#12152b] p-1.5 rounded-xl border-4 border-[#12152b]">
-                        <div className="bg-secondary/50 p-1.5 rounded-lg hover:bg-secondary transition-colors cursor-pointer">
+                        <div 
+                            className="bg-secondary/50 p-1.5 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
+                            onClick={() => {
+                                const temp = sellToken;
+                                setSellToken(buyToken);
+                                setBuyToken(temp);
+                            }}
+                        >
                             <ArrowDown className="h-4 w-4 text-foreground" />
                         </div>
                     </div>
@@ -198,7 +257,7 @@ export default function SwapPage() {
                             </button>
                         )}
                     </div>
-                    <span className="text-muted-foreground text-sm">Balance: 0 WETH</span>
+                    <span className="text-muted-foreground text-sm">Balance: 0 {buyToken.symbol}</span>
                 </div>
                 
                 <div className="flex items-center justify-between gap-4">
@@ -207,11 +266,15 @@ export default function SwapPage() {
                     value={formattedBuyAmount}
                     className="border-0 bg-transparent text-4xl font-normal p-0 h-auto focus-visible:ring-0 text-primary w-full cursor-default"
                   />
-                  <Button variant="secondary" className="rounded-full h-10 px-3 bg-secondary hover:bg-secondary/80 flex items-center gap-2 min-w-fit">
+                  <Button 
+                    variant="secondary" 
+                    className="rounded-full h-10 px-3 bg-secondary hover:bg-secondary/80 flex items-center gap-2 min-w-fit"
+                    onClick={() => openTokenSelect('buy')}
+                  >
                     <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center overflow-hidden p-0.5">
-                        <img src="https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=026" alt="ETH" className="w-full h-full object-contain" />
+                        <img src={buyToken.icon} alt={buyToken.symbol} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-lg font-medium text-white">WETH</span>
+                    <span className="text-lg font-medium text-white">{buyToken.symbol}</span>
                     <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
                 </div>
@@ -282,7 +345,7 @@ export default function SwapPage() {
               <div className="mt-2 px-2 py-3">
                  <div className="flex justify-between items-center text-sm text-muted-foreground hover:text-foreground/80 transition-colors cursor-pointer group">
                     <div className="flex items-center gap-1">
-                        <span>1 WETH = {ethPrice.toFixed(2)} USDC</span>
+                        <span>1 {buyToken.symbol} = {ethPrice.toFixed(4)} {sellToken.symbol}</span>
                     </div>
                     <div className="flex items-center gap-1 text-xs">
                         <span className="text-foreground">~$4.50</span>
@@ -327,7 +390,61 @@ export default function SwapPage() {
             debt={formattedDebt}
             liquidationPrice={formattedLiquidationPrice}
             liquidationDrop={liquidationDrop}
+            sellToken={sellToken}
+            buyToken={buyToken}
         />
+
+        {/* Token Select Dialog */}
+        <Dialog open={isTokenSelectOpen} onOpenChange={setIsTokenSelectOpen}>
+            <DialogContent className="bg-[#12152b] border-white/10 text-foreground sm:max-w-[420px] p-0 gap-0">
+                <DialogHeader className="px-4 py-3 border-b border-white/5">
+                    <DialogTitle>Select a token</DialogTitle>
+                </DialogHeader>
+                <div className="p-4">
+                    <div className="relative mb-4">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input 
+                            placeholder="Search name or paste address" 
+                            className="bg-[#0b0e1e] border-white/10 pl-9"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                        {filteredTokens.map((token) => (
+                            <button
+                                key={token.symbol}
+                                onClick={() => handleTokenSelect(token)}
+                                className={`w-full flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors ${
+                                    (selectingSide === 'sell' && sellToken.symbol === token.symbol) || 
+                                    (selectingSide === 'buy' && buyToken.symbol === token.symbol) 
+                                        ? 'opacity-50 cursor-default' 
+                                        : ''
+                                }`}
+                                disabled={
+                                    (selectingSide === 'sell' && sellToken.symbol === token.symbol) || 
+                                    (selectingSide === 'buy' && buyToken.symbol === token.symbol)
+                                }
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-white p-0.5 overflow-hidden">
+                                        <img src={token.icon} alt={token.symbol} className="w-full h-full object-contain" />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="font-medium">{token.symbol}</div>
+                                        <div className="text-xs text-muted-foreground">{token.name}</div>
+                                    </div>
+                                </div>
+                                {(selectingSide === 'sell' && sellToken.symbol === token.symbol) || 
+                                 (selectingSide === 'buy' && buyToken.symbol === token.symbol) && (
+                                    <div className="text-xs text-primary">Selected</div>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
