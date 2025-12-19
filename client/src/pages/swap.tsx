@@ -93,8 +93,46 @@ export default function SwapPage() {
   const liquidationPrice = activeLeverage > 1 
     ? (ethPrice * (activeLeverage - 1)) / (activeLeverage * liquidationThreshold)
     : 0;
-  const formattedLiquidationPrice = `${liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${sellToken.symbol}`;
+  const getMoneynessRank = (symbol: string) => {
+    if (["USDC", "USDT", "DAI"].includes(symbol)) return 0;
+    if (symbol === "WBTC") return 1;
+    if (symbol === "WETH") return 2;
+    if (symbol === "GNO") return 3;
+    return 4;
+  };
+
+  // Determine display price based on moneyness
+  const sellRank = getMoneynessRank(sellToken.symbol);
+  const buyRank = getMoneynessRank(buyToken.symbol);
+  
+  let displayLiquidationPrice = "";
+  let displayLiquidationLabel = "Deleverage Price";
+
+  // We want to express price of "Other" (Higher Rank Value) in terms of "More Money" (Lower Rank Value).
+  // liquidationPrice variable is "Price of BuyToken in SellToken terms" (SellToken per BuyToken)
+  
+  if (sellRank < buyRank) {
+    // Sell is "More Money" (e.g. USDC). Buy is "Other" (e.g. ETH).
+    // We want Price of Other(Buy) in Money(Sell).
+    // This is exactly what liquidationPrice represents (Sell per Buy).
+    // e.g. 2800 USDC per 1 ETH.
+    displayLiquidationPrice = `${liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${sellToken.symbol}`;
+    // Label could optionally indicate the "Other" token: "ETH Deleverage Price"
+  } else if (buyRank < sellRank) {
+    // Buy is "More Money" (e.g. USDC). Sell is "Other" (e.g. ETH).
+    // liquidationPrice is "Sell per Buy" (e.g. 0.0003 ETH per USDC).
+    // We want Price of Other(Sell) in Money(Buy).
+    // This is 1 / liquidationPrice (e.g. 3000 USDC per ETH).
+    const invPrice = liquidationPrice > 0 ? 1 / liquidationPrice : 0;
+    displayLiquidationPrice = `${invPrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${buyToken.symbol}`;
+  } else {
+    // Equal moneyness (e.g. USDC vs USDT). Default to standard (Sell per Buy).
+    displayLiquidationPrice = `${liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${sellToken.symbol}`;
+  }
+
+  const formattedLiquidationPrice = displayLiquidationPrice;
   const liquidationDrop = activeLeverage > 1 ? ((ethPrice - liquidationPrice) / ethPrice) * 100 : 0;
+
 
   const handleTokenSelect = (token: Token) => {
     if (selectingSide === 'sell') {
