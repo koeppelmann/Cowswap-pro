@@ -36,7 +36,7 @@ const TOKENS: Token[] = [
   { symbol: "WBTC", name: "Wrapped Bitcoin", icon: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg?v=026", price: 92450.0 },
   { symbol: "DAI", name: "Dai Stablecoin", icon: "https://cryptologos.cc/logos/multi-collateral-dai-dai-logo.svg?v=026", price: 1.0 },
   { symbol: "USDT", name: "Tether USD", icon: "https://cryptologos.cc/logos/tether-usdt-logo.svg?v=026", price: 1.0 },
-  { symbol: "GNO", name: "Gnosis", icon: "https://cryptologos.cc/logos/gnosis-gno-gno-logo.svg?v=026", price: 340.0 },
+  { symbol: "GNO", name: "Gnosis", icon: "https://cryptologos.cc/logos/gnosis-gno-gno-logo.svg?v=026", price: 120.0 },
 ];
 
 export default function SwapPage() {
