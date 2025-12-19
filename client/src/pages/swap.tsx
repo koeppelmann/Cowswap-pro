@@ -44,6 +44,7 @@ export default function SwapPage() {
   const [leverage, setLeverage] = useState<number[]>([1]); // Default 1x (inactive)
   const [showLeverage, setShowLeverage] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isPriceFlipped, setIsPriceFlipped] = useState(false);
   
   const [sellToken, setSellToken] = useState<Token>(TOKENS[0]); // USDC
   const [buyToken, setBuyToken] = useState<Token>(TOKENS[1]);   // WETH
@@ -133,6 +134,23 @@ export default function SwapPage() {
   const formattedLiquidationPrice = displayLiquidationPrice;
   const liquidationDrop = activeLeverage > 1 ? ((ethPrice - liquidationPrice) / ethPrice) * 100 : 0;
 
+  // Quote Exchange Rate Display Logic
+  let displayQuote = "";
+  // Check moneyness for default direction
+  const defaultShowBuyInSell = sellRank < buyRank; // Sell is money, Buy is asset -> Show "1 Asset = X Money" (e.g. 1 ETH = 2800 USDC)
+  
+  // If we should flip (user toggled), we invert the default preference
+  const showBuyInSell = isPriceFlipped ? !defaultShowBuyInSell : defaultShowBuyInSell;
+
+  if (showBuyInSell) {
+    // 1 BuyToken = X SellToken
+    // ethPrice is Sell per Buy (e.g. 2800).
+    displayQuote = `1 ${buyToken.symbol} = ${ethPrice.toFixed(4)} ${sellToken.symbol}`;
+  } else {
+    // 1 SellToken = Y BuyToken
+    const invPrice = ethPrice > 0 ? 1 / ethPrice : 0;
+    displayQuote = `1 ${sellToken.symbol} = ${invPrice.toFixed(6)} ${buyToken.symbol}`;
+  }
 
   const handleTokenSelect = (token: Token) => {
     if (selectingSide === 'sell') {
@@ -381,9 +399,12 @@ export default function SwapPage() {
 
               {/* Quote Info */}
               <div className="mt-2 px-2 py-3">
-                 <div className="flex justify-between items-center text-sm text-muted-foreground hover:text-foreground/80 transition-colors cursor-pointer group">
+                 <div 
+                    className="flex justify-between items-center text-sm text-muted-foreground hover:text-foreground/80 transition-colors cursor-pointer group select-none"
+                    onClick={() => setIsPriceFlipped(!isPriceFlipped)}
+                 >
                     <div className="flex items-center gap-1">
-                        <span>1 {buyToken.symbol} = {ethPrice.toFixed(4)} {sellToken.symbol}</span>
+                        <span>{displayQuote}</span>
                     </div>
                     <div className="flex items-center gap-1 text-xs">
                         <span className="text-foreground">~$4.50</span>
