@@ -85,7 +85,7 @@ export default function SwapPage() {
   // Debt = Total Position Value - Collateral (Pay Amount)
   // Debt = (Pay Amount * Leverage) - Pay Amount
   const debtAmount = (parseFloat(payAmount || "0") * activeLeverage) - parseFloat(payAmount || "0");
-  const formattedDebt = debtAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  const formattedDebt = `${debtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${sellToken.symbol}`;
 
   // Liquidation Price Calculation
   // P_liq = (Entry_Price * (Leverage - 1)) / (Leverage * Liquidation_Threshold)
@@ -93,7 +93,7 @@ export default function SwapPage() {
   const liquidationPrice = activeLeverage > 1 
     ? (ethPrice * (activeLeverage - 1)) / (activeLeverage * liquidationThreshold)
     : 0;
-  const formattedLiquidationPrice = liquidationPrice.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  const formattedLiquidationPrice = `${liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${sellToken.symbol}`;
   const liquidationDrop = activeLeverage > 1 ? ((ethPrice - liquidationPrice) / ethPrice) * 100 : 0;
 
   const handleTokenSelect = (token: Token) => {
