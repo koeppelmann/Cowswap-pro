@@ -283,7 +283,7 @@ export default function SwapPage() {
                      <div className="flex items-center gap-2">
                         <span className="text-green-400 text-sm">≈ {formattedUsdValue}</span>
                      </div>
-                     {showLeverage && (
+                     {activeLeverage > 1 && (
                         <div className="flex items-center gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
                             <div className="flex items-center gap-1.5 text-muted-foreground">
                                 <span className="text-xs font-medium">Debt:</span>
