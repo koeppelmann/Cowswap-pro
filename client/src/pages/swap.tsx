@@ -385,7 +385,6 @@ export default function SwapPage() {
                                 <button 
                                     onClick={() => {
                                         setShowLeverage(false);
-                                        setLeverage([1]);
                                     }}
                                     className="text-muted-foreground hover:text-white transition-colors p-1 hover:bg-white/5 rounded-md"
                                 >
