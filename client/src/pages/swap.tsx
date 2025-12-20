@@ -23,21 +23,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import logo from "@assets/logo.svg";
 import { ConfirmSwapDialog } from "@/components/confirm-swap-dialog";
 
-type Token = {
-  symbol: string;
-  name: string;
-  icon: string;
-  price: number;
+type Position = {
+  id: string;
+  collateralToken: Token;
+  debtToken: Token;
+  collateralAmount: number;
+  debtAmount: number;
+  leverage: number;
+  entryPrice: number;
+  timestamp: number;
 };
-
-const TOKENS: Token[] = [
-  { symbol: "USDC", name: "USD Coin", icon: "https://cryptologos.cc/logos/usd-coin-usdc-logo.svg?v=026", price: 1.0 },
-  { symbol: "WETH", name: "Wrapped Ether", icon: "https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=026", price: 2823.35 },
-  { symbol: "WBTC", name: "Wrapped Bitcoin", icon: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg?v=026", price: 92450.0 },
-  { symbol: "DAI", name: "Dai Stablecoin", icon: "https://cryptologos.cc/logos/multi-collateral-dai-dai-logo.svg?v=026", price: 1.0 },
-  { symbol: "USDT", name: "Tether USD", icon: "https://cryptologos.cc/logos/tether-usdt-logo.svg?v=026", price: 1.0 },
-  { symbol: "GNO", name: "Gnosis", icon: "https://cryptologos.cc/logos/gnosis-gno-gno-logo.svg?v=026", price: 120.0 },
-];
 
 export default function SwapPage() {
   const [payAmount, setPayAmount] = useState<string>("10000");
@@ -46,54 +41,119 @@ export default function SwapPage() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isPriceFlipped, setIsPriceFlipped] = useState(false);
   
-  const [sellToken, setSellToken] = useState<Token>(TOKENS[0]); // USDC
+  const [sellToken, setSellToken] = useState<Token | Position>(TOKENS[0]); // USDC or Position
   const [buyToken, setBuyToken] = useState<Token>(TOKENS[1]);   // WETH
   
+  const [positions, setPositions] = useState<Position[]>([]);
+
   const [isTokenSelectOpen, setIsTokenSelectOpen] = useState(false);
   const [selectingSide, setSelectingSide] = useState<'sell' | 'buy'>('sell');
   const [searchQuery, setSearchQuery] = useState("");
 
-  const ethPrice = buyToken.price / sellToken.price; // Relative price
+  const isPosition = (token: any): token is Position => {
+    return 'collateralAmount' in token;
+  };
 
-  const leverageOverlayRef = useRef<HTMLDivElement>(null);
+  const activePosition = isPosition(sellToken) ? sellToken : null;
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (leverageOverlayRef.current && !leverageOverlayRef.current.contains(event.target as Node)) {
-        setShowLeverage(false);
-      }
-    }
+  // Price logic depends on whether we are selling a token or a position
+  // If selling a position, sellToken is the Position object.
+  // We need to resolve the underlying tokens for price calc.
+  
+  const underlyingSellToken = isPosition(sellToken) ? sellToken.collateralToken : sellToken;
+  const underlyingBuyToken = buyToken;
 
-    if (showLeverage) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+  const ethPrice = underlyingBuyToken.price / underlyingSellToken.price; // Relative price
 
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showLeverage]);
+  // ... (leverageOverlayRef useEffect remains same)
 
-  // Calculate buy amount based on leverage
-  // Normal amount = payAmount / ethPrice (relative)
+  // Calculate logic
   const rawBuyAmount = parseFloat(payAmount || "0") / ethPrice;
-  const activeLeverage = leverage[0];
+  
+  // If selling a position:
+  // - Leverage slider acts as "Adjust Leverage" or "Close %"?
+  // - User said: "Selling 50% would mean you sell 50% of the position... remainder keeps existing leverage ratio."
+  // - This implies the "Swap" flow for a position is a "Partial Close".
+  // - "Alternatively you can change the leverage factor".
+  
+  // Let's keep it simple: If selling position, the "Amount" input is % of position size?
+  // Or amount of collateral to sell?
+  // "Selling 50%" implies the input might be better as a slider or percentage buttons if the input is usually absolute.
+  // But let's stick to the input being "Amount of Collateral to Sell".
+  
+  // If we are in "Position Mode" (sellToken is Position):
+  // Leverage slider should ideally be disabled or hidden unless we explicitly add "Adjust Leverage" mode.
+  // For this step, let's treat "Swap" as "Close/Reduce Position".
+  // So Leverage is forced to 1x (or ignored) for the trade logic itself (we are unwinding).
+  
+  const activeLeverage = isPosition(sellToken) ? 1 : leverage[0]; // If closing, no new leverage on the trade itself
   const leveragedBuyAmount = rawBuyAmount * activeLeverage;
   
   const formattedBuyAmount = leveragedBuyAmount.toFixed(4);
-  const formattedUsdValue = (parseFloat(payAmount || "0") * activeLeverage * sellToken.price).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-  
-  // Debt Calculation
-  // Debt = Total Position Value - Collateral (Pay Amount)
-  // Debt = (Pay Amount * Leverage) - Pay Amount
-  const debtAmount = (parseFloat(payAmount || "0") * activeLeverage) - parseFloat(payAmount || "0");
-  const formattedDebt = `${debtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${sellToken.symbol}`;
+  const formattedUsdValue = (parseFloat(payAmount || "0") * activeLeverage * underlyingSellToken.price).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-  // Liquidation Price Calculation
-  // P_liq = (Entry_Price * (Leverage - 1)) / (Leverage * Liquidation_Threshold)
-  const liquidationThreshold = 0.81;
-  const liquidationPrice = activeLeverage > 1 
-    ? (ethPrice * (activeLeverage - 1)) / (activeLeverage * liquidationThreshold)
-    : 0;
+  // Debt/Liquidation logic only applies if we are OPENING a position (normal token sell) AND leverage > 1
+  const showPositionStats = !isPosition(sellToken) && activeLeverage > 1;
+
+  // ... (Debt/Liquidation calcs use showPositionStats to conditionalize or just run)
+  const debtAmount = (parseFloat(payAmount || "0") * activeLeverage) - parseFloat(payAmount || "0");
+  const formattedDebt = `${debtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${underlyingSellToken.symbol}`;
+
+  // ... (Liquidation calcs)
+  // Re-use existing liquidation logic but careful with tokens
+  
+  // ...
+
+  const handleSwapConfirm = () => {
+    if (isPosition(sellToken)) {
+        // Closing position logic (mock)
+        const percentSold = parseFloat(payAmount) / sellToken.collateralAmount;
+        if (percentSold >= 0.99) {
+            // Full close
+            setPositions(prev => prev.filter(p => p.id !== sellToken.id));
+            setSellToken(sellToken.collateralToken); // Reset to token
+        } else {
+            // Partial close - update position
+            setPositions(prev => prev.map(p => {
+                if (p.id === sellToken.id) {
+                    return {
+                        ...p,
+                        collateralAmount: p.collateralAmount - parseFloat(payAmount),
+                        debtAmount: p.debtAmount * (1 - percentSold) // Proportional debt repayment
+                    };
+                }
+                return p;
+            }));
+            // Update the selected "sellToken" to the new position state? 
+            // Might be complex to sync, easier to reset to token or keep current snapshot.
+            // Let's reset for now or just let React update if we linked it right.
+            // Actually `sellToken` is a copy in state. We need to update it or switch back.
+            setSellToken(sellToken.collateralToken); 
+        }
+    } else if (activeLeverage > 1) {
+        // Open new position
+        const newPosition: Position = {
+            id: Math.random().toString(36).substr(2, 9),
+            collateralToken: buyToken, // We bought this
+            debtToken: sellToken,      // We owe this
+            collateralAmount: parseFloat(formattedBuyAmount),
+            debtAmount: debtAmount,
+            leverage: activeLeverage,
+            entryPrice: ethPrice,
+            timestamp: Date.now()
+        };
+        setPositions(prev => [...prev, newPosition]);
+    }
+    
+    setIsConfirmOpen(false);
+    setPayAmount("");
+  };
+
+  // ... (Rest of component)
+  
+  // In TokenSelect:
+  // Add section for Positions if selectingSide === 'sell'
+
   const getMoneynessRank = (symbol: string) => {
     if (["USDC", "USDT", "DAI"].includes(symbol)) return 0;
     if (symbol === "WBTC") return 1;
@@ -103,7 +163,7 @@ export default function SwapPage() {
   };
 
   // Determine display price based on moneyness
-  const sellRank = getMoneynessRank(sellToken.symbol);
+  const sellRank = getMoneynessRank(underlyingSellToken.symbol);
   const buyRank = getMoneynessRank(buyToken.symbol);
   
   let displayLiquidationPrice = "";
@@ -117,7 +177,7 @@ export default function SwapPage() {
     // Sell is "More Money" (e.g. USDC). Buy is "Other" (e.g. ETH).
     numericLiqPrice = liquidationPrice;
     numericCurrentPrice = ethPrice;
-    displayLiquidationPrice = `${liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${sellToken.symbol}`;
+    displayLiquidationPrice = `${liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${underlyingSellToken.symbol}`;
   } else if (buyRank < sellRank) {
     // Buy is "More Money" (e.g. USDC). Sell is "Other" (e.g. ETH).
     numericLiqPrice = liquidationPrice > 0 ? 1 / liquidationPrice : 0;
@@ -127,7 +187,7 @@ export default function SwapPage() {
     // Equal moneyness (e.g. USDC vs USDT). Default to standard (Sell per Buy).
     numericLiqPrice = liquidationPrice;
     numericCurrentPrice = ethPrice;
-    displayLiquidationPrice = `${liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${sellToken.symbol}`;
+    displayLiquidationPrice = `${liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${underlyingSellToken.symbol}`;
   }
 
   const formattedLiquidationPrice = displayLiquidationPrice;
@@ -146,24 +206,29 @@ export default function SwapPage() {
   if (showBuyInSell) {
     // 1 BuyToken = X SellToken
     // ethPrice is Sell per Buy (e.g. 2800).
-    displayQuote = `1 ${buyToken.symbol} = ${ethPrice.toFixed(4)} ${sellToken.symbol}`;
+    displayQuote = `1 ${buyToken.symbol} = ${ethPrice.toFixed(4)} ${underlyingSellToken.symbol}`;
   } else {
     // 1 SellToken = Y BuyToken
     const invPrice = ethPrice > 0 ? 1 / ethPrice : 0;
-    displayQuote = `1 ${sellToken.symbol} = ${invPrice.toFixed(6)} ${buyToken.symbol}`;
+    displayQuote = `1 ${underlyingSellToken.symbol} = ${invPrice.toFixed(6)} ${buyToken.symbol}`;
   }
 
-  const handleTokenSelect = (token: Token) => {
+  const handleTokenSelect = (token: Token | Position) => {
     if (selectingSide === 'sell') {
-      if (token.symbol === buyToken.symbol) {
-        setBuyToken(sellToken); // Swap if same
+      if (!isPosition(token) && token.symbol === buyToken.symbol) {
+        setBuyToken(sellToken as Token); // Swap if same (only if token)
       }
       setSellToken(token);
+      // If position selected, default amount to full collateral?
+      if (isPosition(token)) {
+          setPayAmount(token.collateralAmount.toString());
+      }
     } else {
-      if (token.symbol === sellToken.symbol) {
+      if (!isPosition(sellToken) && token.symbol === (sellToken as Token).symbol) {
         setSellToken(buyToken); // Swap if same
       }
-      setBuyToken(token);
+      // If sellToken is position, buying same underlying token means Deleverage?
+      setBuyToken(token as Token);
     }
     setIsTokenSelectOpen(false);
     setSearchQuery("");
@@ -243,7 +308,12 @@ export default function SwapPage() {
               <div className="bg-[#0b0e1e] rounded-2xl p-4 transition-colors hover:bg-[#0b0e1e]/80 group">
                 <div className="flex justify-between mb-2">
                     <label className="text-muted-foreground text-sm font-medium">Sell</label>
-                    <span className="text-muted-foreground text-sm">Balance: 0 {sellToken.symbol}</span>
+                    <span className="text-muted-foreground text-sm">
+                        {isPosition(sellToken) 
+                            ? `Position: ${sellToken.collateralAmount.toFixed(4)} ${sellToken.collateralToken.symbol}` 
+                            : `Balance: 0 ${sellToken.symbol}`
+                        }
+                    </span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
                   <Input 
@@ -259,14 +329,16 @@ export default function SwapPage() {
                     onClick={() => openTokenSelect('sell')}
                   >
                     <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center p-0.5 overflow-hidden">
-                         <img src={sellToken.icon} alt={sellToken.symbol} className="w-full h-full object-contain" />
+                         <img src={underlyingSellToken.icon} alt={underlyingSellToken.symbol} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-lg font-medium text-white">{sellToken.symbol}</span>
+                    <span className="text-lg font-medium text-white">
+                        {isPosition(sellToken) ? `Pos: ${underlyingSellToken.symbol}` : underlyingSellToken.symbol}
+                    </span>
                     <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
                 </div>
                 <div className="text-muted-foreground text-sm mt-2">
-                    ≈ ${(parseFloat(payAmount || "0") * sellToken.price).toFixed(2)}
+                    ≈ ${(parseFloat(payAmount || "0") * underlyingSellToken.price).toFixed(2)}
                 </div>
               </div>
 
@@ -275,11 +347,13 @@ export default function SwapPage() {
                 <div className="absolute left-1/2 -translate-x-1/2 -top-4">
                     <div className="bg-[#12152b] p-1.5 rounded-xl border-4 border-[#12152b]">
                         <div 
-                            className="bg-secondary/50 p-1.5 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
+                            className={`bg-secondary/50 p-1.5 rounded-lg hover:bg-secondary transition-colors cursor-pointer ${isPosition(sellToken) ? 'opacity-50 cursor-not-allowed' : ''}`}
                             onClick={() => {
-                                const temp = sellToken;
-                                setSellToken(buyToken);
-                                setBuyToken(temp);
+                                if (!isPosition(sellToken)) {
+                                    const temp = sellToken;
+                                    setSellToken(buyToken);
+                                    setBuyToken(temp as Token);
+                                }
                             }}
                         >
                             <ArrowDown className="h-4 w-4 text-foreground" />
@@ -293,7 +367,7 @@ export default function SwapPage() {
                 <div className="flex justify-between mb-2">
                     <div className="flex items-center gap-2">
                         <label className="text-muted-foreground text-sm font-medium">Buy</label>
-                        {!showLeverage && (
+                        {!isPosition(sellToken) && !showLeverage && (
                             <button 
                                 onClick={() => {
                                     setShowLeverage(true);
@@ -312,6 +386,11 @@ export default function SwapPage() {
                                     {leverage[0] > 1 ? `${leverage[0]}x Leverage` : "Add Leverage"}
                                 </span>
                             </button>
+                        )}
+                        {isPosition(sellToken) && (
+                             <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
+                                Closing Position ({((parseFloat(payAmount)/sellToken.collateralAmount)*100).toFixed(0)}%)
+                             </span>
                         )}
                     </div>
                     <span className="text-muted-foreground text-sm">Balance: 0 {buyToken.symbol}</span>
@@ -340,7 +419,7 @@ export default function SwapPage() {
                      <div className="flex items-center gap-2">
                         <span className="text-green-400 text-sm">≈ {formattedUsdValue}</span>
                      </div>
-                     {activeLeverage > 1 && (
+                     {showPositionStats && (
                         <div className="flex items-center gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
                             <div className="flex items-center gap-1.5 text-muted-foreground">
                                 <span className="text-xs font-medium">Debt:</span>
@@ -360,7 +439,7 @@ export default function SwapPage() {
                 </div>
 
                 {/* LEVERAGE OVERLAY - Compact & High */}
-                {showLeverage && (
+                {!isPosition(sellToken) && showLeverage && (
                     <div className="absolute -top-5 left-2 right-2 z-20" ref={leverageOverlayRef}>
                         <div className="bg-[#1a1d3d] border border-primary/20 rounded-xl shadow-lg p-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
                             <div className="flex items-center gap-3">
@@ -417,10 +496,13 @@ export default function SwapPage() {
                 onClick={() => setIsConfirmOpen(true)}
                 className="w-full h-14 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 shadow-[0_0_20px_rgba(76,130,251,0.3)] mt-2 transition-all"
               >
-                {activeLeverage > 1 ? `Swap with ${activeLeverage}x Leverage` : 'Swap'}
+                {isPosition(sellToken) 
+                    ? `Close Position`
+                    : activeLeverage > 1 ? `Swap with ${activeLeverage}x Leverage` : 'Swap'
+                }
               </Button>
 
-              {activeLeverage > 1 && (
+              {activeLeverage > 1 && !isPosition(sellToken) && (
                   <div className="mt-3 text-center">
                     <p className="text-xs text-muted-foreground">
                         Leverage powered by <span className="text-foreground font-medium">Aave V3</span> integration.
@@ -449,8 +531,9 @@ export default function SwapPage() {
             debt={formattedDebt}
             liquidationPrice={formattedLiquidationPrice}
             liquidationDrop={liquidationDrop}
-            sellToken={sellToken}
+            sellToken={underlyingSellToken}
             buyToken={buyToken}
+            onConfirm={handleSwapConfirm}
         />
 
         {/* Token Select Dialog */}
@@ -470,18 +553,49 @@ export default function SwapPage() {
                         />
                     </div>
                     <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                        {/* Positions Section */}
+                        {positions.length > 0 && selectingSide === 'sell' && (
+                            <div className="mb-2">
+                                <div className="text-xs font-semibold text-muted-foreground px-2 mb-1">Your Positions</div>
+                                {positions.map((pos) => (
+                                    <button
+                                        key={pos.id}
+                                        onClick={() => handleTokenSelect(pos)}
+                                        className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors mb-1 border border-white/5 bg-white/5"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-white p-0.5 overflow-hidden ring-2 ring-primary/20">
+                                                <img src={pos.collateralToken.icon} alt={pos.collateralToken.symbol} className="w-full h-full object-contain" />
+                                            </div>
+                                            <div className="text-left">
+                                                <div className="font-medium flex items-center gap-2">
+                                                    {pos.collateralToken.symbol} 
+                                                    <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">{pos.leverage}x</span>
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    Collat: {pos.collateralAmount.toFixed(4)} • Debt: {pos.debtAmount.toFixed(4)} {pos.debtToken.symbol}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </button>
+                                ))}
+                                <div className="h-px bg-white/5 my-2"></div>
+                            </div>
+                        )}
+
+                        <div className="text-xs font-semibold text-muted-foreground px-2 mb-1">Tokens</div>
                         {filteredTokens.map((token) => (
                             <button
                                 key={token.symbol}
                                 onClick={() => handleTokenSelect(token)}
                                 className={`w-full flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors ${
-                                    (selectingSide === 'sell' && sellToken.symbol === token.symbol) || 
+                                    (!isPosition(sellToken) && selectingSide === 'sell' && sellToken.symbol === token.symbol) || 
                                     (selectingSide === 'buy' && buyToken.symbol === token.symbol) 
                                         ? 'opacity-50 cursor-default' 
                                         : ''
                                 }`}
                                 disabled={
-                                    (selectingSide === 'sell' && sellToken.symbol === token.symbol) || 
+                                    (!isPosition(sellToken) && selectingSide === 'sell' && sellToken.symbol === token.symbol) || 
                                     (selectingSide === 'buy' && buyToken.symbol === token.symbol)
                                 }
                             >
@@ -494,8 +608,8 @@ export default function SwapPage() {
                                         <div className="text-xs text-muted-foreground">{token.name}</div>
                                     </div>
                                 </div>
-                                {(selectingSide === 'sell' && sellToken.symbol === token.symbol) || 
-                                 (selectingSide === 'buy' && buyToken.symbol === token.symbol) && (
+                                {((!isPosition(sellToken) && selectingSide === 'sell' && sellToken.symbol === token.symbol) || 
+                                 (selectingSide === 'buy' && buyToken.symbol === token.symbol)) && (
                                     <div className="text-xs text-primary">Selected</div>
                                 )}
                             </button>

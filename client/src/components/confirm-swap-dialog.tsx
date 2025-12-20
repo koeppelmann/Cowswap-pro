@@ -23,7 +23,8 @@ export function ConfirmSwapDialog({
   liquidationPrice,
   liquidationDrop,
   sellToken,
-  buyToken
+  buyToken,
+  onConfirm
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -36,6 +37,7 @@ export function ConfirmSwapDialog({
   liquidationDrop: number;
   sellToken: { symbol: string; icon: string };
   buyToken: { symbol: string; icon: string };
+  onConfirm: () => void;
 }) {
   const priceImpact = -0.13;
   const protocolFee = 0.000071;
@@ -143,7 +145,10 @@ export function ConfirmSwapDialog({
                 </div>
             </div>
 
-            <Button className="w-full h-12 text-lg font-semibold rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+            <Button 
+                className="w-full h-12 text-lg font-semibold rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+                onClick={onConfirm}
+            >
                 Confirm Swap
             </Button>
         </div>
