@@ -809,7 +809,32 @@ export default function SwapPage() {
                         {positions.length > 0 && selectingSide === 'sell' && (
                             <div className="mb-2">
                                 <div className="text-xs font-semibold text-muted-foreground px-2 mb-1">Your Positions</div>
-                                {positions.map((pos) => (
+                                {positions.map((pos) => {
+                                    // Calculate liquidation stats for display
+                                    const liquidationThreshold = 0.8; 
+                                    const currentPrice = pos.collateralToken.price; // Simplified for mockup
+                                    // Use the same formula as main view: 
+                                    // LiqPrice = EntryPrice * (1 - (1/Leverage) * LiqThreshold)
+                                    // Wait, EntryPrice is static. We should use Current Market Price for current liquidation distance?
+                                    // Actually, Liquidation Price is fixed based on Debt/Collateral ratio usually.
+                                    // LiqPrice = Debt / (Collateral * LiqThreshold).
+                                    // Let's use that one as it's more accurate to the current state.
+                                    // Debt Value needs to be in Collateral Token terms? 
+                                    // Let's assume standard USD pricing.
+                                    const debtValue = pos.debtAmount * pos.debtToken.price;
+                                    const collateralValue = pos.collateralAmount * pos.collateralToken.price;
+                                    
+                                    // Liq Price of Collateral Token = (Debt Value / LiqThreshold) / Collateral Amount
+                                    // This assumes Debt Value stays constant in USD (stablecoin debt).
+                                    const liqPrice = (debtValue / liquidationThreshold) / pos.collateralAmount;
+                                    
+                                    const dropNeeded = ((currentPrice - liqPrice) / currentPrice) * 100;
+                                    
+                                    let riskColor = "text-muted-foreground";
+                                    if (dropNeeded < 5) riskColor = "text-red-400 font-bold";
+                                    else if (dropNeeded < 10) riskColor = "text-orange-400 font-medium";
+
+                                    return (
                                     <button
                                         key={pos.id}
                                         onClick={() => handleTokenSelect(pos)}
@@ -829,8 +854,15 @@ export default function SwapPage() {
                                                 </div>
                                             </div>
                                         </div>
+                                        <div className="text-right">
+                                            <div className="text-xs text-muted-foreground">Liq: <span className="font-mono">{liqPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
+                                            <div className={`text-[10px] ${riskColor}`}>
+                                                -{dropNeeded.toFixed(2)}% to liq
+                                            </div>
+                                        </div>
                                     </button>
-                                ))}
+                                    );
+                                })}
                                 <div className="h-px bg-white/5 my-2"></div>
                             </div>
                         )}
