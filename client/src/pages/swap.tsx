@@ -64,6 +64,7 @@ export default function SwapPage() {
   const [isTokenSelectOpen, setIsTokenSelectOpen] = useState(false);
   const [selectingSide, setSelectingSide] = useState<'sell' | 'buy'>('sell');
   const [searchQuery, setSearchQuery] = useState("");
+  const [positionMode, setPositionMode] = useState<'close' | 'leverage'>('close');
 
   const isPosition = (token: any): token is Position => {
     return 'collateralAmount' in token;
@@ -117,8 +118,29 @@ export default function SwapPage() {
   // For this step, let's treat "Swap" as "Close/Reduce Position".
   // So Leverage is forced to 1x (or ignored) for the trade logic itself (we are unwinding).
   
-  const activeLeverage = isPosition(sellToken) ? 1 : leverage[0]; // If closing, no new leverage on the trade itself
-  const leveragedBuyAmount = rawBuyAmount * activeLeverage;
+  const activeLeverage = isPosition(sellToken) && positionMode === 'close' ? 1 : leverage[0]; // If closing, no new leverage on the trade itself
+  
+  // If closing position, calculate proceeds based on equity
+  // Equity = (Collateral * Price) - Debt
+  // Proceeds = Equity * (CollateralSold / TotalCollateral)
+  // But here we are selling 'payAmount' of Collateral.
+  // So fraction = payAmount / TotalCollateral
+  
+  let leveragedBuyAmount = 0;
+  
+  if (isPosition(sellToken) && positionMode === 'close') {
+      const collateralPrice = sellToken.collateralToken.price;
+      const debtPrice = sellToken.debtToken.price;
+      const totalEquity = (sellToken.collateralAmount * collateralPrice) - (sellToken.debtAmount * debtPrice);
+      const fractionSold = parseFloat(payAmount || "0") / sellToken.collateralAmount;
+      
+      const equitySold = totalEquity * fractionSold;
+      // Convert equity (USD) to BuyToken amount
+      leveragedBuyAmount = equitySold / buyToken.price;
+      if (leveragedBuyAmount < 0) leveragedBuyAmount = 0;
+  } else {
+      leveragedBuyAmount = rawBuyAmount * activeLeverage;
+  }
   
   const formattedBuyAmount = leveragedBuyAmount.toFixed(4);
   const formattedUsdValue = (parseFloat(payAmount || "0") * activeLeverage * underlyingSellToken.price).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -337,7 +359,26 @@ export default function SwapPage() {
             <CardContent className="p-4 space-y-1">
               
               {/* Sell Section */}
-              <div className="bg-[#0b0e1e] rounded-2xl p-4 transition-colors hover:bg-[#0b0e1e]/80 group">
+              <div className="bg-[#0b0e1e] rounded-2xl p-4 transition-colors hover:bg-[#0b0e1e]/80 group relative">
+                
+                {/* Position Mode Toggle */}
+                {isPosition(sellToken) && (
+                    <div className="absolute top-4 right-4 flex bg-secondary/30 p-0.5 rounded-lg z-10">
+                        <button 
+                            onClick={() => setPositionMode('close')}
+                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${positionMode === 'close' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white'}`}
+                        >
+                            Close / Reduce
+                        </button>
+                        <button 
+                            onClick={() => setPositionMode('leverage')}
+                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${positionMode === 'leverage' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white'}`}
+                        >
+                            Adjust Leverage
+                        </button>
+                    </div>
+                )}
+
                 <div className="flex justify-between mb-2">
                     <label className="text-muted-foreground text-sm font-medium">Sell</label>
                     <span className="text-muted-foreground text-sm">
@@ -347,31 +388,86 @@ export default function SwapPage() {
                         }
                     </span>
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <Input 
-                    type="number" 
-                    value={payAmount}
-                    onChange={(e) => setPayAmount(e.target.value)}
-                    className="border-0 bg-transparent text-4xl font-normal p-0 h-auto focus-visible:ring-0 placeholder:text-muted-foreground/50 w-full"
-                    placeholder="0"
-                  />
-                  <Button 
-                    variant="secondary" 
-                    className="rounded-full h-10 px-3 bg-secondary hover:bg-secondary/80 flex items-center gap-2 min-w-fit"
-                    onClick={() => openTokenSelect('sell')}
-                  >
-                    <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center p-0.5 overflow-hidden">
-                         <img src={underlyingSellToken.icon} alt={underlyingSellToken.symbol} className="w-full h-full object-contain" />
-                    </div>
-                    <span className="text-lg font-medium text-white">
-                        {isPosition(sellToken) ? `Pos: ${underlyingSellToken.symbol}` : underlyingSellToken.symbol}
-                    </span>
-                    <ChevronDown className="h-4 w-4 opacity-50" />
-                  </Button>
-                </div>
-                <div className="text-muted-foreground text-sm mt-2">
-                    ≈ ${(parseFloat(payAmount || "0") * underlyingSellToken.price).toFixed(2)}
-                </div>
+                
+                {isPosition(sellToken) && positionMode === 'leverage' ? (
+                     <div className="py-6 px-2">
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="text-sm text-muted-foreground">Current Leverage: <span className="text-white font-mono">{sellToken.leverage}x</span></span>
+                            <span className="text-sm text-muted-foreground">Target: <span className="text-primary font-bold font-mono">{leverage[0]}x</span></span>
+                        </div>
+                        <Slider 
+                            value={leverage} 
+                            onValueChange={setLeverage} 
+                            min={1.1} 
+                            max={5} 
+                            step={0.1}
+                            className="py-2"
+                        />
+                        <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                            <span>1.1x</span>
+                            <span>5.0x</span>
+                        </div>
+                     </div>
+                ) : (
+                    <>
+                        <div className="flex items-center justify-between gap-4">
+                        <Input 
+                            type="number" 
+                            value={payAmount}
+                            onChange={(e) => setPayAmount(e.target.value)}
+                            className="border-0 bg-transparent text-4xl font-normal p-0 h-auto focus-visible:ring-0 placeholder:text-muted-foreground/50 w-full"
+                            placeholder="0"
+                        />
+                        <Button 
+                            variant="secondary" 
+                            className="rounded-full h-10 px-3 bg-secondary hover:bg-secondary/80 flex items-center gap-2 min-w-fit"
+                            onClick={() => openTokenSelect('sell')}
+                        >
+                            <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center p-0.5 overflow-hidden">
+                                <img src={underlyingSellToken.icon} alt={underlyingSellToken.symbol} className="w-full h-full object-contain" />
+                            </div>
+                            <span className="text-lg font-medium text-white">
+                                {isPosition(sellToken) ? `Pos: ${underlyingSellToken.symbol}` : underlyingSellToken.symbol}
+                            </span>
+                            <ChevronDown className="h-4 w-4 opacity-50" />
+                        </Button>
+                        </div>
+                        
+                        {/* Percentage Shortcuts for Position Closing */}
+                        {isPosition(sellToken) && (
+                            <div className="flex gap-2 mt-2 mb-1">
+                                <button 
+                                    onClick={() => setPayAmount((sellToken.collateralAmount * 0.25).toFixed(4))}
+                                    className="px-2 py-0.5 text-xs bg-secondary/30 hover:bg-secondary/50 rounded text-primary transition-colors"
+                                >
+                                    25%
+                                </button>
+                                <button 
+                                    onClick={() => setPayAmount((sellToken.collateralAmount * 0.5).toFixed(4))}
+                                    className="px-2 py-0.5 text-xs bg-secondary/30 hover:bg-secondary/50 rounded text-primary transition-colors"
+                                >
+                                    50%
+                                </button>
+                                <button 
+                                    onClick={() => setPayAmount((sellToken.collateralAmount * 0.75).toFixed(4))}
+                                    className="px-2 py-0.5 text-xs bg-secondary/30 hover:bg-secondary/50 rounded text-primary transition-colors"
+                                >
+                                    75%
+                                </button>
+                                <button 
+                                    onClick={() => setPayAmount(sellToken.collateralAmount.toString())}
+                                    className="px-2 py-0.5 text-xs bg-secondary/30 hover:bg-secondary/50 rounded text-primary transition-colors"
+                                >
+                                    Max
+                                </button>
+                            </div>
+                        )}
+                        
+                        <div className="text-muted-foreground text-sm mt-2">
+                            ≈ ${(parseFloat(payAmount || "0") * underlyingSellToken.price).toFixed(2)}
+                        </div>
+                    </>
+                )}
               </div>
 
               {/* Arrow Connector */}
