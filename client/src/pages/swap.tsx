@@ -398,13 +398,13 @@ export default function SwapPage() {
                         <Slider 
                             value={leverage} 
                             onValueChange={setLeverage} 
-                            min={1.1} 
+                            min={1.0} 
                             max={5} 
                             step={0.1}
                             className="py-2"
                         />
                         <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                            <span>1.1x</span>
+                            <span>1.0x</span>
                             <span>5.0x</span>
                         </div>
                      </div>
@@ -492,6 +492,44 @@ export default function SwapPage() {
 
               {/* Buy Section */}
               <div className="bg-[#0b0e1e] rounded-2xl p-4 pt-6 transition-colors hover:bg-[#0b0e1e]/80 relative">
+                
+                {isPosition(sellToken) && positionMode === 'leverage' ? (
+                   // Adjusted Leverage Preview
+                   <div className="space-y-4">
+                      <div className="flex justify-between items-center mb-2">
+                         <span className="text-muted-foreground text-sm font-medium">New Position Details</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                         <div className="bg-secondary/20 p-3 rounded-xl border border-white/5">
+                             <div className="text-xs text-muted-foreground mb-1">Collateral</div>
+                             <div className="flex items-center gap-2">
+                                <img src={sellToken.collateralToken.icon} className="w-5 h-5 rounded-full" />
+                                <span className="font-mono text-lg font-medium text-white">
+                                    {((((sellToken.collateralAmount * sellToken.collateralToken.price - sellToken.debtAmount * sellToken.debtToken.price) * leverage[0]) / sellToken.collateralToken.price)).toFixed(4)}
+                                </span>
+                             </div>
+                             <div className="text-xs text-muted-foreground mt-1">
+                                {sellToken.collateralToken.symbol}
+                             </div>
+                         </div>
+                         
+                         <div className="bg-secondary/20 p-3 rounded-xl border border-white/5">
+                             <div className="text-xs text-muted-foreground mb-1">Debt</div>
+                             <div className="flex items-center gap-2">
+                                <img src={sellToken.debtToken.icon} className="w-5 h-5 rounded-full" />
+                                <span className="font-mono text-lg font-medium text-white">
+                                    {Math.max(0, (((((sellToken.collateralAmount * sellToken.collateralToken.price - sellToken.debtAmount * sellToken.debtToken.price) * leverage[0]) - (sellToken.collateralAmount * sellToken.collateralToken.price - sellToken.debtAmount * sellToken.debtToken.price)) / sellToken.debtToken.price))).toFixed(4)}
+                                </span>
+                             </div>
+                             <div className="text-xs text-muted-foreground mt-1">
+                                {sellToken.debtToken.symbol}
+                             </div>
+                         </div>
+                      </div>
+                   </div>
+                ) : (
+                <>
                 <div className="flex justify-between mb-2">
                     <div className="flex items-center gap-2">
                         <label className="text-muted-foreground text-sm font-medium">Buy</label>
@@ -565,6 +603,8 @@ export default function SwapPage() {
                         </div>
                      )}
                 </div>
+                </>
+                )}
 
                 {/* LEVERAGE OVERLAY - Compact & High */}
                 {!isPosition(sellToken) && showLeverage && (
@@ -620,15 +660,23 @@ export default function SwapPage() {
                  </div>
               </div>
 
-              <Button 
-                onClick={() => setIsConfirmOpen(true)}
-                className="w-full h-14 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 shadow-[0_0_20px_rgba(76,130,251,0.3)] mt-2 transition-all"
-              >
-                {isPosition(sellToken) 
-                    ? `Close Position`
-                    : activeLeverage > 1 ? `Swap with ${activeLeverage}x Leverage` : 'Swap'
-                }
-              </Button>
+          <Button 
+            className="w-full h-14 text-xl font-semibold rounded-2xl mt-4 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-blue-500/20"
+            onClick={() => setIsConfirmOpen(true)}
+          >
+            {isPosition(sellToken) && positionMode === 'close' 
+                ? "Close Position" 
+                : isPosition(sellToken) && positionMode === 'leverage'
+                  ? leverage[0] === 1.0 
+                      ? "Close Position" 
+                      : leverage[0] > sellToken.leverage
+                          ? "Increase Leverage"
+                          : leverage[0] < sellToken.leverage
+                              ? "Decrease Leverage"
+                              : "Adjust Leverage"
+                  : (payAmount ? "Swap" : "Enter an amount")
+            }
+          </Button>
 
               {activeLeverage > 1 && !isPosition(sellToken) && (
                   <div className="mt-3 text-center">
