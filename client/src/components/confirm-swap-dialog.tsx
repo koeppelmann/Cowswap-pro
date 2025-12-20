@@ -79,6 +79,34 @@ export function ConfirmSwapDialog({
                         To reduce leverage, a portion of your collateral ({position.collateralToken.symbol}) will be sold to repay debt ({position.debtToken.symbol}).
                     </div>
                 )}
+                
+                {/* Trade Details for Reduction */}
+                {isReducing && (
+                    <div className="bg-[#12152b] rounded-xl p-4 border border-white/5 relative overflow-hidden">
+                        <div className="text-xs text-muted-foreground mb-3 uppercase tracking-wider font-semibold">Repayment Trade</div>
+                        <div className="flex items-center gap-2">
+                             {/* Selling Collateral */}
+                             <div className="flex-1 text-center">
+                                <div className="text-xs text-muted-foreground mb-1">Selling</div>
+                                <div className="font-mono font-medium text-white">
+                                    {(position.current.collateralAmount - position.target.collateralAmount).toFixed(4)}
+                                </div>
+                                <div className="text-xs text-muted-foreground">{position.collateralToken.symbol}</div>
+                             </div>
+                             
+                             <div className="text-muted-foreground">→</div>
+                             
+                             {/* Repaying Debt */}
+                             <div className="flex-1 text-center">
+                                <div className="text-xs text-muted-foreground mb-1">Repaying</div>
+                                <div className="font-mono font-medium text-white">
+                                    {(position.current.debtAmount - position.target.debtAmount).toFixed(4)}
+                                </div>
+                                <div className="text-xs text-muted-foreground">{position.debtToken.symbol}</div>
+                             </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="space-y-4">
                     {/* Collateral Comparison */}
