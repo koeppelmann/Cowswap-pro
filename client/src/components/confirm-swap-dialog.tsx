@@ -24,7 +24,8 @@ export function ConfirmSwapDialog({
   liquidationDrop,
   sellToken,
   buyToken,
-  onConfirm
+  onConfirm,
+  position
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
