@@ -739,7 +739,7 @@ export default function SwapPage() {
             onClick={() => setIsConfirmOpen(true)}
           >
             {isPosition(sellToken) && positionMode === 'close' 
-                ? "Close Position" 
+                ? "Swap" 
                 : isPosition(sellToken) && positionMode === 'leverage'
                   ? leverage[0] === 1.0 
                       ? "Close Position" 
