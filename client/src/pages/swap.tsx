@@ -421,19 +421,21 @@ export default function SwapPage() {
                 
                 {/* Position Mode Toggle */}
                 {isPosition(sellToken) && (
-                    <div className="absolute top-4 right-4 flex bg-secondary/30 p-0.5 rounded-lg z-10">
-                        <button 
-                            onClick={() => setPositionMode('close')}
-                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${positionMode === 'close' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white'}`}
-                        >
-                            Close / Reduce
-                        </button>
-                        <button 
-                            onClick={() => setPositionMode('leverage')}
-                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${positionMode === 'leverage' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white'}`}
-                        >
-                            Adjust Leverage
-                        </button>
+                    <div className="flex justify-end mb-4">
+                        <div className="flex bg-secondary/30 p-0.5 rounded-lg z-10">
+                            <button 
+                                onClick={() => setPositionMode('close')}
+                                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${positionMode === 'close' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white'}`}
+                            >
+                                Swap
+                            </button>
+                            <button 
+                                onClick={() => setPositionMode('leverage')}
+                                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${positionMode === 'leverage' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white'}`}
+                            >
+                                Adjust Leverage
+                            </button>
+                        </div>
                     </div>
                 )}
 
