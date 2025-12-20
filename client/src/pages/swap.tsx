@@ -23,6 +23,21 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import logo from "@assets/logo.svg";
 import { ConfirmSwapDialog } from "@/components/confirm-swap-dialog";
 
+type Token = {
+  symbol: string;
+  name: string;
+  price: number;
+  icon: string;
+};
+
+const TOKENS: Token[] = [
+  { symbol: "USDC", name: "USD Coin", price: 1, icon: "https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=024" },
+  { symbol: "WETH", name: "Wrapped Ethereum", price: 2800, icon: "https://cryptologos.cc/logos/ethereum-eth-logo.png?v=024" },
+  { symbol: "WBTC", name: "Wrapped Bitcoin", price: 65000, icon: "https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=024" },
+  { symbol: "GNO", name: "Gnosis", price: 300, icon: "https://cryptologos.cc/logos/gnosis-gno-gno-logo.png?v=024" },
+  { symbol: "DAI", name: "Dai", price: 1, icon: "https://cryptologos.cc/logos/multi-collateral-dai-dai-logo.png?v=024" },
+];
+
 type Position = {
   id: string;
   collateralToken: Token;
@@ -65,7 +80,23 @@ export default function SwapPage() {
 
   const ethPrice = underlyingBuyToken.price / underlyingSellToken.price; // Relative price
 
-  // ... (leverageOverlayRef useEffect remains same)
+  const leverageOverlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (leverageOverlayRef.current && !leverageOverlayRef.current.contains(event.target as Node)) {
+        setShowLeverage(false);
+      }
+    };
+
+    if (showLeverage) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showLeverage]);
 
   // Calculate logic
   const rawBuyAmount = parseFloat(payAmount || "0") / ethPrice;
@@ -99,10 +130,11 @@ export default function SwapPage() {
   const debtAmount = (parseFloat(payAmount || "0") * activeLeverage) - parseFloat(payAmount || "0");
   const formattedDebt = `${debtAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${underlyingSellToken.symbol}`;
 
-  // ... (Liquidation calcs)
-  // Re-use existing liquidation logic but careful with tokens
-  
-  // ...
+  // Liquidation calcs
+  const liquidationThreshold = 0.8; // 80% LTV roughly
+  const liquidationPrice = activeLeverage > 1 
+    ? ethPrice * (1 - (1 / activeLeverage) * liquidationThreshold)
+    : 0;
 
   const handleSwapConfirm = () => {
     if (isPosition(sellToken)) {
@@ -224,7 +256,7 @@ export default function SwapPage() {
           setPayAmount(token.collateralAmount.toString());
       }
     } else {
-      if (!isPosition(sellToken) && token.symbol === (sellToken as Token).symbol) {
+      if (!isPosition(sellToken) && !isPosition(token) && token.symbol === (sellToken as Token).symbol) {
         setSellToken(buyToken); // Swap if same
       }
       // If sellToken is position, buying same underlying token means Deleverage?
