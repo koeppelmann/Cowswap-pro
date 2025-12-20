@@ -38,12 +38,105 @@ export function ConfirmSwapDialog({
   sellToken: { symbol: string; icon: string };
   buyToken: { symbol: string; icon: string };
   onConfirm: () => void;
+  position?: {
+      collateralToken: { symbol: string; icon: string };
+      debtToken: { symbol: string; icon: string };
+      current: {
+          collateralAmount: number;
+          debtAmount: number;
+          leverage: number;
+      };
+      target: {
+          collateralAmount: number;
+          debtAmount: number;
+          leverage: number;
+      };
+  };
 }) {
   const priceImpact = -0.13;
   const protocolFee = 0.000071;
   const networkCost = 0.000212;
   const slippage = 0.20;
   
+  // Custom View for Position Adjustment
+  if (position) {
+      const isReducing = position.target.leverage < position.current.leverage;
+      const isClosing = position.target.leverage === 1;
+
+      return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="bg-[#0b0e1e] border-white/10 text-foreground sm:max-w-[480px] p-0 overflow-hidden gap-0">
+            <DialogHeader className="px-6 py-4 border-b border-white/5 flex flex-row items-center justify-between">
+              <DialogTitle className="text-lg font-medium flex items-center gap-2">
+                {isClosing ? "Close Position" : "Adjust Leverage"}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="p-6 space-y-6">
+                {isReducing && !isClosing && (
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-sm text-blue-200">
+                        To reduce leverage, a portion of your collateral ({position.collateralToken.symbol}) will be sold to repay debt ({position.debtToken.symbol}).
+                    </div>
+                )}
+
+                <div className="space-y-4">
+                    {/* Collateral Comparison */}
+                    <div className="bg-[#12152b] rounded-xl p-4 border border-white/5">
+                        <div className="text-xs text-muted-foreground mb-3 uppercase tracking-wider font-semibold">Collateral ({position.collateralToken.symbol})</div>
+                        <div className="flex items-center justify-between">
+                            <div className="opacity-50">
+                                <div className="text-lg font-mono">{position.current.collateralAmount.toFixed(4)}</div>
+                                <div className="text-xs text-muted-foreground">Current</div>
+                            </div>
+                            <div className="text-muted-foreground">→</div>
+                            <div>
+                                <div className="text-lg font-mono text-white">{position.target.collateralAmount.toFixed(4)}</div>
+                                <div className="text-xs text-muted-foreground text-right">New</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Debt Comparison */}
+                    <div className="bg-[#12152b] rounded-xl p-4 border border-white/5">
+                        <div className="text-xs text-muted-foreground mb-3 uppercase tracking-wider font-semibold">Debt ({position.debtToken.symbol})</div>
+                        <div className="flex items-center justify-between">
+                            <div className="opacity-50">
+                                <div className="text-lg font-mono">{position.current.debtAmount.toFixed(4)}</div>
+                                <div className="text-xs text-muted-foreground">Current</div>
+                            </div>
+                            <div className="text-muted-foreground">→</div>
+                            <div>
+                                <div className="text-lg font-mono text-white">{position.target.debtAmount.toFixed(4)}</div>
+                                <div className="text-xs text-muted-foreground text-right">New</div>
+                            </div>
+                        </div>
+                    </div>
+
+                     {/* Leverage Comparison */}
+                     <div className="flex justify-between items-center px-2">
+                        <span className="text-muted-foreground">Leverage</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground line-through">{position.current.leverage}x</span>
+                            <span>→</span>
+                            <span className={`font-bold ${isReducing ? 'text-green-400' : 'text-orange-400'}`}>
+                                {position.target.leverage}x
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <Button 
+                    className="w-full h-12 text-lg font-semibold rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+                    onClick={onConfirm}
+                >
+                    Confirm Adjustment
+                </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-[#0b0e1e] border-white/10 text-foreground sm:max-w-[480px] p-0 overflow-hidden gap-0">

@@ -160,29 +160,55 @@ export default function SwapPage() {
 
   const handleSwapConfirm = () => {
     if (isPosition(sellToken)) {
-        // Closing position logic (mock)
-        const percentSold = parseFloat(payAmount) / sellToken.collateralAmount;
-        if (percentSold >= 0.99) {
-            // Full close
-            setPositions(prev => prev.filter(p => p.id !== sellToken.id));
-            setSellToken(sellToken.collateralToken); // Reset to token
-        } else {
-            // Partial close - update position
-            setPositions(prev => prev.map(p => {
+        if (positionMode === 'leverage') {
+             // Adjust leverage logic
+             setPositions(prev => prev.map(p => {
                 if (p.id === sellToken.id) {
-                    return {
+                     // Recalculate amounts based on new leverage
+                     const collateralValue = p.collateralAmount * p.collateralToken.price;
+                     const debtValue = p.debtAmount * p.debtToken.price;
+                     const equity = collateralValue - debtValue;
+                     
+                     const newCollateralValue = equity * leverage[0];
+                     const newDebtValue = newCollateralValue - equity;
+                     
+                     return {
                         ...p,
-                        collateralAmount: p.collateralAmount - parseFloat(payAmount),
-                        debtAmount: p.debtAmount * (1 - percentSold) // Proportional debt repayment
-                    };
+                        collateralAmount: newCollateralValue / p.collateralToken.price,
+                        debtAmount: Math.max(0, newDebtValue / p.debtToken.price),
+                        leverage: leverage[0]
+                     };
                 }
                 return p;
-            }));
-            // Update the selected "sellToken" to the new position state? 
-            // Might be complex to sync, easier to reset to token or keep current snapshot.
-            // Let's reset for now or just let React update if we linked it right.
-            // Actually `sellToken` is a copy in state. We need to update it or switch back.
-            setSellToken(sellToken.collateralToken); 
+             }));
+             // Also update the selected sellToken to reflect changes immediately if we wanted, 
+             // but strictly we should probably reset or refetch. 
+             // For mock, let's just close dialog.
+        } else {
+            // Closing position logic (mock)
+            const percentSold = parseFloat(payAmount) / sellToken.collateralAmount;
+            if (percentSold >= 0.99) {
+                // Full close
+                setPositions(prev => prev.filter(p => p.id !== sellToken.id));
+                setSellToken(sellToken.collateralToken); // Reset to token
+            } else {
+                // Partial close - update position
+                setPositions(prev => prev.map(p => {
+                    if (p.id === sellToken.id) {
+                        return {
+                            ...p,
+                            collateralAmount: p.collateralAmount - parseFloat(payAmount),
+                            debtAmount: p.debtAmount * (1 - percentSold) // Proportional debt repayment
+                        };
+                    }
+                    return p;
+                }));
+                // Update the selected "sellToken" to the new position state? 
+                // Might be complex to sync, easier to reset to token or keep current snapshot.
+                // Let's reset for now or just let React update if we linked it right.
+                // Actually `sellToken` is a copy in state. We need to update it or switch back.
+                setSellToken(sellToken.collateralToken); 
+            }
         }
     } else if (activeLeverage > 1) {
         // Open new position
@@ -297,6 +323,34 @@ export default function SwapPage() {
     t.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || 
     t.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  let positionDetails = undefined;
+  if (isPosition(sellToken) && positionMode === 'leverage') {
+      const collateralValue = sellToken.collateralAmount * sellToken.collateralToken.price;
+      const debtValue = sellToken.debtAmount * sellToken.debtToken.price;
+      const equity = collateralValue - debtValue;
+      
+      const newCollateralValue = equity * leverage[0];
+      const newDebtValue = newCollateralValue - equity;
+      
+      const newCollateralAmount = newCollateralValue / sellToken.collateralToken.price;
+      const newDebtAmount = Math.max(0, newDebtValue / sellToken.debtToken.price);
+      
+      positionDetails = {
+          collateralToken: sellToken.collateralToken,
+          debtToken: sellToken.debtToken,
+          current: {
+              collateralAmount: sellToken.collateralAmount,
+              debtAmount: sellToken.debtAmount,
+              leverage: sellToken.leverage
+          },
+          target: {
+              collateralAmount: newCollateralAmount,
+              debtAmount: newDebtAmount,
+              leverage: leverage[0]
+          }
+      };
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
@@ -710,6 +764,7 @@ export default function SwapPage() {
             sellToken={underlyingSellToken}
             buyToken={buyToken}
             onConfirm={handleSwapConfirm}
+            position={positionDetails}
         />
 
         {/* Token Select Dialog */}
