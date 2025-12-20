@@ -189,8 +189,17 @@ export function ConfirmSwapDialog({
                         <img src={sellToken.icon} alt={sellToken.symbol} className="w-full h-full object-contain" />
                     </div>
                     <div>
-                        <div className="text-lg font-medium">{parseFloat(payAmount).toLocaleString()} {sellToken.symbol}</div>
-                        <div className="text-xs text-muted-foreground">≈ ${parseFloat(payAmount).toLocaleString()}</div>
+                        {position ? (
+                            <>
+                                <div className="text-lg font-medium">{payAmount}% Position</div>
+                                <div className="text-xs text-muted-foreground">Share of {sellToken.symbol} + Debt</div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="text-lg font-medium">{parseFloat(payAmount).toLocaleString()} {sellToken.symbol}</div>
+                                <div className="text-xs text-muted-foreground">≈ ${parseFloat(payAmount).toLocaleString()}</div>
+                            </>
+                        )}
                     </div>
                 </div>
 
