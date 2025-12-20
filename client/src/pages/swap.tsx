@@ -103,38 +103,29 @@ export default function SwapPage() {
   const rawBuyAmount = parseFloat(payAmount || "0") / ethPrice;
   
   // If selling a position:
-  // - Leverage slider acts as "Adjust Leverage" or "Close %"?
-  // - User said: "Selling 50% would mean you sell 50% of the position... remainder keeps existing leverage ratio."
-  // - This implies the "Swap" flow for a position is a "Partial Close".
-  // - "Alternatively you can change the leverage factor".
-  
-  // Let's keep it simple: If selling position, the "Amount" input is % of position size?
-  // Or amount of collateral to sell?
-  // "Selling 50%" implies the input might be better as a slider or percentage buttons if the input is usually absolute.
-  // But let's stick to the input being "Amount of Collateral to Sell".
-  
-  // If we are in "Position Mode" (sellToken is Position):
-  // Leverage slider should ideally be disabled or hidden unless we explicitly add "Adjust Leverage" mode.
-  // For this step, let's treat "Swap" as "Close/Reduce Position".
-  // So Leverage is forced to 1x (or ignored) for the trade logic itself (we are unwinding).
+  // - The input "payAmount" is now treated as a PERCENTAGE (0-100) if we are in position mode.
+  // - "Selling 50%" would mean you sell 50% of the position.
   
   const activeLeverage = isPosition(sellToken) && positionMode === 'close' ? 1 : leverage[0]; // If closing, no new leverage on the trade itself
   
   // If closing position, calculate proceeds based on equity
   // Equity = (Collateral * Price) - Debt
-  // Proceeds = Equity * (CollateralSold / TotalCollateral)
-  // But here we are selling 'payAmount' of Collateral.
-  // So fraction = payAmount / TotalCollateral
+  // Proceeds = Equity * (PercentSold / 100)
   
   let leveragedBuyAmount = 0;
+  let equitySoldValue = 0;
   
   if (isPosition(sellToken) && positionMode === 'close') {
       const collateralPrice = sellToken.collateralToken.price;
       const debtPrice = sellToken.debtToken.price;
       const totalEquity = (sellToken.collateralAmount * collateralPrice) - (sellToken.debtAmount * debtPrice);
-      const fractionSold = parseFloat(payAmount || "0") / sellToken.collateralAmount;
+      
+      const percentSold = parseFloat(payAmount || "0");
+      const fractionSold = percentSold / 100;
       
       const equitySold = totalEquity * fractionSold;
+      equitySoldValue = equitySold;
+      
       // Convert equity (USD) to BuyToken amount
       leveragedBuyAmount = equitySold / buyToken.price;
       if (leveragedBuyAmount < 0) leveragedBuyAmount = 0;
@@ -143,7 +134,14 @@ export default function SwapPage() {
   }
   
   const formattedBuyAmount = leveragedBuyAmount.toFixed(4);
-  const formattedUsdValue = (parseFloat(payAmount || "0") * activeLeverage * underlyingSellToken.price).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  
+  // Display Value Logic
+  let formattedUsdValue = "";
+  if (isPosition(sellToken) && positionMode === 'close') {
+      formattedUsdValue = equitySoldValue.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  } else {
+      formattedUsdValue = (parseFloat(payAmount || "0") * activeLeverage * underlyingSellToken.price).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  }
 
   // Debt/Liquidation logic only applies if we are OPENING a position (normal token sell) AND leverage > 1
   const showPositionStats = !isPosition(sellToken) && activeLeverage > 1;
@@ -188,8 +186,10 @@ export default function SwapPage() {
              setLeverage([1]); // Reset leverage slider
         } else {
             // Closing position logic (mock)
-            const percentSold = parseFloat(payAmount) / sellToken.collateralAmount;
-            if (percentSold >= 0.99) {
+            const percentSold = parseFloat(payAmount); // Input is now %
+            const fractionSold = percentSold / 100;
+            
+            if (fractionSold >= 0.99) {
                 // Full close
                 setPositions(prev => prev.filter(p => p.id !== sellToken.id));
                 setSellToken(sellToken.collateralToken); // Reset to token
@@ -200,16 +200,13 @@ export default function SwapPage() {
                     if (p.id === sellToken.id) {
                         return {
                             ...p,
-                            collateralAmount: p.collateralAmount - parseFloat(payAmount),
-                            debtAmount: p.debtAmount * (1 - percentSold) // Proportional debt repayment
+                            collateralAmount: p.collateralAmount * (1 - fractionSold),
+                            debtAmount: p.debtAmount * (1 - fractionSold) // Proportional debt repayment
                         };
                     }
                     return p;
                 }));
                 // Even on partial close, maybe we want to reset?
-                // User said "get me back to the initial swap view" after confirming "adjustment"
-                // "Adjustment" usually implies leverage change, but could mean partial close too.
-                // Safest to reset for all "Management" actions if that's the desired flow.
                 setSellToken(sellToken.collateralToken); 
                 setLeverage([1]);
             }
@@ -471,13 +468,30 @@ export default function SwapPage() {
                 ) : (
                     <>
                         <div className="flex items-center justify-between gap-4">
-                        <Input 
-                            type="number" 
-                            value={payAmount}
-                            onChange={(e) => setPayAmount(e.target.value)}
-                            className="border-0 bg-transparent text-4xl font-normal p-0 h-auto focus-visible:ring-0 placeholder:text-muted-foreground/50 w-full"
-                            placeholder="0"
-                        />
+                        {isPosition(sellToken) ? (
+                            <div className="flex items-center w-full border-b border-white/10">
+                            <Input 
+                                type="number" 
+                                value={payAmount}
+                                onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    if (val > 100) setPayAmount("100");
+                                    else setPayAmount(e.target.value);
+                                }}
+                                className="border-0 bg-transparent text-4xl font-normal p-0 h-auto focus-visible:ring-0 placeholder:text-muted-foreground/50 w-full"
+                                placeholder="0"
+                            />
+                            <span className="text-3xl text-muted-foreground ml-2">%</span>
+                            </div>
+                        ) : (
+                            <Input 
+                                type="number" 
+                                value={payAmount}
+                                onChange={(e) => setPayAmount(e.target.value)}
+                                className="border-0 bg-transparent text-4xl font-normal p-0 h-auto focus-visible:ring-0 placeholder:text-muted-foreground/50 w-full"
+                                placeholder="0"
+                            />
+                        )}
                         <Button 
                             variant="secondary" 
                             className="rounded-full h-10 px-3 bg-secondary hover:bg-secondary/80 flex items-center gap-2 min-w-fit"
@@ -497,25 +511,25 @@ export default function SwapPage() {
                         {isPosition(sellToken) && (
                             <div className="flex gap-2 mt-2 mb-1">
                                 <button 
-                                    onClick={() => setPayAmount((sellToken.collateralAmount * 0.25).toFixed(4))}
+                                    onClick={() => setPayAmount("25")}
                                     className="px-2 py-0.5 text-xs bg-secondary/30 hover:bg-secondary/50 rounded text-primary transition-colors"
                                 >
                                     25%
                                 </button>
                                 <button 
-                                    onClick={() => setPayAmount((sellToken.collateralAmount * 0.5).toFixed(4))}
+                                    onClick={() => setPayAmount("50")}
                                     className="px-2 py-0.5 text-xs bg-secondary/30 hover:bg-secondary/50 rounded text-primary transition-colors"
                                 >
                                     50%
                                 </button>
                                 <button 
-                                    onClick={() => setPayAmount((sellToken.collateralAmount * 0.75).toFixed(4))}
+                                    onClick={() => setPayAmount("75")}
                                     className="px-2 py-0.5 text-xs bg-secondary/30 hover:bg-secondary/50 rounded text-primary transition-colors"
                                 >
                                     75%
                                 </button>
                                 <button 
-                                    onClick={() => setPayAmount(sellToken.collateralAmount.toString())}
+                                    onClick={() => setPayAmount("100")}
                                     className="px-2 py-0.5 text-xs bg-secondary/30 hover:bg-secondary/50 rounded text-primary transition-colors"
                                 >
                                     Max
@@ -524,7 +538,7 @@ export default function SwapPage() {
                         )}
                         
                         <div className="text-muted-foreground text-sm mt-2">
-                            ≈ ${(parseFloat(payAmount || "0") * underlyingSellToken.price).toFixed(2)}
+                            ≈ {formattedUsdValue}
                         </div>
                     </>
                 )}
