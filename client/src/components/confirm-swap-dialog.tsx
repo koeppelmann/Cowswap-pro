@@ -25,7 +25,8 @@ export function ConfirmSwapDialog({
   sellToken,
   buyToken,
   onConfirm,
-  position
+  position,
+  isPosition
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,6 +40,7 @@ export function ConfirmSwapDialog({
   sellToken: { symbol: string; icon: string };
   buyToken: { symbol: string; icon: string };
   onConfirm: () => void;
+  isPosition?: boolean;
   position?: {
       collateralToken: { symbol: string; icon: string };
       debtToken: { symbol: string; icon: string };
@@ -189,7 +191,7 @@ export function ConfirmSwapDialog({
                         <img src={sellToken.icon} alt={sellToken.symbol} className="w-full h-full object-contain" />
                     </div>
                     <div>
-                        {position ? (
+                        {isPosition ? (
                             <>
                                 <div className="text-lg font-medium">{payAmount}% Position</div>
                                 <div className="text-xs text-muted-foreground">Share of {sellToken.symbol} + Debt</div>

@@ -785,6 +785,7 @@ export default function SwapPage() {
             buyToken={buyToken}
             onConfirm={handleSwapConfirm}
             position={positionDetails}
+            isPosition={isPosition(sellToken)}
         />
 
         {/* Token Select Dialog */}
