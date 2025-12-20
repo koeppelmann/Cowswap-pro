@@ -120,7 +120,7 @@ export default function SwapPage() {
       const debtPrice = sellToken.debtToken.price;
       const totalEquity = (sellToken.collateralAmount * collateralPrice) - (sellToken.debtAmount * debtPrice);
       
-      const percentSold = parseFloat(payAmount || "0");
+      const percentSold = payAmount ? parseFloat(payAmount) : 100; // Default to 100% if empty
       const fractionSold = percentSold / 100;
       
       const equitySold = totalEquity * fractionSold;
@@ -300,9 +300,9 @@ export default function SwapPage() {
         setBuyToken(sellToken as Token); // Swap if same (only if token)
       }
       setSellToken(token);
-      // If position selected, default amount to full collateral?
+      // If position selected, default amount to 100%
       if (isPosition(token)) {
-          setPayAmount(token.collateralAmount.toString());
+          setPayAmount("100");
       }
     } else {
       if (!isPosition(sellToken) && !isPosition(token) && token.symbol === (sellToken as Token).symbol) {

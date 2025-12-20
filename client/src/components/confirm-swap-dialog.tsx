@@ -69,7 +69,7 @@ export function ConfirmSwapDialog({
           <DialogContent className="bg-[#0b0e1e] border-white/10 text-foreground sm:max-w-[480px] p-0 overflow-hidden gap-0">
             <DialogHeader className="px-6 py-4 border-b border-white/5 flex flex-row items-center justify-between">
               <DialogTitle className="text-lg font-medium flex items-center gap-2">
-                {isClosing ? "Close Position" : "Adjust Leverage"}
+                {isClosing ? "Swap" : "Adjust Leverage"}
               </DialogTitle>
             </DialogHeader>
             
