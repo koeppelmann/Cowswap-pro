@@ -181,9 +181,11 @@ export default function SwapPage() {
                 }
                 return p;
              }));
-             // Also update the selected sellToken to reflect changes immediately if we wanted, 
-             // but strictly we should probably reset or refetch. 
-             // For mock, let's just close dialog.
+             
+             // After leverage adjustment, reset to initial swap view
+             setSellToken(TOKENS[0]); // Reset to first token (usually USDC)
+             setBuyToken(TOKENS[2]); // Reset to ETH (or WETH equivalent in list)
+             setLeverage([1]); // Reset leverage slider
         } else {
             // Closing position logic (mock)
             const percentSold = parseFloat(payAmount) / sellToken.collateralAmount;
@@ -191,6 +193,7 @@ export default function SwapPage() {
                 // Full close
                 setPositions(prev => prev.filter(p => p.id !== sellToken.id));
                 setSellToken(sellToken.collateralToken); // Reset to token
+                setLeverage([1]);
             } else {
                 // Partial close - update position
                 setPositions(prev => prev.map(p => {
@@ -203,11 +206,12 @@ export default function SwapPage() {
                     }
                     return p;
                 }));
-                // Update the selected "sellToken" to the new position state? 
-                // Might be complex to sync, easier to reset to token or keep current snapshot.
-                // Let's reset for now or just let React update if we linked it right.
-                // Actually `sellToken` is a copy in state. We need to update it or switch back.
+                // Even on partial close, maybe we want to reset?
+                // User said "get me back to the initial swap view" after confirming "adjustment"
+                // "Adjustment" usually implies leverage change, but could mean partial close too.
+                // Safest to reset for all "Management" actions if that's the desired flow.
                 setSellToken(sellToken.collateralToken); 
+                setLeverage([1]);
             }
         }
     } else if (activeLeverage > 1) {
