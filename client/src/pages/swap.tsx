@@ -31,11 +31,11 @@ type Token = {
 };
 
 const TOKENS: Token[] = [
-  { symbol: "USDC", name: "USD Coin", price: 1, icon: "https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=024" },
-  { symbol: "WETH", name: "Wrapped Ethereum", price: 2800, icon: "https://cryptologos.cc/logos/ethereum-eth-logo.png?v=024" },
-  { symbol: "WBTC", name: "Wrapped Bitcoin", price: 65000, icon: "https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=024" },
-  { symbol: "GNO", name: "Gnosis", price: 300, icon: "https://cryptologos.cc/logos/gnosis-gno-gno-logo.png?v=024" },
-  { symbol: "DAI", name: "Dai", price: 1, icon: "https://cryptologos.cc/logos/multi-collateral-dai-dai-logo.png?v=024" },
+  { symbol: "USDC", name: "USD Coin", price: 1, icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png" },
+  { symbol: "WETH", name: "Wrapped Ethereum", price: 2800, icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png" },
+  { symbol: "WBTC", name: "Wrapped Bitcoin", price: 65000, icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png" },
+  { symbol: "GNO", name: "Gnosis", price: 300, icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6810e776880C02933D47DB1b9fc05908e5386b96/logo.png" },
+  { symbol: "DAI", name: "Dai", price: 1, icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6B175474E89094C44Da98b954EedeAC495271d0F/logo.png" },
 ];
 
 type Position = {
