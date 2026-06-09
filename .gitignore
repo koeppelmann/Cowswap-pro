@@ -1,0 +1,25 @@
+# contracts
+contracts/out
+contracts/cache
+contracts/broadcast/**/dry-run
+# web
+web/node_modules
+web/.next
+web/out
+# misc
+.env
+.env*.local
+.DS_Store
+
+# deployer key (DO NOT COMMIT)
+.deployer/
+
+# foundry deps (restored via git submodules / forge install)
+contracts/lib
+# scratch / one-off test scripts
+web/_*.mjs
+web/_*.mts
+/tmp/
+
+# node deps anywhere
+node_modules/
