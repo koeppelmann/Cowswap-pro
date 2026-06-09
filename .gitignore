@@ -23,3 +23,5 @@ web/_*.mts
 
 # node deps anywhere
 node_modules/
+**/node_modules/
+relayer/node_modules/
