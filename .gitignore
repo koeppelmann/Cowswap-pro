@@ -25,3 +25,4 @@ web/_*.mts
 node_modules/
 **/node_modules/
 relayer/node_modules/
+relayer/node_modules
