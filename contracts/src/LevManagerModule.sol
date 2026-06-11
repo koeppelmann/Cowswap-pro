@@ -40,6 +40,9 @@ contract LevManagerModule {
     address constant FLASHWRAP  = 0x2E3fdEe28D7224ED140B4ea08C57F47546679363; // CowFlashLoanWrapper
     address constant MULTISEND  = 0x40A2aCCbd92BCA938b02010E17A5b8929b49130D;
     address constant POOL       = 0xb50201558B00496A145fE76f7424749556E326D8; // Aave V3 pool
+    address constant SUPPLYHELP = 0x35a086289db9cA6EcD860f92655C2440f3E5FA7F; // LevSupplyHelper (delegatecall)
+    // secp256k1n/2 — reject high-s ECDSA signatures (malleability hardening, codex low finding)
+    uint256 constant HALF_N = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
 
     bytes32 constant ORDER_TYPE_HASH = 0xd5a25ba2e97094ad7d83dc28a6572da797d6b3e7fc6663bd93efb789fc17e489;
     bytes32 constant KIND_SELL       = 0xf3b277728b3fee749481eb3e0b3b48980dbbab78658fc419025cb16eee346775;
@@ -85,6 +88,9 @@ contract LevManagerModule {
         require(block.timestamp <= r.deadline, "expired");
         require(r.orderValidTo <= r.deadline, "validTo>deadline");
         require(r.mode <= INCREASE, "mode");
+        // mode-specific parameter sanity (codex medium): partial REDUCE must be flash-covered; INCREASE has no flash
+        if (r.mode == REDUCE && r.repayAmount != MAX) require(r.repayAmount <= r.flash, "repay>flash");
+        if (r.mode == INCREASE) require(r.flash == 0 && r.repayAmount == 0, "increase params");
 
         // authority: the EIP-712 signer must be an owner of the (module-enabled) Safe
         address signer = _recover(_digest(r), sig);
@@ -165,9 +171,10 @@ contract LevManagerModule {
                 _ms(r.debt,  abi.encodeWithSignature("approve(address,uint256)", RELAYER, r.sellAmount))
             );
             pre = CoWSafeWrapper.SafeTx({ to: MULTISEND, value: 0, data: abi.encodeWithSignature("multiSend(bytes)", preCalls), operation: 1 });
+            // supply the FULL bought collateral (not just minBuy) so positive slippage isn't left idle:
+            // DELEGATECALL the helper (runs AS the Safe → supplies balanceOf(safe)). Then check HF.
             bytes memory postCalls = abi.encodePacked(
-                _ms(r.collateral, abi.encodeWithSignature("approve(address,uint256)", POOL, r.minBuy)),
-                _ms(POOL,         abi.encodeWithSignature("supply(address,uint256,address,uint16)", r.collateral, r.minBuy, r.safe, uint16(0))),
+                _msd(SUPPLYHELP, abi.encodeWithSignature("supplyAll(address,address)", r.collateral, POOL)),
                 _ms(address(this), abi.encodeWithSignature("requireHF(address,uint256)", r.safe, r.minHealthFactor))
             );
             post = CoWSafeWrapper.SafeTx({ to: MULTISEND, value: 0, data: abi.encodeWithSignature("multiSend(bytes)", postCalls), operation: 1 });
@@ -227,12 +234,15 @@ contract LevManagerModule {
             v := byte(0, mload(add(sig, 96)))
         }
         if (v < 27) v += 27;
+        require(uint256(ss) <= HALF_N, "high-s");        // reject malleable signatures
+        require(v == 27 || v == 28, "bad v");
         address a = ecrecover(digest, v, rr, ss);
         require(a != address(0), "bad sig");
         return a;
     }
     function _h(CoWSafeWrapper.SafeTx memory t) internal pure returns (bytes32) { return keccak256(abi.encode(t.to, t.value, t.data, t.operation)); }
     function _ms(address to, bytes memory d) internal pure returns (bytes memory) { return abi.encodePacked(uint8(0), to, uint256(0), d.length, d); }
+    function _msd(address to, bytes memory d) internal pure returns (bytes memory) { return abi.encodePacked(uint8(1), to, uint256(0), d.length, d); } // MultiSend DELEGATECALL
     function _hex(bytes memory b) internal pure returns (string memory) {
         bytes memory HEX = "0123456789abcdef";
         bytes memory out = new bytes(2 + b.length * 2);

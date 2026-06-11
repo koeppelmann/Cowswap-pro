@@ -10,7 +10,7 @@ from eth_abi import encode as abi_encode, decode as abi_decode
 
 RPC = "https://rpc.gnosischain.com"
 BARN = "https://barn.api.cow.fi/xdai/api/v1"
-MODULE = "0xdbFFd11Fd029BB93BF3C0620Ed03E4FDBbAd9995"
+MODULE = "0xBf629ED089625c0E649A9ba264144894E3b65E89"
 POOL = "0xb50201558B00496A145fE76f7424749556E326D8"
 AWETH = "0xa818F1B57c201E092C4A2017A91815034326Efd1"
 VDEBT = "0x281963D7471eCdC3A2Bd4503e24e89691cfe420D"
@@ -68,8 +68,12 @@ def build_retarget(mode, safe, slippage_bps=2000, fraction_bps=10000, extra=None
         r = dict(safe=safe, nonce=int(time.time()), deadline=deadline, mode=0, collateral=WETH, debt=WXDAI,
                  sellAmount=sellAmount, repayAmount=repayAmount, minBuy=minBuy, flash=flash,
                  orderValidTo=validTo, minHealthFactor=0)
-    else:  # INCREASE
-        borrowAmt = extra if extra else debt  # default: double the debt (~+1x leverage)
+    else:  # INCREASE (no flash → borrow is capped by CURRENT Aave capacity, since the new collateral
+           # is only supplied in `post`, after the borrow). Bigger increases need a flash-assisted flow.
+        acct = call(POOL, "getUserAccountData(address)(uint256,uint256,uint256,uint256,uint256,uint256)", safe).split("\n")
+        availBase = int(acct[2].split()[0])         # availableBorrowsBase, 8-dec USD; WXDAI ~ $1
+        capacity = availBase * 10**10 * 80 // 100    # -> WXDAI (18 dec), 80% safety margin
+        borrowAmt = min(extra, capacity) if extra else capacity
         minBuy = quote(WXDAI, WETH, safe, borrowAmt) * (10000 - slippage_bps) // 10000
         r = dict(safe=safe, nonce=int(time.time()), deadline=deadline, mode=1, collateral=WETH, debt=WXDAI,
                  sellAmount=borrowAmt, repayAmount=0, minBuy=minBuy, flash=0,

@@ -48,7 +48,7 @@ contract IntentBootstrap7 {
     address constant SINGLETON  = 0x3E5c63644E683549055b9Be8653de26E0B4CD36E;
     address constant MODSETUP   = 0x2dd68b007B46fBe91B9A7c3EDa5A7a1063cB5b47; // SafeModuleSetup.enableModules
     address constant SIMHANDLER = 0xf2044b74959F6bC291dc803C24bF0D7E6379fcC8; // CoWSafeSigHandlerSim2 (combined)
-    address constant LEVMANAGER = 0xdbFFd11Fd029BB93BF3C0620Ed03E4FDBbAd9995; // LevManagerModule (signed-intent mgmt)
+    address constant LEVMANAGER = 0xBf629ED089625c0E649A9ba264144894E3b65E89; // LevManagerModule (signed-intent mgmt)
 
     event Bootstrapped(address indexed safe, bytes uid);
     uint256 constant TRIGGER_DUST = 1e12; // pulled from owner to fund the self-settling trigger order
