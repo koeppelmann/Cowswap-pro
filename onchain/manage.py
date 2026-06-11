@@ -10,7 +10,7 @@ from eth_abi import encode as abi_encode, decode as abi_decode
 
 RPC = "https://rpc.gnosischain.com"
 BARN = "https://barn.api.cow.fi/xdai/api/v1"
-MODULE = "0xBf629ED089625c0E649A9ba264144894E3b65E89"
+MODULE = "0xd504138eD8d6bF01A6C2c3e6f83298aE7242E985"
 POOL = "0xb50201558B00496A145fE76f7424749556E326D8"
 AWETH = "0xa818F1B57c201E092C4A2017A91815034326Efd1"
 VDEBT = "0x281963D7471eCdC3A2Bd4503e24e89691cfe420D"

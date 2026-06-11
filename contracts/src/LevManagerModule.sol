@@ -40,7 +40,7 @@ contract LevManagerModule {
     address constant FLASHWRAP  = 0x2E3fdEe28D7224ED140B4ea08C57F47546679363; // CowFlashLoanWrapper
     address constant MULTISEND  = 0x40A2aCCbd92BCA938b02010E17A5b8929b49130D;
     address constant POOL       = 0xb50201558B00496A145fE76f7424749556E326D8; // Aave V3 pool
-    address constant SUPPLYHELP = 0x35a086289db9cA6EcD860f92655C2440f3E5FA7F; // LevSupplyHelper (delegatecall)
+    address constant SUPPLYHELP = 0x28168683E6115A99DA995f9fDA95A88e885C9A15; // LevSupplyHelper (delegatecall)
     // secp256k1n/2 — reject high-s ECDSA signatures (malleability hardening, codex low finding)
     uint256 constant HALF_N = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
 
@@ -171,13 +171,13 @@ contract LevManagerModule {
                 _ms(r.debt,  abi.encodeWithSignature("approve(address,uint256)", RELAYER, r.sellAmount))
             );
             pre = CoWSafeWrapper.SafeTx({ to: MULTISEND, value: 0, data: abi.encodeWithSignature("multiSend(bytes)", preCalls), operation: 1 });
-            // supply the FULL bought collateral (not just minBuy) so positive slippage isn't left idle:
-            // DELEGATECALL the helper (runs AS the Safe → supplies balanceOf(safe)). Then check HF.
-            bytes memory postCalls = abi.encodePacked(
-                _msd(SUPPLYHELP, abi.encodeWithSignature("supplyAll(address,address)", r.collateral, POOL)),
-                _ms(address(this), abi.encodeWithSignature("requireHF(address,uint256)", r.safe, r.minHealthFactor))
-            );
-            post = CoWSafeWrapper.SafeTx({ to: MULTISEND, value: 0, data: abi.encodeWithSignature("multiSend(bytes)", postCalls), operation: 1 });
+            // post = ONE delegatecall (operation 1) to the helper, run AS the Safe: supply the FULL
+            // bought collateral (not just minBuy, so positive slippage isn't idle) + enforce minHF.
+            post = CoWSafeWrapper.SafeTx({
+                to: SUPPLYHELP, value: 0,
+                data: abi.encodeWithSignature("supplyAllAndCheck(address,address,uint256)", r.collateral, POOL, r.minHealthFactor),
+                operation: 1
+            });
         }
     }
 
