@@ -40,24 +40,40 @@ def post(path, body):
     except urllib.error.HTTPError as e:
         return e.code, e.read().decode()
 
+def put_appdata(h, doc):
+    req = urllib.request.Request(f"{BARN}/app_data/{h}", json.dumps({"fullAppData": doc}).encode(), {"content-type": "application/json"}, method="PUT")
+    try:
+        urllib.request.urlopen(req); return True
+    except urllib.error.HTTPError as e:
+        return e.code == 400  # 400 "already exists" is fine
+
 RETARGET_TYPE = ("Retarget(address safe,uint256 nonce,uint256 deadline,uint8 mode,address collateral,"
                  "address debt,uint256 sellAmount,uint256 repayAmount,uint256 minBuy,uint256 flash,"
                  "uint32 orderValidTo,uint256 minHealthFactor)")
 
-def build_retarget(mode, safe, slippage_bps=2000):
+def build_retarget(mode, safe, slippage_bps=2000, fraction_bps=10000, extra=None):
+    """REDUCE: sell `fraction` of collateral, repay proportional debt (MAX if fraction==100%).
+    INCREASE: borrow + sell `extra` debt (default = current debt) for collateral, supply it."""
     coll = bal(AWETH, safe); debt = bal(VDEBT, safe)
     validTo = int(time.time()) + 1800
     deadline = int(time.time()) + 3600
-    if mode == 0:  # REDUCE / close
-        sellAmount = coll
-        flash = debt * 103 // 100
-        q = quote(WETH, WXDAI, safe, sellAmount)
-        minBuy = q * (10000 - slippage_bps) // 10000
+    if mode == 0:  # REDUCE (close / partial / decrease-lev)
+        full = fraction_bps >= 10000
+        sellAmount = coll if full else coll * fraction_bps // 10000
+        # proportional debt to repay keeps HF ~constant; full close repays MAX
+        repayAmount = (2**256 - 1) if full else debt * fraction_bps // 10000
+        flashBase = debt if full else repayAmount
+        flash = flashBase * 103 // 100
+        minBuy = quote(WETH, WXDAI, safe, sellAmount) * (10000 - slippage_bps) // 10000
         r = dict(safe=safe, nonce=int(time.time()), deadline=deadline, mode=0, collateral=WETH, debt=WXDAI,
-                 sellAmount=sellAmount, repayAmount=(2**256 - 1), minBuy=minBuy, flash=flash,
+                 sellAmount=sellAmount, repayAmount=repayAmount, minBuy=minBuy, flash=flash,
                  orderValidTo=validTo, minHealthFactor=0)
     else:  # INCREASE
-        raise SystemExit("increase wired in a later test")
+        borrowAmt = extra if extra else debt  # default: double the debt (~+1x leverage)
+        minBuy = quote(WXDAI, WETH, safe, borrowAmt) * (10000 - slippage_bps) // 10000
+        r = dict(safe=safe, nonce=int(time.time()), deadline=deadline, mode=1, collateral=WETH, debt=WXDAI,
+                 sellAmount=borrowAmt, repayAmount=0, minBuy=minBuy, flash=0,
+                 orderValidTo=validTo, minHealthFactor=1050000000000000000)  # HF >= 1.05 postcondition
     return r
 
 def domain_separator():
@@ -85,7 +101,8 @@ if __name__ == "__main__":
     mode = 0 if sys.argv[1] == "reduce" else 1
     safe = sys.argv[2]
     owner_key = json.load(open(sys.argv[3]))[0]["private_key"]
-    r = build_retarget(mode, safe)
+    arg4 = int(sys.argv[4]) if len(sys.argv) > 4 else None
+    r = build_retarget(mode, safe, fraction_bps=(arg4 or 10000) if mode == 0 else 10000, extra=arg4 if mode == 1 else None)
     sig = "0x" + sign_intent(r, owner_key)
     print("intent:", json.dumps({k: str(v) for k, v in r.items()}))
     # relay execute()
@@ -102,15 +119,16 @@ if __name__ == "__main__":
     uid = "0x" + uid_.hex(); apphash = "0x" + apphash_.hex()
     print("registered uid:", uid)
     # PUT appData (retry until stored, then a brief beat before submit)
-    for _ in range(5):
-        c,_r = post(f"/app_data/{apphash}", {"fullAppData": json_})
-        if c == 200 or (isinstance(_r,str) and apphash[2:10] in _r): break
+    for _ in range(6):
+        if put_appdata(apphash, json_): break
         time.sleep(1)
     time.sleep(1)
-    # submit order: REDUCE sells collateral(WETH) -> debt(WXDAI)
-    order = {"sellToken": WETH, "buyToken": WXDAI, "receiver": safe, "sellAmount": str(r["sellAmount"]),
+    # order token sides per mode: REDUCE sells collateral->debt; INCREASE sells debt->collateral
+    sellTok, buyTok = (WETH, WXDAI) if mode == 0 else (WXDAI, WETH)
+    order = {"sellToken": sellTok, "buyToken": buyTok, "receiver": safe, "sellAmount": str(r["sellAmount"]),
              "buyAmount": str(r["minBuy"]), "validTo": r["orderValidTo"], "appData": apphash, "feeAmount": "0",
              "kind": "sell", "partiallyFillable": False, "sellTokenBalance": "erc20", "buyTokenBalance": "erc20",
              "signingScheme": "eip1271", "signature": "0x", "from": safe}
     code, resp = post("/orders", order)
     print("submit order:", code, resp)
+    print("ORDER_UID", uid)
