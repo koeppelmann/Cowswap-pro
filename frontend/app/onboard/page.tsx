@@ -156,6 +156,7 @@ export default function Onboard() {
       const coll = await pub.readContract({ address: O.aweth as Address, abi: ERC20_ABI, functionName: 'balanceOf', args: [safeAddr] }) as bigint;
       const debt = await pub.readContract({ address: O.vdebtWxdai as Address, abi: ERC20_ABI, functionName: 'balanceOf', args: [safeAddr] }) as bigint;
       setPosition({ coll, debt });
+      try { const k = JSON.parse(localStorage.getItem("levSafes") || "[]"); if (!k.includes(safeAddr)) { k.push(safeAddr); localStorage.setItem("levSafes", JSON.stringify(k)); } } catch { /* */ }
     } catch (e) {
       setErr((e as Error).message);
       setSteps((p) => p.map((x) => (x.state === 'active' ? { ...x, state: 'error' } : x)));

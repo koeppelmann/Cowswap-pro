@@ -25,6 +25,8 @@ export default function Manage() {
   const { data: wallet } = useWalletClient();
 
   const [safe, setSafe] = useState('');
+  const [known, setKnown] = useState<string[]>([]);
+  useEffect(() => { try { setKnown(JSON.parse(localStorage.getItem('levSafes') || '[]')); } catch { /* */ } }, []);
   const [pos, setPos] = useState<Pos | null>(null);
   const [pct, setPct] = useState(50);
   const [busy, setBusy] = useState(false);
@@ -109,6 +111,12 @@ export default function Manage() {
         <button onClick={() => switchChain({ chainId: 100 })} style={btn}>Switch to Gnosis</button>
       ) : (
         <>
+          {known.length > 0 && (
+            <div style={{ marginBottom: 8, fontSize: 13 }}>
+              <span style={{ color: '#888' }}>Your positions: </span>
+              {known.map((s) => <button key={s} onClick={() => setSafe(s)} style={{ ...chip, marginRight: 6 }}>{s.slice(0, 8)}…{s.slice(-4)}</button>)}
+            </div>
+          )}
           <input value={safe} onChange={(e) => setSafe(e.target.value.trim())} placeholder="Position Safe address" style={{ ...inp, width: 440 }} />
           {pos && (
             <div style={{ margin: '16px 0', padding: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
