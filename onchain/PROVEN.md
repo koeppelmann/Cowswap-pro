@@ -1,15 +1,27 @@
-# On-chain proofs (Gnosis barn, organic solvers — no solver privilege)
+# On-chain proofs (Gnosis barn, organic solvers — NO solver privilege)
 
-## Open (carrier order, 1 signature)
-- IntentBootstrap7 enables [CoWSafeWrapper, IntentBootstrap7, LevManagerModule] on the deployed Safe.
-- user13 signed ONE carrier order; solver settlement deployed Safe13 `0x4340e89ED5D5D1Ca08327850E7cEA82E0204797E`
-  + registered the leverage order; leverage order filled → 2x WETH long (aWETH 9e12 vs debt 0.010012).
+All management actions are owner-signed EIP-712 `Retarget` intents relayed by anyone through
+`LevManagerModule.execute`, then the resulting CoW order (signature "0x") is filled by an organic
+barn solver. Verified on-chain.
 
-## Manage: REDUCE/close via signed intent (relayed through the module)
-- user13 signed an EIP-712 `Retarget` (mode REDUCE, full close); the **relay EOA** called
-  `LevManagerModule.execute(intent,sig)` (relay tx `0xcaf1f8a2ebf9ed0869c19287a47c48a3ce670f8545caaf2e82b5cf8856484f17`).
-- Module verified owner sig + replay nonce + module-enabled, derived pre/post+appData+UID on-chain,
-  registered the close meta-order. Relayer submitted the close order (signature "0x").
-- Organic solver filled it → position closed: aWETH 0, debt 0, **0.00556 WXDAI returned** to the Safe.
+## Open (carrier order, one signature)
+IntentBootstrap7 enables [CoWSafeWrapper, IntentBootstrap7, LevManagerModule] on the deployed Safe.
+A single carrier signature → solver settlement deploys the Safe + registers + opens the leverage order.
 
-Replay `onchain/manage.py reduce <safe> <ownerKeyFile>` to reproduce a close.
+## REDUCE (full close) — Safe13
+Signed Retarget(mode=REDUCE, repayAmount=MAX) → relay execute → solver fill → position 0/0, equity
+returned (0.00556 WXDAI). Relay tx 0xcaf1f8a2…4f17.
+
+## INCREASE (increase leverage) — Safe15
+Signed Retarget(mode=INCREASE, borrow capped at Aave availableBorrows) → borrow debt → buy collateral
+→ supply FULL bought balance (delegatecall LevSupplyHelper, no idle slippage) → minHF guard.
+Result: collateral 1.907e13→2.647e13, debt 2.002e16→2.443e16, WETH dust → 0, HF 1.505 ≥ 1.05 floor.
+Relay tx 0xf03e17d6…a189.
+
+## REDUCE (partial close 50% / decrease leverage) — Safe15
+Signed Retarget(mode=REDUCE, fraction 50%): flash 50% debt → repay 50% → withdraw 50% collateral →
+sell → repay flash. Result: collateral and debt EXACTLY halved, **HF unchanged (1.505)** — proportional
+reduction keeps health constant. Proceeds returned to the Safe. Relay tx 0x638a67b0…241c.
+
+Reproduce: `onchain/open.py <key> <equityWei> <levX1000>` then
+`onchain/manage.py {reduce|increase} <safe> <key> [fractionBps|extraWei]`.
