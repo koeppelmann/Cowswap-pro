@@ -100,3 +100,22 @@ Implement in the live app. Reuse `/onboard` pieces. Pages/flows:
 - Module verifies signer is a Safe owner; 1/1 Safe assumption documented.
 - Relay can only land what the owner signed; it cannot forge intents.
 - Idempotent registration; HF-safety checks where withdrawals happen.
+
+---
+## Revision after codex plan review (adopted)
+Codex: the module pattern is sound; the 5 loose actions are under-specified. Build around an explicit
+state-transition with strict postconditions; expose verbs as frontend presets. MUST-FIX adopted:
+1. EIP-712 domain binds `chainId` + module address; `safe` is in the signed struct; module verifies it
+   is enabled on `safe`. Replay key `used[safe][nonce]`.
+2. `metaNonce` is **module-derived** = keccak(chainId, module, safe, nonce, mode) — never signed/relayer-chosen.
+3. Signed + enforced **postcondition**: `minHealthFactor` checked after the action (module.requireHF in post).
+4. `orderValidTo <= deadline`.
+5. Two precise modes instead of 5 builders:
+   - **REDUCE** (covers Close / Partial close / Decrease-lev): flash debt → repay `repayAmount`
+     (MAX for full close) → withdraw `sellAmount` collateral → sell collateral→debt (order) → repay
+     flash. Debt-first inside the flash window keeps Aave LTV valid throughout. Residual equity (debt
+     token) stays in the Safe. minHF guard.
+   - **INCREASE** (covers Increase-lev): borrow `sellAmount` debt → sell debt→collateral (order) →
+     supply collateral. No flash. minHF guard (borrowing lowers HF).
+6. **AddEquity / external WithdrawEquity DEFERRED** (need external funding path; not in v1 module).
+7. Conservative `expectedFill`; `minBuy` is the signed price floor (fresh-quote at action time).
