@@ -1,7 +1,7 @@
 // Carrier-order onboarding constants + IntentBootstrap6 ABI (Gnosis staging/barn).
 export const ONBOARD = {
   chainId: 100,
-  intentBootstrap: '0x5eCCd048b0d8150d7A17AFbe2cdEE80760425ef8',
+  intentBootstrap: '0x0795ec54A7C79403C2CD6BE77C738bf298670Da5',
   settlement: '0xf553d092b50bdcbddeD1A99aF2cA29FBE5E2CB13', // barn
   relayer: '0xC7242d167563352E2BCA4d71C043fbe542DB8FB2', // barn vault relayer
   wxdai: '0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d',
