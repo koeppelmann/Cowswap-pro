@@ -119,3 +119,17 @@ state-transition with strict postconditions; expose verbs as frontend presets. M
      supply collateral. No flash. minHF guard (borrowing lowers HF).
 6. **AddEquity / external WithdrawEquity DEFERRED** (need external funding path; not in v1 module).
 7. Conservative `expectedFill`; `minBuy` is the signed price floor (fresh-quote at action time).
+
+---
+## STATUS: complete (overnight build)
+All phases done. Proven live on Gnosis barn (organic solvers, no solver privilege):
+- ★ Plan + codex review (adopted: state-transition modes, domain binding, module-derived metaNonce, minHF guard).
+- ★ LevManagerModule + REDUCE/close — fork-tested (5/5), deployed, live close via signed intent.
+- ★ INCREASE (capacity-capped, full-balance supply, HF guard) + DECREASE/partial close (HF-constant) — live.
+- ★ Frontend: /manage (increase/decrease/close-% one sig each, positions list) + /api/relay-execute — e2e through the real web routes.
+- ★ codex plan + module + final security reviews — NO critical/high; fixes applied (low-s, full-supply, param validation).
+
+Current addresses: LevManagerModule 0xd504138e…E985 · IntentBootstrap7 0x0795ec54…0Da5 · LevSupplyHelper 0x28168683…9A15.
+Recommended next (codex guardrails, not blockers): on-chain minHF floor for INCREASE (frontend already enforces 1.05),
+allowed-token list, verified bytecode, oracle-relative price bound, a "withdraw returned equity" action, plain (non-leverage)
+swaps from the Safe, and on-chain positions auto-discovery (owner-indexed Bootstrapped event).
