@@ -32,7 +32,7 @@ interface IProxyFactory {
     function proxyCreationCode() external pure returns (bytes memory);
 }
 
-contract IntentBootstrap9 {
+contract IntentBootstrap10 {
     // canonical / pre-existing (Gnosis staging)
     address constant SETTLEMENT = 0xf553d092b50bdcbddeD1A99aF2cA29FBE5E2CB13;
     address constant RELAYER    = 0xC7242d167563352E2BCA4d71C043fbe542DB8FB2;
@@ -48,7 +48,8 @@ contract IntentBootstrap9 {
     address constant SINGLETON  = 0x3E5c63644E683549055b9Be8653de26E0B4CD36E;
     address constant MODSETUP   = 0x2dd68b007B46fBe91B9A7c3EDa5A7a1063cB5b47; // SafeModuleSetup.enableModules
     address constant SIMHANDLER = 0xf2044b74959F6bC291dc803C24bF0D7E6379fcC8; // CoWSafeSigHandlerSim2 (combined)
-    address constant LEVMANAGER = 0xA3044558D8459E37dC26b7d4ee8901e8e6f40fd2; // LevManagerModule v3 (closeAndSweep single-delegatecall post)
+    address constant LEVMANAGER = 0xbd913B8626DD7ACe1810E1797C93f27dD7906A5C; // LevManagerModule v4 (stop trigger + sweep)
+    address constant SUPPLYHELP = 0xf663f3f18aEe1632C9FFC801dd30D7FfE7196dCb; // LevSupplyHelper v4 (delegatecall)
 
     event Bootstrapped(address indexed safe, bytes uid);
     uint256 constant TRIGGER_DUST = 1e12; // pulled from owner to fund the self-settling trigger order
@@ -144,12 +145,17 @@ contract IntentBootstrap9 {
             _ms(WETH,  abi.encodeWithSignature("approve(address,uint256)", POOL, type(uint256).max))
         );
         pre = CoWSafeWrapper.SafeTx({ to: MULTISEND, value: 0, data: abi.encodeWithSignature("multiSend(bytes)", preCalls), operation: 1 });
-        bytes memory postCalls = abi.encodePacked(
-            _ms(POOL,  abi.encodeWithSignature("supply(address,uint256,address,uint16)", WETH, it.buyMin, safe, uint16(0))),
-            _ms(POOL,  abi.encodeWithSignature("borrow(address,uint256,uint256,uint16,address)", WXDAI, it.borrow, uint256(2), uint16(0), safe)),
-            _ms(WXDAI, abi.encodeWithSignature("transfer(address,uint256)", FLASHWRAP, it.repay))
-        );
-        post = CoWSafeWrapper.SafeTx({ to: MULTISEND, value: 0, data: abi.encodeWithSignature("multiSend(bytes)", postCalls), operation: 1 });
+        // ONE delegatecall (canonical MultiSend is CallOnly): supply the FULL bought balance —
+        // positive slippage above buyMin earns yield instead of idling (codex medium) — then
+        // borrow and repay the flash loan.
+        post = CoWSafeWrapper.SafeTx({
+            to: SUPPLYHELP, value: 0,
+            data: abi.encodeWithSignature(
+                "openPost(address,address,address,uint256,address,uint256)",
+                WETH, POOL, WXDAI, it.borrow, FLASHWRAP, it.repay
+            ),
+            operation: 1
+        });
     }
 
     struct Loan { address token; uint256 amount; address recipient; }

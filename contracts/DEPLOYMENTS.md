@@ -52,7 +52,14 @@ one the live Safe/orders use: CoWSafeWrapper `0x27EBDB6Cefd590FEAF79B20F6e77BF79
 CoWSafeSigHandler `0x311A5e7B318e8f2f09B4f7C9b06f5BcF980e8F23`, CowFlashLoanWrapper (old proof-of-settle)
 `0x7c20a2ca046c08b9509035D84BeE79f7B28F781D`.
 
-## Leverage management stack (Gnosis staging/barn) — CURRENT (2026-06-12, v3)
+## Leverage management stack (Gnosis staging/barn) — CURRENT (2026-06-12, v4)
+| contract | address | notes |
+|---|---|---|
+| LevManagerModule **v4** | `0xbd913B8626DD7ACe1810E1797C93f27dD7906A5C` | + `triggerHealthFactor` in Retarget: stop orders fillable ONLY while HF < trigger (`requireHFBelow` as first `pre` op) |
+| LevSupplyHelper **v4** | `0xf663f3f18aEe1632C9FFC801dd30D7FfE7196dCb` | + `openPost` (supply-ALL on open — positive slippage earns yield, codex medium) |
+| IntentBootstrap10 | `0x68d25304A69A9F63288Da73ea6a2d72D01dF0DcF` | wires module v4; open post = single delegatecall `openPost` |
+
+## Superseded leverage stack (v3, 2026-06-12)
 | contract | address | notes |
 |---|---|---|
 | LevManagerModule **v3** | `0xA3044558D8459E37dC26b7d4ee8901e8e6f40fd2` | Retarget has `receiver`; full close = single-delegatecall `closeAndSweep` post (flash repay + minHF + sweep BOTH tokens to receiver) |

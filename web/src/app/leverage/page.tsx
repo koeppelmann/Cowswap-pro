@@ -137,6 +137,8 @@ export default function LeveragePage() {
   const [slippagePct, setSlippagePct] = useState(1);
   const [posMode, setPosMode] = useState<'close' | 'leverage'>('close');
   const [receiver, setReceiver] = useState('');   // close proceeds receiver; '' = the connected owner
+  const [stopHF, setStopHF] = useState('1.15');   // stop protection: trigger health factor
+  const [stopPct, setStopPct] = useState('50');   // stop protection: % of position to deleverage
   const isPos = (x: UIToken | LivePos): x is LivePos => 'safe' in x;
   const sellIsPos = isPos(sell);
 
@@ -305,7 +307,8 @@ export default function LeveragePage() {
   function pickPosition(p: LivePos) { setSell(p); setPosMode('close'); setAmount('100'); setBuy(WXDAI); setSelOpen(false); }
 
   // ── sign a Retarget intent over the LevManagerModule domain & relay it ──
-  async function relayRetarget(intent: Record<string, bigint | number | string>, label: string): Promise<{ uid: string }> {
+  // wait=false: submit and return immediately (stop orders PARK in the auction until triggered)
+  async function relayRetarget(intent: Record<string, bigint | number | string>, label: string, wait = true): Promise<{ uid: string }> {
     setStatus('Sign the management intent (one signature)…');
     const sig = await walletClient!.signTypedData({
       account: address!, domain: { name: 'LevManagerModule', version: '1', chainId: 100, verifyingContract: LEV_MODULE as Address },
@@ -328,9 +331,41 @@ export default function LeveragePage() {
     };
     const os = await barn('order', { order });
     if (os.status !== 201) throw new Error('order: ' + JSON.stringify(os.body));
+    if (!wait) return { uid: os.body as string };
     setStatus(label + ' — waiting for a solver…');
     if (await pollFill(os.body as string, (s) => setStatus(label + ' (' + s + ')…')) !== 'fulfilled') throw new Error('order expired — no solver settled it. Try again.');
     return { uid: os.body as string };
+  }
+
+  // ── STOP PROTECTION: park a REDUCE order that only becomes fillable while HF < trigger ──
+  async function doArmStop() {
+    if (!walletClient || !publicClient || !address || !sellIsPos) return;
+    const p = sell as LivePos;
+    const trigger = parseFloat(stopHF);
+    const pct = Math.min(99, Math.max(1, Math.round(parseFloat(stopPct) || 0)));
+    if (!isFinite(trigger) || trigger <= 1) { setErr('trigger must be > 1.00'); return; }
+    if (trigger >= p.m.healthFactor) { setErr(`trigger must be below the current health factor (${p.m.healthFactor.toFixed(2)})`); return; }
+    setBusy(true); setErr(null);
+    try {
+      const sellAmount = (p.collQty * BigInt(pct)) / 100n;
+      const repayAmount = (p.debtQty * BigInt(pct)) / 100n;
+      const flash = (repayAmount * 103n) / 100n;
+      // minBuy priced for the TRIGGER scenario: HF scales 1:1 with price (debt fixed), so the
+      // WETH price when HF first touches the trigger is priceNow · trigger / hfNow; 3% slack.
+      const priceNow = p.collQty > 0n ? p.m.collateralUsd / Number(formatUnits(p.collQty, WETH.decimals)) : 0;
+      if (priceNow <= 0 || !isFinite(p.m.healthFactor) || p.m.healthFactor > 100) throw new Error('no live price/HF');
+      const priceAtTrigger = priceNow * (trigger / p.m.healthFactor);
+      const minBuy = floatToWei(Number(formatUnits(sellAmount, WETH.decimals)) * priceAtTrigger * 0.97);
+      const validTo = Math.floor(Date.now() / 1000) + 6 * 3600; // parked for up to 6h
+      const intent = {
+        safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0n,
+        collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
+        receiver: '0x0000000000000000000000000000000000000000' as Address,
+        triggerHealthFactor: floatToWei(trigger),
+      };
+      const { uid } = await relayRetarget(intent, 'Arming stop', false);
+      setStatus(`🛡 Stop armed — sells ${pct}% if HF < ${trigger.toFixed(2)} · parked until ${new Date(validTo * 1000).toLocaleTimeString()} · ${short(uid)}`);
+    } catch (e) { setErr((e as Error).message); setStatus(null); } finally { setBusy(false); }
   }
 
   // ── OPEN: carrier order (one signature, gasless) → solver deploys Safe + opens ──
@@ -403,7 +438,7 @@ export default function LeveragePage() {
       const intent = {
         safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0n,
         collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
-        receiver: recv,
+        receiver: recv, triggerHealthFactor: 0n,
       };
       await relayRetarget(intent, full ? 'Closing position' : `Reducing ${pct}%`);
       setStatus(full ? '✅ Position closed' : `✅ Reduced ${pct}%`);
@@ -436,7 +471,7 @@ export default function LeveragePage() {
         const intent = {
           safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 1n,
           collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount: 0n, minBuy, flash: 0n, orderValidTo: BigInt(validTo), minHealthFactor: 1050000000000000000n,
-          receiver: '0x0000000000000000000000000000000000000000' as Address, // not a close — nothing to sweep
+          receiver: '0x0000000000000000000000000000000000000000' as Address, triggerHealthFactor: 0n, // not a close — nothing to sweep
         };
         await relayRetarget(intent, `Increasing to ${target.toFixed(1)}x`);
       } else {
@@ -451,7 +486,7 @@ export default function LeveragePage() {
         const intent = {
           safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0n,
           collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
-          receiver: '0x0000000000000000000000000000000000000000' as Address, // partial reduce — residual stays as position buffer
+          receiver: '0x0000000000000000000000000000000000000000' as Address, triggerHealthFactor: 0n, // partial reduce — residual stays as position buffer
         };
         await relayRetarget(intent, `Decreasing to ${target.toFixed(1)}x`);
       }
@@ -638,6 +673,19 @@ export default function LeveragePage() {
               <div className="lev-stat"><span className="k">Leverage</span><span className="v"><span style={{ textDecoration: 'line-through', opacity: .5, marginRight: 6 }}>{(sell as LivePos).m.leverage.toFixed(2)}x</span><span style={{ color: lev < (sell as LivePos).m.leverage ? '#46d39a' : '#ffa53b' }}>{lev.toFixed(1)}x</span></span></div>
               <div className="lev-stat"><span className="k">Health factor</span><span className="v">{(sell as LivePos).m.healthFactor > 100 ? '∞' : (sell as LivePos).m.healthFactor.toFixed(2)}</span></div>
               {(sell as LivePos).m.liqPrice && <div className="lev-stat"><span className="k">Liquidation price</span><span className="v">{(sell as LivePos).m.liqPrice!.toLocaleString(undefined, { maximumFractionDigits: 0 })} WXDAI</span></div>}
+              {/* stop protection: a parked deleverage order that turns fillable only while HF < trigger */}
+              <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.06)' }}>
+                <div className="lev-stat"><span className="k">🛡 Stop protection (one signature, trustless)</span></div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
+                  <span className="k" style={{ fontSize: 12 }}>if HF &lt;</span>
+                  <input className="lev-amt" style={{ fontSize: 14, width: 64 }} value={stopHF} onChange={(e) => setStopHF(e.target.value)} />
+                  <span className="k" style={{ fontSize: 12 }}>sell</span>
+                  <input className="lev-amt" style={{ fontSize: 14, width: 48 }} value={stopPct} onChange={(e) => setStopPct(e.target.value)} />
+                  <span className="k" style={{ fontSize: 12 }}>% of collateral</span>
+                  <button className="lev-tok" disabled={busy} onClick={doArmStop} style={{ marginLeft: 'auto' }}>Arm</button>
+                </div>
+                <div className="lev-stat"><span className="k" style={{ fontSize: 11 }}>Parks in the auction; fillable only while HF is below the trigger — enforced on-chain</span></div>
+              </div>
             </div>
           )}
 
