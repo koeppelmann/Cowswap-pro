@@ -160,9 +160,10 @@ suite executes these delegatecalls for real (`contracts/LevManagerModule.fork.t.
 
 - `contracts/` — Solidity sources (module, bootstrap, helpers, wrapper stack) + fork tests + deployments.
 - `onchain/` — `open.py` / `manage.py` / `test_adjust.py`: scriptable reproductions of every flow, plus on-chain proofs.
-- `frontend/` — the real Next.js surfaces: `app/leverage/page.tsx` (swap-style UI: implicit onboarding,
-  positions in the token list, close/adjust with receiver), `lib/onboard.ts` (constants/ABIs),
-  `app/api/barn` (orderbook proxy), `app/api/relay-execute` (gas-paying relay for `execute()`).
+- `frontend/` — the real Next.js surfaces: `components/SwapTab.tsx` (the merged app's default Swap
+  tab: plain swaps for any listed pair, 'Add Leverage' on the supported pair, positions in the token
+  list with close/adjust/stop), `app/page.tsx` (Swap · Limit · TWAP tabs), `lib/onboard.ts`
+  (constants/ABIs), `app/api/barn` (orderbook proxy), `app/api/relay-execute` (gas-paying relay).
 - `docs/` — design plan and codex security reviews.
 - `client/` — the original UI mockup this work implements.
 
