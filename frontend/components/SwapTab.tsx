@@ -13,7 +13,7 @@ import { useTokenBalances } from '../lib/useTokenBalances';
 import { useTokenList } from '../lib/useTokenList';
 import { positionMetrics, type PositionMetrics } from '../lib/leverage';
 import {
-  ONBOARD, IB_ABI, ERC20_ABI, GPV2_ORDER_TYPES, RETARGET_TYPES, RETARGET_TYPES_V4, LEV_MODULE, LEV_MODULE_V4, POOL_ADDR, type Intent,
+  ONBOARD, IB_ABI, ERC20_ABI, GPV2_ORDER_TYPES, RETARGET_TYPES, RETARGET_TYPES_V4, LEV_MODULE, LEV_MODULE_V4, MODULE_ABI, MODULE_ABI_V4, POOL_ADDR, type Intent,
 } from '../lib/onboard';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -231,6 +231,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   const [previewBuy, setPreviewBuy] = useState<bigint | null>(null);
   const [previewReduce, setPreviewReduce] = useState<bigint | null>(null); // est. WXDAI freed by a close/reduce
   const [openPlan, setOpenPlan] = useState<OpenPlan | null>(null);         // frozen pre-open derivation (Safe + UIDs)
+  const [managePlan, setManagePlan] = useState<{ kind: 'close' | 'adjust'; intent: Record<string, bigint | number | string>; uid: string } | null>(null); // frozen manage derivation
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -392,6 +393,36 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
     return () => { live = false; };
   }, [sellIsPos, posMode, sell, amount, buy]);
 
+  // derive the manage intent + its DETERMINISTIC order UID (module.preview, no registration)
+  // before any signature — what is shown is byte-identical to what executes (consumed on click).
+  useEffect(() => {
+    setManagePlan(null);
+    if (!sellIsPos || !publicClient || !address) return;
+    const p = sell as LivePos;
+    const t = setTimeout(async () => {
+      try {
+        let kind: 'close' | 'adjust'; let intent: Record<string, bigint | number | string>;
+        if (posMode === 'close') {
+          const pct = Math.min(100, Math.max(0, Math.round(parseFloat(amount) || 0)));
+          if (pct <= 0) return;
+          kind = 'close'; intent = await buildReduceIntent(pct);
+        } else {
+          if (Math.abs(lev - p.m.leverage) < 0.05 && lev > 1.01) return;
+          kind = lev <= 1.01 ? 'close' : 'adjust';
+          intent = lev <= 1.01 ? await buildReduceIntent(100) : await buildAdjustIntent(lev);
+        }
+        const isV4 = p.module.toLowerCase() === (LEV_MODULE_V4 as string).toLowerCase();
+        const msg = { ...intent };
+        if (isV4) delete (msg as Record<string, unknown>).withdrawExtra;
+        const [uid] = await publicClient.readContract({
+          address: p.module, abi: isV4 ? MODULE_ABI_V4 : MODULE_ABI, functionName: 'preview', args: [msg as never],
+        }) as [string, string, string];
+        setManagePlan({ kind, intent, uid });
+      } catch { /* preview unavailable (e.g. dust position) — show nothing */ }
+    }, 700);
+    return () => clearTimeout(t);
+  }, [sellIsPos, sell, posMode, amount, lev, buy, receiver, slippagePct, publicClient, address]);
+
   const estHF = useMemo(() => {
     if (!openAmts || openAmts.borrow === 0n) return null;
     const dec = (sell as UIToken).decimals;
@@ -533,12 +564,10 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
     } catch (e) { setErr((e as Error).message); setStatus(null); } finally { setBusy(false); }
   }
 
-  // ── REDUCE / CLOSE (pct of position) via LevManagerModule ──
-  async function doReduce(pct: number) {
-    if (!walletClient || !publicClient || !address || !sellIsPos) return;
+  // ── REDUCE / CLOSE intent builder (shared by the click path AND the plan preview) ──
+  async function buildReduceIntent(pct: number): Promise<Record<string, bigint | number | string>> {
     const p = sell as LivePos;
-    setBusy(true); setErr(null); setStatus('Quoting…');
-    try {
+    {
       const full = pct >= 100;
       // every close (full or partial) pays the freed equity to the receiver — default = the owner
       let recv: Address;
@@ -584,6 +613,19 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
         if (!full) (intent as Record<string, unknown>).receiver = '0x0000000000000000000000000000000000000000';
         (intent as Record<string, unknown>).withdrawExtra = 0n;
       }
+      return intent;
+    }
+  }
+
+  async function doReduce(pct: number) {
+    if (!walletClient || !publicClient || !address || !sellIsPos) return;
+    const p = sell as LivePos;
+    setBusy(true); setErr(null); setStatus('Quoting…');
+    try {
+      const full = pct >= 100;
+      // consume the PREVIEWED intent when fresh — the user saw exactly this UID
+      const fresh = managePlan && managePlan.kind === 'close' && Number(managePlan.intent.orderValidTo) - 120 > Math.floor(Date.now() / 1000);
+      const intent = fresh ? managePlan!.intent : await buildReduceIntent(pct);
       await relayRetarget(intent, full ? 'Closing position' : `Reducing ${pct}%`, true, p.module);
       setStatus(full ? '✅ Position closed' : `✅ Reduced ${pct}%`);
       if (full) { setSell(WXDAI); setAmount('1'); }
@@ -592,13 +634,11 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   }
 
   // ── ADJUST LEVERAGE (target) via LevManagerModule: INCREASE up / REDUCE down ──
-  async function doAdjust(target: number) {
-    if (!walletClient || !publicClient || !address || !sellIsPos) return;
+  // adjust intent builder (shared by the click path AND the plan preview)
+  async function buildAdjustIntent(target: number): Promise<Record<string, bigint | number | string>> {
     const p = sell as LivePos;
     const cur = p.m.leverage;
-    if (Math.abs(target - cur) < 0.05) { setErr('Target leverage unchanged'); return; }
-    setBusy(true); setErr(null); setStatus('Quoting…');
-    try {
+    {
       const equityUsd = Math.max(p.m.equityUsd, 0);
       const collPrice = p.collQty > 0n ? p.m.collateralUsd / Number(formatUnits(p.collQty, p.collTok.decimals)) : 0;
       // debt-token USD price from the account's own balances (handles EURe ≠ $1, 6-dec tokens)
@@ -621,7 +661,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
           collateral: p.collTok.address, debt: p.debtTok.address, sellAmount, repayAmount: 0n, minBuy, flash: 0n, orderValidTo: BigInt(validTo), minHealthFactor: 1050000000000000000n,
           receiver: '0x0000000000000000000000000000000000000000' as Address, triggerHealthFactor: 0n, withdrawExtra: 0n, // not a close — nothing to sweep
         };
-        await relayRetarget(intent, `Increasing to ${target.toFixed(1)}x`, true, p.module);
+        return intent;
       } else {
         // DECREASE: sell Δ-worth collateral (overshoot so guaranteed minBuy still covers flash+premium),
         // repay Δ debt. Any surplus debt token stays in the Safe (small equity bump).
@@ -636,8 +676,21 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
           collateral: p.collTok.address, debt: p.debtTok.address, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
           receiver: '0x0000000000000000000000000000000000000000' as Address, triggerHealthFactor: 0n, withdrawExtra: 0n, // partial reduce — residual stays as position buffer
         };
-        await relayRetarget(intent, `Decreasing to ${target.toFixed(1)}x`, true, p.module);
+        return intent;
       }
+    }
+  }
+
+  async function doAdjust(target: number) {
+    if (!walletClient || !publicClient || !address || !sellIsPos) return;
+    const p = sell as LivePos;
+    const cur = p.m.leverage;
+    if (Math.abs(target - cur) < 0.05) { setErr('Target leverage unchanged'); return; }
+    setBusy(true); setErr(null); setStatus('Quoting…');
+    try {
+      const fresh = managePlan && managePlan.kind === 'adjust' && Number(managePlan.intent.orderValidTo) - 120 > Math.floor(Date.now() / 1000);
+      const intent = fresh ? managePlan!.intent : await buildAdjustIntent(target);
+      await relayRetarget(intent, target > cur ? `Increasing to ${target.toFixed(1)}x` : `Decreasing to ${target.toFixed(1)}x`, true, p.module);
       setStatus('✅ Leverage adjusted');
       await loadPositions();
     } catch (e) { setErr((e as Error).message); setStatus(null); } finally { setBusy(false); }
@@ -786,6 +839,12 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
                   value={receiver} onChange={(e) => setReceiver(e.target.value)}
                 />
                 <div className="lev-stat"><span className="k" style={{ fontSize: 11 }}>{parseFloat(amount) >= 100 ? 'All remaining funds (incl. dust) are sent here on close' : 'The freed equity is sent here'} · default: your wallet</span></div>
+                {managePlan && managePlan.kind === 'close' && (
+                  <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,.06)' }}>
+                    <div className="lev-stat"><span className="k">Order UID (deterministic)</span><span className="v"><ExtLink href={explorerUrl(managePlan.uid)}>{short(managePlan.uid)}</ExtLink></span></div>
+                    <div className="lev-stat"><span className="k">Position Safe</span><span className="v"><ExtLink href={safeAppUrl((sell as LivePos).safe)}>{short((sell as LivePos).safe)}</ExtLink>&nbsp;·&nbsp;<ExtLink href={scanUrl((sell as LivePos).safe)}>scan</ExtLink></span></div>
+                  </div>
+                )}
               </div>
             )}
             {!sellIsPos && lev > 1 && openAmts && (
@@ -819,6 +878,12 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
               <div className="lev-stat"><span className="k">Leverage</span><span className="v"><span style={{ textDecoration: 'line-through', opacity: .5, marginRight: 6 }}>{(sell as LivePos).m.leverage.toFixed(2)}x</span><span style={{ color: lev < (sell as LivePos).m.leverage ? '#46d39a' : '#ffa53b' }}>{lev.toFixed(1)}x</span></span></div>
               <div className="lev-stat"><span className="k">Health factor</span><span className="v">{(sell as LivePos).m.healthFactor > 100 ? '∞' : (sell as LivePos).m.healthFactor.toFixed(2)}</span></div>
               {(sell as LivePos).m.liqPrice && <div className="lev-stat"><span className="k">Liquidation price</span><span className="v">{(sell as LivePos).m.liqPrice!.toLocaleString(undefined, { maximumFractionDigits: 0 })} WXDAI</span></div>}
+              {managePlan && (
+                <>
+                  <div className="lev-stat"><span className="k">Order UID (deterministic)</span><span className="v"><ExtLink href={explorerUrl(managePlan.uid)}>{short(managePlan.uid)}</ExtLink></span></div>
+                  <div className="lev-stat"><span className="k">Position Safe</span><span className="v"><ExtLink href={safeAppUrl((sell as LivePos).safe)}>{short((sell as LivePos).safe)}</ExtLink>&nbsp;·&nbsp;<ExtLink href={scanUrl((sell as LivePos).safe)}>scan</ExtLink></span></div>
+                </>
+              )}
               {/* stop protection: a parked deleverage order that turns fillable only while HF < trigger */}
               <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.06)' }}>
                 <div className="lev-stat"><span className="k">🛡 Stop protection (one signature, trustless)</span></div>
