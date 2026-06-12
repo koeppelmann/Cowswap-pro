@@ -11,6 +11,8 @@ interface IERC20S { function balanceOf(address) external view returns (uint256);
 interface IAaveSupply {
     function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode) external;
     function borrow(address asset, uint256 amount, uint256 interestRateMode, uint16 referralCode, address onBehalfOf) external;
+    function setUserEMode(uint8 categoryId) external;
+    function setUserUseReserveAsCollateral(address asset, bool useAsCollateral) external;
     function getUserAccountData(address) external view returns (uint256,uint256,uint256,uint256,uint256,uint256);
 }
 
@@ -69,6 +71,28 @@ contract LevSupplyHelper {
         require(amt > 0, "nothing to supply");
         IERC20S(collToken).approve(pool, amt);
         IAaveSupply(pool).supply(collToken, amt, address(this), 0);
+        IAaveSupply(pool).borrow(debtToken, borrowAmt, 2, 0, address(this));
+        require(IERC20S(debtToken).transfer(flashwrap, repayAmt), "flash repay failed");
+    }
+
+    /// openPost + eMode: identical, but enters the signed Aave eMode category AFTER the supply and
+    /// BEFORE the borrow, so the category's boosted LTV applies to the borrow. Some pairs (e.g.
+    /// sDAI collateral on Gnosis, base LTV 0) only support leverage at all inside their category.
+    /// eModeCategory 0 = no eMode (skipped).
+    function openPostE(
+        address collToken, address pool, address debtToken, uint256 borrowAmt,
+        address flashwrap, uint256 repayAmt, uint8 eModeCategory
+    ) external {
+        uint256 amt = IERC20S(collToken).balanceOf(address(this));
+        require(amt > 0, "nothing to supply");
+        IERC20S(collToken).approve(pool, amt);
+        IAaveSupply(pool).supply(collToken, amt, address(this), 0);
+        if (eModeCategory != 0) {
+            IAaveSupply(pool).setUserEMode(eModeCategory);
+            // assets with base LTV 0 (e.g. sDAI) are NOT auto-enabled as collateral on supply —
+            // inside their category they must be enabled explicitly or the borrow LTV-validates to 0
+            IAaveSupply(pool).setUserUseReserveAsCollateral(collToken, true);
+        }
         IAaveSupply(pool).borrow(debtToken, borrowAmt, 2, 0, address(this));
         require(IERC20S(debtToken).transfer(flashwrap, repayAmt), "flash repay failed");
     }

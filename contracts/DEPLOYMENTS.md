@@ -52,7 +52,17 @@ one the live Safe/orders use: CoWSafeWrapper `0x27EBDB6Cefd590FEAF79B20F6e77BF79
 CoWSafeSigHandler `0x311A5e7B318e8f2f09B4f7C9b06f5BcF980e8F23`, CowFlashLoanWrapper (old proof-of-settle)
 `0x7c20a2ca046c08b9509035D84BeE79f7B28F781D`.
 
-## Leverage management stack (Gnosis staging/barn) — CURRENT (2026-06-12, v4)
+## Leverage management stack (Gnosis staging/barn) — CURRENT (2026-06-12 late, v4 module + IB12)
+| contract | address | notes |
+|---|---|---|
+| LevManagerModule v4 | `0xbd913B8626DD7ACe1810E1797C93f27dD7906A5C` | unchanged — Retarget was already token-parameterized |
+| LevSupplyHelper **v6** | `0xC390b54c4f29157ccbD4feCF598C12404F8607ff` | + `openPostE`: supply-all → `setUserEMode` → `setUserUseReserveAsCollateral` (LTV-0 assets like sDAI are NOT auto-enabled) → borrow → flash repay |
+| **IntentBootstrap12** | `0x7Da9A9043be2DE12348fe0668b72b9da315cE821` | Intent gains `collateral`/`debt`/`eMode` — ANY Aave pair (borrow sell against buy), eMode category entered when the pair shares one |
+
+(IB11 `0x55ce…049B` + helper v5 `0x4f91…FBB7` deployed then superseded the same hour — v5's openPostE
+lacked the explicit collateral enable, caught by the executing fork test before any use.)
+
+## Superseded leverage stack (v4 bootstrap, 2026-06-12)
 | contract | address | notes |
 |---|---|---|
 | LevManagerModule **v4** | `0xbd913B8626DD7ACe1810E1797C93f27dD7906A5C` | + `triggerHealthFactor` in Retarget: stop orders fillable ONLY while HF < trigger (`requireHFBelow` as first `pre` op) |

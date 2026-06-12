@@ -62,3 +62,22 @@ Live sequence on barn (Safe `0x0C9A1ca6eaA4715EC290A7ca7f9C9b0af07F069B`, organi
 
 Conclusion: HF-conditional validity is enforced ON-CHAIN end to end (park ✓ gate-flip ✓ triggered
 fill ✓); the only soft spot is solver-side retry latency for orders that spent time unfillable.
+
+## Any-Aave-pair leverage + eMode — e2e proven (2026-06-12 late)
+
+IntentBootstrap12 `0x7Da9A9043be2DE12348fe0668b72b9da315cE821` + LevSupplyHelper v6
+`0xC390b54c4f29157ccbD4feCF598C12404F8607ff` (module v4 unchanged — Retarget was already generic).
+'Add Leverage' now appears for ANY pair where Aave allows borrowing the sell token against the
+buy token; when the pair shares an eMode category the open enters it (supply-all →
+setUserEMode → setUserUseReserveAsCollateral → borrow — LTV-0 collaterals like sDAI are NOT
+auto-enabled on supply, caught by the executing fork test before deploy use).
+
+Live proofs (barn, organic solvers, real /api routes):
+- generic pair WXDAI→wstETH 2.5x: open filled (Safe 0xC97e7D8c…, liqT 7900 = wstETH's own,
+  0 idle collateral) → full close w/ receiver sweep → Safe 0/0/0/0, owner +0.01244 WXDAI.
+- eMode pair USDC.e→sDAI (cat 3 'sDAI/USDCe', LTV 90%): open filled (Safe 0x336a00aC…,
+  on-chain getUserEMode == 3, leverage 4.01x on a base-LTV-0 collateral — impossible outside
+  the category, liqT 9200) → full close w/ sweep → Safe 0/0/0/0, owner +0.0104 USDC.e —
+  also exercises a 6-decimals debt token end to end.
+UI: slider max derives from the pair's LTV (9.7x on the eMode pair), eMode label + LTV shown
+before signing.

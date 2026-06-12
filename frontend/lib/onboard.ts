@@ -1,7 +1,7 @@
 // Carrier-order onboarding constants + IntentBootstrap6 ABI (Gnosis staging/barn).
 export const ONBOARD = {
   chainId: 100,
-  intentBootstrap: '0x68d25304A69A9F63288Da73ea6a2d72D01dF0DcF', // IntentBootstrap10 (module v4, supply-all open post)
+  intentBootstrap: '0x7Da9A9043be2DE12348fe0668b72b9da315cE821', // IntentBootstrap12 (any Aave pair + eMode)
   settlement: '0xf553d092b50bdcbddeD1A99aF2cA29FBE5E2CB13', // barn
   relayer: '0xC7242d167563352E2BCA4d71C043fbe542DB8FB2', // barn vault relayer
   wxdai: '0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d',
@@ -19,6 +19,8 @@ const INTENT = {
     { name: 'flash', type: 'uint256' }, { name: 'buyMin', type: 'uint256' },
     { name: 'borrow', type: 'uint256' }, { name: 'repay', type: 'uint256' },
     { name: 'validTo', type: 'uint32' }, { name: 'nonce', type: 'uint256' },
+    { name: 'collateral', type: 'address' }, { name: 'debt', type: 'address' },
+    { name: 'eMode', type: 'uint8' },
   ],
 } as const;
 
@@ -38,6 +40,7 @@ export const ERC20_ABI = [
 export type Intent = {
   owner: `0x${string}`; equity: bigint; flash: bigint; buyMin: bigint;
   borrow: bigint; repay: bigint; validTo: number; nonce: bigint;
+  collateral: `0x${string}`; debt: `0x${string}`; eMode: number;
 };
 
 // GPv2 order EIP-712 types for signing the carrier order.
