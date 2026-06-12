@@ -52,7 +52,18 @@ one the live Safe/orders use: CoWSafeWrapper `0x27EBDB6Cefd590FEAF79B20F6e77BF79
 CoWSafeSigHandler `0x311A5e7B318e8f2f09B4f7C9b06f5BcF980e8F23`, CowFlashLoanWrapper (old proof-of-settle)
 `0x7c20a2ca046c08b9509035D84BeE79f7B28F781D`.
 
-## Leverage management stack (Gnosis staging/barn) — CURRENT (2026-06-12 night, v5 module + IB14)
+## Leverage management stack (Gnosis staging/barn) — CURRENT (2026-06-12 night, v5 module + IB15)
+| contract | address | notes |
+|---|---|---|
+| LevManagerModule **v5** | `0x239D413A6Ac5322D3ccAaaf43e34045bdAcD7E74` | Retarget 15 fields; partial-close payout to receiver (`withdrawExtra`); manage minHF enforced via closeAndSweep |
+| LevSupplyHelper **v8** | `0x29C3E5CC5bF31A749e91000F362Ea6C4195CEC5B` | openPostA adaptive borrow + **signed post-open minHF floor** (codex high: bounds solver under-delivery → user debt); closeAndSweep; eMode |
+| **IntentBootstrap15** | `0x325afB837204D46A3D4158deD26a8BE2681761B5` | Intent gains `minHealthFactor`; exact-outlay open with the signed HF floor |
+
+Module **v4** `0xbd913B86…6A5C` stays live for pre-v5 Safes (UI signs 14-field intents; relay whitelists both).
+NOTE: LevManagerModule's `SUPPLYHELP` constant points at helper v4 `0xf663…6dCb` — intentional and safe:
+`closeAndSweep`/`supplyAllAndCheck` are ABI-identical across helper v4–v8, and the helper is stateless.
+
+## Superseded leverage stack (v5 module + IB14, 2026-06-12 night)
 | contract | address | notes |
 |---|---|---|
 | LevManagerModule **v5** | `0x239D413A6Ac5322D3ccAaaf43e34045bdAcD7E74` | Retarget +`withdrawExtra` (15 fields): partial closes pay the freed equity to the signed receiver — in the debt token or (via withdrawExtra) the collateral |

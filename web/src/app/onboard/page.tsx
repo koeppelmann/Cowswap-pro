@@ -65,7 +65,7 @@ export default function Onboard() {
       const borrow = repay - equity;
       patch(si, { state: 'done', detail: `min out ${formatEther(buyMin)} WETH` });
 
-      const intent: Intent = { owner: address, equity, flash, buyMin, borrow, repay, validTo, nonce: 1n, collateral: O.weth as `0x${string}`, debt: O.wxdai as `0x${string}`, eMode: 0 };
+      const intent: Intent = { owner: address, equity, flash, buyMin, borrow, repay, validTo, nonce: 1n, collateral: O.weth as `0x${string}`, debt: O.wxdai as `0x${string}`, eMode: 0, minHealthFactor: 0n };
       
 
       // 2. derive Safe + leverage appData + uid (all on-chain)

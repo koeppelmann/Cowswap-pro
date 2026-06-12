@@ -333,7 +333,13 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
         const validTo = Math.floor(Date.now() / 1000) + 3600;
         const buyMin = minOut(previewBuy, slippagePct);
         const nonce = BigInt('0x' + [...crypto.getRandomValues(new Uint8Array(12))].map((x) => x.toString(16).padStart(2, '0')).join(''));
-        const intent: Intent = { owner: address, equity, flash: openAmts.flash, buyMin, borrow: openAmts.borrow, repay: openAmts.repay, validTo, nonce, collateral: buy.address, debt: (sell as UIToken).address, eMode: pairLev.eMode };
+        // signed post-open HF floor: 93% of the expected HF (so the ~bps fee shift passes, but a
+        // solver under-delivering equity within the carrier tolerance reverts the settlement).
+        // expected HF = flash·liqThreshold / borrow (same formula as the estHF display).
+        const liqT = pairLev.liqTBps / 10000;
+        const hfExp = openAmts.borrow > 0n ? (Number(formatUnits(openAmts.flash, (sell as UIToken).decimals)) * liqT) / Number(formatUnits(openAmts.borrow, (sell as UIToken).decimals)) : 0;
+        const minHF = hfExp > 0 && isFinite(hfExp) ? floatToWei(Math.max(1.01, hfExp * 0.93)) : floatToWei(1.01);
+        const intent: Intent = { owner: address, equity, flash: openAmts.flash, buyMin, borrow: openAmts.borrow, repay: openAmts.repay, validTo, nonce, collateral: buy.address, debt: (sell as UIToken).address, eMode: pairLev.eMode, minHealthFactor: minHF };
         const safeAddr = await publicClient.readContract({ address: O.intentBootstrap as Address, abi: IB_ABI, functionName: 'safeOf', args: [intent] }) as Address;
         const [levJson, levHash] = await publicClient.readContract({ address: O.intentBootstrap as Address, abi: IB_ABI, functionName: 'appData', args: [intent, safeAddr] }) as [string, `0x${string}`];
         const levUid = await publicClient.readContract({ address: O.intentBootstrap as Address, abi: IB_ABI, functionName: 'uid', args: [intent, safeAddr] }) as `0x${string}`;
@@ -603,9 +609,13 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
         minBuy = minOut(q, Math.max(slippagePct, 2));
       }
       const validTo = Math.floor(Date.now() / 1000) + 1800;
+      // partial close must leave the residual healthy (codex medium): floor = min(currentHF·0.98, 1.1).
+      // pure deleverage RAISES HF so it always passes; an into-collateral payout is bounded by it.
+      const cur = p.m.healthFactor;
+      const closeMinHF = full ? 0n : floatToWei(Math.min(isFinite(cur) && cur < 100 ? cur * 0.98 : 1.1, 1.1));
       const intent = {
         safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0n,
-        collateral: p.collTok.address, debt: p.debtTok.address, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
+        collateral: p.collTok.address, debt: p.debtTok.address, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: closeMinHF,
         receiver: recv, triggerHealthFactor: 0n, withdrawExtra,
       };
       if (isV4) {

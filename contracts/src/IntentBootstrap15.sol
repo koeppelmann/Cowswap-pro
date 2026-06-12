@@ -32,7 +32,7 @@ interface IProxyFactory {
     function proxyCreationCode() external pure returns (bytes memory);
 }
 
-contract IntentBootstrap14 {
+contract IntentBootstrap15 {
     // canonical / pre-existing (Gnosis staging)
     address constant SETTLEMENT = 0xf553d092b50bdcbddeD1A99aF2cA29FBE5E2CB13;
     address constant RELAYER    = 0xC7242d167563352E2BCA4d71C043fbe542DB8FB2;
@@ -47,7 +47,7 @@ contract IntentBootstrap14 {
     address constant MODSETUP   = 0x2dd68b007B46fBe91B9A7c3EDa5A7a1063cB5b47; // SafeModuleSetup.enableModules
     address constant SIMHANDLER = 0xf2044b74959F6bC291dc803C24bF0D7E6379fcC8; // CoWSafeSigHandlerSim2 (combined)
     address constant LEVMANAGER = 0x239D413A6Ac5322D3ccAaaf43e34045bdAcD7E74; // LevManagerModule v5 (partial-close payout to receiver)
-    address constant SUPPLYHELP = 0x3E349D3789ce820202a0D35799077c343a9C2b41; // LevSupplyHelper v7 (openPostA: adaptive borrow, exact user outlay)
+    address constant SUPPLYHELP = 0x29C3E5CC5bF31A749e91000F362Ea6C4195CEC5B; // LevSupplyHelper v8 (openPostA + signed minHF floor)
 
     event Bootstrapped(address indexed safe, bytes uid);
     uint256 constant TRIGGER_DUST = 1e12; // pulled from owner to fund the self-settling trigger order
@@ -71,6 +71,7 @@ contract IntentBootstrap14 {
         address collateral; // Aave collateral = the BUY token (long leg)
         address debt;       // Aave debt = the SELL token (funding leg)
         uint8   eMode;      // Aave eMode category entered before the borrow (0 = none)
+        uint256 minHealthFactor; // signed post-open HF floor (0 = none) — bounds adaptive-borrow risk
     }
 
     /// CREATE2 salt-nonce derived from the FULL intent: the Safe address commits to every economic
@@ -79,7 +80,7 @@ contract IntentBootstrap14 {
     function _saltNonce(Intent memory it) public pure returns (uint256) {
         return uint256(keccak256(abi.encode(
             it.owner, it.equity, it.flash, it.buyMin, it.borrow, it.repay, it.validTo, it.nonce,
-            it.collateral, it.debt, it.eMode
+            it.collateral, it.debt, it.eMode, it.minHealthFactor
         )));
     }
 
@@ -156,8 +157,8 @@ contract IntentBootstrap14 {
         post = CoWSafeWrapper.SafeTx({
             to: SUPPLYHELP, value: 0,
             data: abi.encodeWithSignature(
-                "openPostA(address,address,address,address,uint256,uint8)",
-                it.collateral, POOL, it.debt, FLASHWRAP, it.repay, it.eMode
+                "openPostA(address,address,address,address,uint256,uint8,uint256)",
+                it.collateral, POOL, it.debt, FLASHWRAP, it.repay, it.eMode, it.minHealthFactor
             ),
             operation: 1
         });

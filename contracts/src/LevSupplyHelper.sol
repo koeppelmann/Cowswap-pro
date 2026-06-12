@@ -104,7 +104,7 @@ contract LevSupplyHelper {
     /// the user's outlay. Supply-all + eMode behaviour identical to openPostE.
     function openPostA(
         address collToken, address pool, address debtToken,
-        address flashwrap, uint256 repayAmt, uint8 eModeCategory
+        address flashwrap, uint256 repayAmt, uint8 eModeCategory, uint256 minHF
     ) external {
         uint256 amt = IERC20S(collToken).balanceOf(address(this));
         require(amt > 0, "nothing to supply");
@@ -117,5 +117,13 @@ contract LevSupplyHelper {
         uint256 have = IERC20S(debtToken).balanceOf(address(this));
         if (have < repayAmt) IAaveSupply(pool).borrow(debtToken, repayAmt - have, 2, 0, address(this));
         require(IERC20S(debtToken).transfer(flashwrap, repayAmt), "flash repay failed");
+        // signed safety floor (codex high): the adaptive borrow covers whatever the settlement fee
+        // shaved off the delivered equity — but a solver under-delivering within the carrier's price
+        // tolerance would push that gap into the user's debt. Enforce the owner-signed post-open HF
+        // so any such under-delivery reverts the whole settlement instead of opening a worse position.
+        if (minHF != 0) {
+            (,,,,, uint256 hf) = IAaveSupply(pool).getUserAccountData(address(this));
+            require(hf >= minHF, "HF too low");
+        }
     }
 }
