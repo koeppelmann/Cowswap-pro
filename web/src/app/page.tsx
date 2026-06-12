@@ -7,6 +7,7 @@ import { useAccount, useBytecode, useChainId, useReadContract } from 'wagmi';
 import { ConnectButton } from '../components/ConnectButton';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { TokenPicker } from '../components/TokenPicker';
+import { SwapTab } from '../components/SwapTab';
 import { DurationPicker } from '../components/DurationPicker';
 import { erc20Abi } from '../lib/abi';
 import { getChainConfig } from '../lib/chains';
@@ -59,10 +60,25 @@ function Info({ text, wide }: { text: string; wide?: boolean }) {
   return <span className={`info${wide ? ' wide' : ''}`} data-tip={text} tabIndex={0} role="img" aria-label={text}>ⓘ</span>;
 }
 
+type Tab = 'swap' | 'limit' | 'twap';
+
+/** Shared tab row — rendered inside each tab's own widget so styling stays native. */
+function Tabs({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
+  return (
+    <div className="tabs">
+      <button className={`tab ${tab === 'swap' ? 'active' : ''}`} onClick={() => setTab('swap')}>Swap</button>
+      <button className="tab" disabled title="Coming soon">Limit</button>
+      <button className={`tab ${tab === 'twap' ? 'active' : ''}`} onClick={() => setTab('twap')}>TWAP</button>
+    </div>
+  );
+}
+
 export default function Page() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const chain = getChainConfig(chainId);
+  // Swap (with optional leverage) is the default; TWAP keeps the existing builder.
+  const [tab, setTab] = useState<Tab>('swap');
 
   return (
     <div className="container">
@@ -74,21 +90,25 @@ export default function Page() {
         </div>
       </div>
 
-      {isConnected && !chain ? (
+      {tab === 'swap' ? (
+        <SwapTab tabs={<Tabs tab={tab} setTab={setTab} />} />
+      ) : isConnected && !chain ? (
         <div className="widget center"><p className="errors">Unsupported network — switch to Ethereum or Gnosis.</p></div>
       ) : (
-        <Builder key={chainId} chain={chain ?? getChainConfig(1)!} owner={address} connected={isConnected} />
+        <Builder key={chainId} chain={chain ?? getChainConfig(1)!} owner={address} connected={isConnected} tabs={<Tabs tab={tab} setTab={setTab} />} />
       )}
 
-      <p className="hint center" style={{ marginTop: 22 }}>
-        Single tx time-weighted average price orders on CoW Protocol.
-        <Info wide text="Submitting a CoW Swap TWAP order requires a Safe. This interface creates a single-use Safe whose address is calculated deterministically in advance. You give that address an allowance; then a relayer deploys the Safe (or you can deploy it yourself), which claims the tokens needed for the order and places it — all in one transaction. The Safe is controlled solely by your wallet, so you stay in full custody of your tokens the whole time." />
-      </p>
+      {tab === 'twap' && (
+        <p className="hint center" style={{ marginTop: 22 }}>
+          Single tx time-weighted average price orders on CoW Protocol.
+          <Info wide text="Submitting a CoW Swap TWAP order requires a Safe. This interface creates a single-use Safe whose address is calculated deterministically in advance. You give that address an allowance; then a relayer deploys the Safe (or you can deploy it yourself), which claims the tokens needed for the order and places it — all in one transaction. The Safe is controlled solely by your wallet, so you stay in full custody of your tokens the whole time." />
+        </p>
+      )}
     </div>
   );
 }
 
-function Builder({ chain, owner, connected }: { chain: NonNullable<ReturnType<typeof getChainConfig>>; owner?: Address; connected: boolean }) {
+function Builder({ chain, owner, connected, tabs }: { chain: NonNullable<ReturnType<typeof getChainConfig>>; owner?: Address; connected: boolean; tabs: React.ReactNode }) {
   // sensible defaults so the widget shows a live quote immediately (Builder is
   // keyed by chainId, so these re-init per chain). Gnosis → WXDAI→GNO, mainnet → WETH→USDT.
   const [sellAddr, setSellAddr] = useState<string>(chain.tokens[0]?.address ?? '');
@@ -259,11 +279,7 @@ function Builder({ chain, owner, connected }: { chain: NonNullable<ReturnType<ty
   return (
     <>
       <div className="widget">
-        <div className="tabs">
-          <button className="tab" disabled>Swap</button>
-          <button className="tab" disabled>Limit</button>
-          <button className="tab active">TWAP</button>
-        </div>
+        {tabs}
 
         <div className="token-row">
           <div className="label"><span>Sell total</span>{sellToken && owner && <span>Balance {dispAmount(sellBal, sellToken.decimals)}</span>}</div>

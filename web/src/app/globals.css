@@ -238,6 +238,11 @@ input.mini { max-width: 72px; }
 /* ===================== CoW Leverage (swap-card UI) ===================== */
 .lev-root { --lev-bg:#060918; --lev-card:#12152b; --lev-panel:#0b0e1e; --lev-pri:#4C82FB; --lev-border:rgba(255,255,255,.06); --lev-muted:#8595b3; min-height:100vh; background:var(--lev-bg); color:#fff; font-family:'Inter',-apple-system,system-ui,sans-serif; }
 .lev-root *{ box-sizing:border-box; }
+/* embedded variant: same design tokens, no full-page layout (used by the Swap tab inside the main app) */
+.lev-scope { --lev-bg:#060918; --lev-card:#12152b; --lev-panel:#0b0e1e; --lev-pri:#4C82FB; --lev-border:rgba(255,255,255,.06); --lev-muted:#8595b3; color:#fff; }
+.lev-scope *{ box-sizing:border-box; }
+.lev-scope .lev-wrap{ padding:0; max-width:none; }
+.lev-cardtop .tabs{ flex:1; margin:0 12px 0 0; }
 .lev-hd{ display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--lev-border); }
 .lev-hd .brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:18px; color:#dbe6ff; }
 .lev-hd .nav{ display:flex; gap:18px; color:var(--lev-muted); font-size:14px; }
