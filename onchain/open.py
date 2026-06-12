@@ -9,7 +9,7 @@ from eth_account import Account
 
 RPC = "https://rpc.gnosischain.com"
 BARN = "https://barn.api.cow.fi/xdai/api/v1"
-IB7 = "0x7Da9A9043be2DE12348fe0668b72b9da315cE821"  # IntentBootstrap12 (any Aave pair + eMode)
+IB7 = "0x3D3191d57c871172882F45F9bd68A87eC7158ce8"  # IntentBootstrap14 (module v5)
 SETTLEMENT = "0xf553d092b50bdcbddeD1A99aF2cA29FBE5E2CB13"
 RELAYER = "0xC7242d167563352E2BCA4d71C043fbe542DB8FB2"
 WXDAI = "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d"
@@ -49,7 +49,7 @@ itup = "(" + ",".join(str(x) for x in intent) + ")"
 safe = cast("call", IB7, f"safeOf({INTENT_T})(address)", itup, "--rpc-url", RPC)
 
 # fund the owner (equity*1.05 + gas) and set the relayer allowance
-need = equity * 105 // 100
+need = equity  # exact outlay — the adaptive post borrows what fees shave off
 if DEBT == WXDAI and bal(WXDAI, owner) < need:
     send(WXDAI, "transfer(address,uint256)", owner, need, "--private-key", DEPLOYER_KEY); time.sleep(2)
 assert bal(DEBT, owner) >= need, f"owner lacks {need} of sell token {DEBT}"
@@ -66,8 +66,8 @@ cv = int(time.time()) + 3600
 carrier_doc = json.dumps({"appCode": "koeppelmann/cowswap_wrapper", "environment": "barn",
     "metadata": {"hooks": {"pre": [{"target": IB7, "callData": boot, "gasLimit": "3000000"}], "post": []}}, "version": "1.6.0"}, separators=(",", ":"))
 ch = "0x" + keccak(text=carrier_doc).hex()
-sell = equity * 105 // 100
-order = {"sellToken": DEBT, "buyToken": DEBT, "receiver": safe, "sellAmount": str(sell), "buyAmount": str(equity), "validTo": cv,
+sell = equity
+order = {"sellToken": DEBT, "buyToken": DEBT, "receiver": safe, "sellAmount": str(sell), "buyAmount": str(equity * 99 // 100), "validTo": cv,
          "appData": ch, "feeAmount": "0", "kind": "sell", "partiallyFillable": False, "sellTokenBalance": "erc20", "buyTokenBalance": "erc20"}
 typed = {"types": {"EIP712Domain": [{"name": "name", "type": "string"}, {"name": "version", "type": "string"}, {"name": "chainId", "type": "uint256"}, {"name": "verifyingContract", "type": "address"}],
     "Order": [{"name": n, "type": t} for n, t in [("sellToken", "address"), ("buyToken", "address"), ("receiver", "address"), ("sellAmount", "uint256"), ("buyAmount", "uint256"), ("validTo", "uint32"), ("appData", "bytes32"), ("feeAmount", "uint256"), ("kind", "string"), ("partiallyFillable", "bool"), ("sellTokenBalance", "string"), ("buyTokenBalance", "string")]]},

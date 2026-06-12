@@ -81,3 +81,17 @@ Live proofs (barn, organic solvers, real /api routes):
   also exercises a 6-decimals debt token end to end.
 UI: slider max derives from the pair's LTV (9.7x on the eMode pair), eMode label + LTV shown
 before signing.
+
+## Exact outlay + partial-close payout (either asset) — e2e proven (2026-06-12 night)
+
+Module v5 `0x239D413A6Ac5322D3ccAaaf43e34045bdAcD7E74` (+withdrawExtra), helper v7
+`0x3E349D3789ce820202a0D35799077c343a9C2b41` (openPostA adaptive borrow), IntentBootstrap14
+`0x3D3191d57c871172882F45F9bd68A87eC7158ce8`.
+
+- EXACT OUTLAY: carrier sold 6000000000000000 WXDAI — owner balance decreased by exactly that
+  amount (verified to the wei); the adaptive post borrowed the fee shortfall at execution.
+- partial 40% close INTO DEBT, receiver=owner: coll/debt each −40%, owner +0.00237 WXDAI.
+- partial 40% close INTO COLLATERAL, receiver=owner (withdrawExtra): owner +0.000635 wstETH
+  (+ sell-overshoot surplus in WXDAI — nothing stranded in the Safe).
+- full close w/ sweep: Safe 0/0, all to owner.
+Dual-module compat: v4 Safes stay manageable (14-field intents, relay whitelists both).

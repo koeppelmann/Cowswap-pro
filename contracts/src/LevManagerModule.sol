@@ -65,12 +65,13 @@ contract LevManagerModule {
         uint256 flash;            // REDUCE: flash debt amount · INCREASE: 0
         uint32  orderValidTo;     // CoW order validity (<= deadline)
         uint256 minHealthFactor;  // postcondition (Aave 1e18 units); 0 = no check
-        address receiver;         // full close: sweep ALL residual tokens here (0 = leave in Safe)
+        address receiver;         // close payout target: residual tokens are sent here (0 = leave in Safe)
         uint256 triggerHealthFactor; // stop trigger: order fillable ONLY while HF < this (0 = always)
+        uint256 withdrawExtra;    // partial REDUCE: collateral withdrawn ON TOP of sellAmount and paid out
     }
 
     bytes32 public constant RETARGET_TYPEHASH = keccak256(
-        "Retarget(address safe,uint256 nonce,uint256 deadline,uint8 mode,address collateral,address debt,uint256 sellAmount,uint256 repayAmount,uint256 minBuy,uint256 flash,uint32 orderValidTo,uint256 minHealthFactor,address receiver,uint256 triggerHealthFactor)"
+        "Retarget(address safe,uint256 nonce,uint256 deadline,uint8 mode,address collateral,address debt,uint256 sellAmount,uint256 repayAmount,uint256 minBuy,uint256 flash,uint32 orderValidTo,uint256 minHealthFactor,address receiver,uint256 triggerHealthFactor,uint256 withdrawExtra)"
     );
     bytes32 public immutable DOMAIN_SEPARATOR;
 
@@ -92,7 +93,7 @@ contract LevManagerModule {
         require(r.mode <= INCREASE, "mode");
         // mode-specific parameter sanity (codex medium): partial REDUCE must be flash-covered; INCREASE has no flash
         if (r.mode == REDUCE && r.repayAmount != MAX) require(r.repayAmount <= r.flash, "repay>flash");
-        if (r.mode == INCREASE) require(r.flash == 0 && r.repayAmount == 0, "increase params");
+        if (r.mode == INCREASE) require(r.flash == 0 && r.repayAmount == 0 && r.withdrawExtra == 0, "increase params");
 
         // authority: the EIP-712 signer must be an owner of the (module-enabled) Safe
         address signer = _recover(_digest(r), sig);
@@ -172,14 +173,16 @@ contract LevManagerModule {
                 trig,
                 _ms(r.debt,       abi.encodeWithSignature("approve(address,uint256)", POOL, r.flash)),
                 _ms(POOL,         abi.encodeWithSignature("repay(address,uint256,uint256,address)", r.debt, r.repayAmount, uint256(2), r.safe)),
-                _ms(POOL,         abi.encodeWithSignature("withdraw(address,uint256,address)", r.collateral, full ? MAX : r.sellAmount, r.safe)),
+                _ms(POOL,         abi.encodeWithSignature("withdraw(address,uint256,address)", r.collateral, full ? MAX : r.sellAmount + r.withdrawExtra, r.safe)),
                 _ms(r.collateral, abi.encodeWithSignature("approve(address,uint256)", RELAYER, r.sellAmount))
             );
             pre = CoWSafeWrapper.SafeTx({ to: MULTISEND, value: 0, data: abi.encodeWithSignature("multiSend(bytes)", preCalls), operation: 1 });
-            if (full && r.receiver != address(0)) {
-                // full close with a signed receiver: ONE delegatecall (MULTISEND is MultiSendCallOnly —
-                // inner delegatecalls revert) that repays the flash, checks minHF and sweeps ALL residual
-                // tokens (debt proceeds + collateral dust) to the receiver, balances read at execution time.
+            if (r.receiver != address(0)) {
+                // close payout with a signed receiver (FULL or PARTIAL): ONE delegatecall (MULTISEND is
+                // MultiSendCallOnly — inner delegatecalls revert) that repays the flash, checks minHF and
+                // sweeps the Safe's ERC20 balances of both tokens to the receiver: on full close that is
+                // everything; on partial close it is the freed equity — the debt-token surplus plus any
+                // `withdrawExtra` collateral (supplied aTokens are untouched). Balances read at execution.
                 post = CoWSafeWrapper.SafeTx({
                     to: SUPPLYHELP, value: 0,
                     data: abi.encodeWithSignature(
@@ -253,7 +256,7 @@ contract LevManagerModule {
         // all-static fields: two concatenated abi.encode chunks are byte-identical to one (stack depth)
         bytes32 structHash = keccak256(bytes.concat(
             abi.encode(RETARGET_TYPEHASH, r.safe, r.nonce, r.deadline, r.mode, r.collateral, r.debt),
-            abi.encode(r.sellAmount, r.repayAmount, r.minBuy, r.flash, r.orderValidTo, r.minHealthFactor, r.receiver, r.triggerHealthFactor)
+            abi.encode(r.sellAmount, r.repayAmount, r.minBuy, r.flash, r.orderValidTo, r.minHealthFactor, r.receiver, r.triggerHealthFactor, r.withdrawExtra)
         ));
         return keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash));
     }

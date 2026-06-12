@@ -32,7 +32,7 @@ interface IProxyFactory {
     function proxyCreationCode() external pure returns (bytes memory);
 }
 
-contract IntentBootstrap12 {
+contract IntentBootstrap14 {
     // canonical / pre-existing (Gnosis staging)
     address constant SETTLEMENT = 0xf553d092b50bdcbddeD1A99aF2cA29FBE5E2CB13;
     address constant RELAYER    = 0xC7242d167563352E2BCA4d71C043fbe542DB8FB2;
@@ -46,8 +46,8 @@ contract IntentBootstrap12 {
     address constant SINGLETON  = 0x3E5c63644E683549055b9Be8653de26E0B4CD36E;
     address constant MODSETUP   = 0x2dd68b007B46fBe91B9A7c3EDa5A7a1063cB5b47; // SafeModuleSetup.enableModules
     address constant SIMHANDLER = 0xf2044b74959F6bC291dc803C24bF0D7E6379fcC8; // CoWSafeSigHandlerSim2 (combined)
-    address constant LEVMANAGER = 0xbd913B8626DD7ACe1810E1797C93f27dD7906A5C; // LevManagerModule v4 (stop trigger + sweep)
-    address constant SUPPLYHELP = 0xC390b54c4f29157ccbD4feCF598C12404F8607ff; // LevSupplyHelper v6 (openPostE: eMode + explicit collateral enable)
+    address constant LEVMANAGER = 0x239D413A6Ac5322D3ccAaaf43e34045bdAcD7E74; // LevManagerModule v5 (partial-close payout to receiver)
+    address constant SUPPLYHELP = 0x3E349D3789ce820202a0D35799077c343a9C2b41; // LevSupplyHelper v7 (openPostA: adaptive borrow, exact user outlay)
 
     event Bootstrapped(address indexed safe, bytes uid);
     uint256 constant TRIGGER_DUST = 1e12; // pulled from owner to fund the self-settling trigger order
@@ -149,11 +149,15 @@ contract IntentBootstrap12 {
         // ONE delegatecall (canonical MultiSend is CallOnly): supply the FULL bought balance
         // (positive slippage earns yield), enter the signed eMode category (if any) before the
         // borrow so its boosted LTV applies, borrow, repay the flash loan.
+        // ADAPTIVE post: the Safe borrows exactly (repay − actual equity received) at execution
+        // time, so the carrier can sell EXACTLY the user's amount — settlement fees shift the
+        // borrow by their size instead of requiring a pre-funded buffer. it.borrow stays committed
+        // in the intent as the displayed/expected value but the helper derives the real one.
         post = CoWSafeWrapper.SafeTx({
             to: SUPPLYHELP, value: 0,
             data: abi.encodeWithSignature(
-                "openPostE(address,address,address,uint256,address,uint256,uint8)",
-                it.collateral, POOL, it.debt, it.borrow, FLASHWRAP, it.repay, it.eMode
+                "openPostA(address,address,address,address,uint256,uint8)",
+                it.collateral, POOL, it.debt, FLASHWRAP, it.repay, it.eMode
             ),
             operation: 1
         });
