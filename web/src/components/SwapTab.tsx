@@ -32,9 +32,20 @@ const WETH: UIToken = { address: O.weth as Address, symbol: 'WETH', decimals: 18
 // pair is WXDAI→WETH — every other pair is a plain barn swap.
 const tokenKind = (addr: string): UIToken['kind'] => (addr.toLowerCase() === (O.wxdai as string).toLowerCase() ? 'debt' : 'collateral');
 
+type PosTok = { address: Address; symbol: string; decimals: number };
 type LivePos = {
   safe: Address; m: PositionMetrics; collQty: bigint; debtQty: bigint; availBase: bigint;
+  collTok: PosTok; debtTok: PosTok;
 };
+
+// /api/aave-market shapes (which pairs can be levered + eMode categories)
+type AaveReserve = {
+  address: Address; symbol: string; decimals: number; ltvBps: number; liqThresholdBps: number;
+  collateralEnabled: boolean; borrowEnabled: boolean; active: boolean; frozen: boolean; paused: boolean; flashEnabled: boolean;
+  aToken: Address; vDebtToken: Address;
+};
+type AaveEMode = { id: number; label: string; ltvBps: number; liqThresholdBps: number; collateral: Address[]; borrowable: Address[] };
+type Market = { reserves: AaveReserve[]; emodes: AaveEMode[] };
 
 const poolAbi = [
   { type: 'function', name: 'getUserAccountData', stateMutability: 'view', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }] },
@@ -157,6 +168,36 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   const isPos = (x: UIToken | LivePos): x is LivePos => 'safe' in x;
   const sellIsPos = isPos(sell);
 
+  // Aave market snapshot: decides for WHICH pairs the 'Add Leverage' option exists
+  const [market, setMarket] = useState<Market | null>(null);
+  useEffect(() => {
+    fetch('/api/aave-market').then((r) => r.json()).then((d) => { if (d?.reserves?.length) setMarket(d); }).catch(() => {});
+  }, []);
+  // leverage terms for the CURRENT pair: borrow SELL against BUY. eMode preferred when the pair
+  // shares a category (higher LTV — and some collaterals, e.g. sDAI, ONLY work inside one).
+  const pairLev = useMemo(() => {
+    if (sellIsPos || !market) return null;
+    const lc = (x: string) => x.toLowerCase();
+    const S = market.reserves.find((r) => lc(r.address) === lc((sell as UIToken).address));
+    const B = market.reserves.find((r) => lc(r.address) === lc(buy.address));
+    if (!S || !B || S.address === B.address) return null;
+    const live = (r: AaveReserve) => r.active && !r.frozen && !r.paused;
+    if (!live(S) || !live(B) || !S.borrowEnabled || !S.flashEnabled) return null;
+    let best: { eMode: number; label: string; ltvBps: number; liqTBps: number } | null = null;
+    if (B.collateralEnabled) best = { eMode: 0, label: '', ltvBps: B.ltvBps, liqTBps: B.liqThresholdBps };
+    for (const c of market.emodes) {
+      if (c.collateral.some((a) => lc(a) === lc(B.address)) && c.borrowable.some((a) => lc(a) === lc(S.address))
+          && (!best || c.ltvBps > best.ltvBps)) {
+        best = { eMode: c.id, label: c.label, ltvBps: c.ltvBps, liqTBps: c.liqThresholdBps };
+      }
+    }
+    return best;
+  }, [sellIsPos, market, sell, buy]);
+  // max leverage from the pair's LTV: borrow ≤ ltv·coll → L ≤ 1/(1−ltv), with 3% headroom, cap 10×
+  const maxLev = pairLev ? Math.max(1.5, Math.min(10, Math.floor((0.97 / (1 - pairLev.ltvBps / 10000)) * 10) / 10)) : 5;
+  // leaving an eligible pair drops any selected leverage back to a plain swap
+  useEffect(() => { if (!pairLev && !sellIsPos && lev > 1) { setLev(1); setShowLev(false); } }, [pairLev, sellIsPos, lev]);
+
   // dialogs
   const [selOpen, setSelOpen] = useState(false);
 
@@ -176,7 +217,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
 
   // ── load positions (localStorage + live Aave reads) ──
   const loadPositions = useCallback(async () => {
-    if (!publicClient) return;
+    if (!publicClient || !market) return;
     if (!address) { setPositions([]); return; } // no account → no positions to show
     const safes = loadSavedSafes();
     const live: LivePos[] = [];
@@ -192,19 +233,36 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
         if (!managed) continue;
         const acct = await publicClient.readContract({ address: POOL_ADDR as Address, abi: poolAbi, functionName: 'getUserAccountData', args: [safe] }) as readonly bigint[];
         if (acct[0] === 0n && acct[1] === 0n) continue; // closed / empty
-        const collQty = await publicClient.readContract({ address: O.aweth as Address, abi: erc20Abi, functionName: 'balanceOf', args: [safe] }) as bigint;
-        const debtQty = await publicClient.readContract({ address: O.vdebtWxdai as Address, abi: erc20Abi, functionName: 'balanceOf', args: [safe] }) as bigint;
-        if (collQty === 0n) continue;
-        const collQtyF = Number(formatUnits(collQty, WETH.decimals));
-        const m = positionMetrics({ collateralBase: acct[0], debtBase: acct[1], liqThresholdBps: WETH_LIQ_THRESHOLD_BPS, healthFactor1e18: acct[5], collateralQty: collQtyF, collateralPriceUsd: collQtyF > 0 ? (Number(acct[0]) / 1e8) / collQtyF : 0 });
-        live.push({ safe, m, collQty, debtQty, availBase: acct[2] });
+        // ONE multicall over every reserve's aToken + vDebt balance: a position is one
+        // collateral + one debt by construction — take the largest of each.
+        const calls = market!.reserves.flatMap((r) => [
+          { address: r.aToken, abi: erc20Abi, functionName: 'balanceOf', args: [safe] } as const,
+          { address: r.vDebtToken, abi: erc20Abi, functionName: 'balanceOf', args: [safe] } as const,
+        ]);
+        const bals = await publicClient.multicall({ contracts: calls, allowFailure: true });
+        let collR: AaveReserve | null = null, collQty = 0n, debtR: AaveReserve | null = null, debtQty = 0n;
+        market!.reserves.forEach((r, i) => {
+          const a = bals[i * 2].status === 'success' ? (bals[i * 2].result as bigint) : 0n;
+          const v = bals[i * 2 + 1].status === 'success' ? (bals[i * 2 + 1].result as bigint) : 0n;
+          if (a > collQty) { collQty = a; collR = r; }
+          if (v > debtQty) { debtQty = v; debtR = r; }
+        });
+        if (!collR || collQty === 0n) continue;
+        const cR = collR as AaveReserve;
+        const dR = (debtR ?? market!.reserves.find((r) => r.address.toLowerCase() === (O.wxdai as string).toLowerCase())!) as AaveReserve;
+        const collQtyF = Number(formatUnits(collQty, cR.decimals));
+        // acct[3] = the account's CURRENT weighted liquidation threshold (bps) — eMode-aware
+        const m = positionMetrics({ collateralBase: acct[0], debtBase: acct[1], liqThresholdBps: Number(acct[3]), healthFactor1e18: acct[5], collateralQty: collQtyF, collateralPriceUsd: collQtyF > 0 ? (Number(acct[0]) / 1e8) / collQtyF : 0 });
+        live.push({ safe, m, collQty, debtQty, availBase: acct[2],
+          collTok: { address: cR.address, symbol: cR.symbol, decimals: cR.decimals },
+          debtTok: { address: dR.address, symbol: dR.symbol, decimals: dR.decimals } });
       } catch { /* skip */ }
     }
     setPositions(live);
     // keep a live selection fresh after an action (?? cur tolerates a transient RPC blip
     // without deselecting; account-switch deselection is handled by the effect below).
     setSell((cur) => (isPos(cur) ? live.find((p) => p.safe.toLowerCase() === cur.safe.toLowerCase()) ?? cur : cur));
-  }, [publicClient, address]);
+  }, [publicClient, address, market]);
   useEffect(() => { loadPositions(); }, [loadPositions]);
   // on account switch, drop any position selection (it belongs to the previous account)
   useEffect(() => { setSell((cur) => (isPos(cur) ? WXDAI : cur)); }, [address]);
@@ -242,14 +300,14 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   useEffect(() => {
     setOpenPlan(null);
     if (sellIsPos || !address || !publicClient || !openAmts || !previewBuy || lev <= 1) return;
-    if ((sell as UIToken).address.toLowerCase() !== (O.wxdai as string).toLowerCase() || buy.address.toLowerCase() !== (O.weth as string).toLowerCase()) return;
+    if (!pairLev) return;
     let live = true;
     (async () => {
       try {
         const validTo = Math.floor(Date.now() / 1000) + 3600;
         const buyMin = minOut(previewBuy, slippagePct);
         const nonce = BigInt('0x' + [...crypto.getRandomValues(new Uint8Array(12))].map((x) => x.toString(16).padStart(2, '0')).join(''));
-        const intent: Intent = { owner: address, equity, flash: openAmts.flash, buyMin, borrow: openAmts.borrow, repay: openAmts.repay, validTo, nonce };
+        const intent: Intent = { owner: address, equity, flash: openAmts.flash, buyMin, borrow: openAmts.borrow, repay: openAmts.repay, validTo, nonce, collateral: buy.address, debt: (sell as UIToken).address, eMode: pairLev.eMode };
         const safeAddr = await publicClient.readContract({ address: O.intentBootstrap as Address, abi: IB_ABI, functionName: 'safeOf', args: [intent] }) as Address;
         const [levJson, levHash] = await publicClient.readContract({ address: O.intentBootstrap as Address, abi: IB_ABI, functionName: 'appData', args: [intent, safeAddr] }) as [string, `0x${string}`];
         const levUid = await publicClient.readContract({ address: O.intentBootstrap as Address, abi: IB_ABI, functionName: 'uid', args: [intent, safeAddr] }) as `0x${string}`;
@@ -257,7 +315,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
         const { json: carrierJson, hash: carrierHash } = carrierAppData(bootstrapCalldata);
         const sellAmt = (equity * 105n) / 100n; // sell a touch more so the Safe nets >= equity after fee
         const carrierOrder = {
-          sellToken: O.wxdai, buyToken: O.wxdai, receiver: safeAddr, sellAmount: sellAmt.toString(),
+          sellToken: (sell as UIToken).address, buyToken: (sell as UIToken).address, receiver: safeAddr, sellAmount: sellAmt.toString(),
           buyAmount: ((sellAmt * 96n) / 100n).toString(), validTo, appData: carrierHash, feeAmount: '0', kind: 'sell',
           partiallyFillable: false, sellTokenBalance: 'erc20', buyTokenBalance: 'erc20',
         };
@@ -272,7 +330,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
       } catch { /* leave plan null; CTA stays disabled */ }
     })();
     return () => { live = false; };
-  }, [sellIsPos, address, publicClient, openAmts, previewBuy, slippagePct, equity, lev, sell, buy]);
+  }, [sellIsPos, address, publicClient, openAmts, previewBuy, slippagePct, equity, lev, sell, buy, pairLev]);
 
   // close/reduce estimate: sell `pct` of collateral → WXDAI, minus the proportional debt repaid.
   // Net is the WXDAI freed (full close ≈ your equity back; partial ≈ small, it mostly deleverages).
@@ -286,7 +344,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
     const sellAmount = full ? p.collQty : (p.collQty * BigInt(Math.round(pct))) / 100n;
     const debtPortion = full ? p.debtQty : (p.debtQty * BigInt(Math.round(pct))) / 100n;
     let live = true;
-    quoteOut(O.weth as Address, O.wxdai as Address, sellAmount, p.safe).then((gross) => {
+    quoteOut(p.collTok.address, p.debtTok.address, sellAmount, p.safe).then((gross) => {
       if (!live) return;
       if (gross == null) { setPreviewReduce(null); return; }
       const premium = (debtPortion * 5n) / 10000n; // ~5bps Aave flash premium
@@ -299,14 +357,16 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   const estHF = useMemo(() => {
     if (!openAmts || openAmts.borrow === 0n) return null;
     const dec = (sell as UIToken).decimals;
-    return (Number(formatUnits(openAmts.flash, dec)) * (WETH_LIQ_THRESHOLD_BPS / 10000)) / Number(formatUnits(openAmts.borrow, dec));
-  }, [openAmts, sell]);
+    const liqT = (pairLev?.liqTBps ?? WETH_LIQ_THRESHOLD_BPS) / 10000;
+    return (Number(formatUnits(openAmts.flash, dec)) * liqT) / Number(formatUnits(openAmts.borrow, dec));
+  }, [openAmts, sell, pairLev]);
   // deleverage (liquidation) price for the OPEN preview, in WXDAI per WETH
   const estLiqPrice = useMemo(() => {
     if (!openAmts || !previewBuy || openAmts.borrow === 0n) return null;
     const collQty = Number(formatUnits(previewBuy, buy.decimals));
-    return collQty > 0 ? Number(formatUnits(openAmts.borrow, (sell as UIToken).decimals)) / ((WETH_LIQ_THRESHOLD_BPS / 10000) * collQty) : null;
-  }, [openAmts, previewBuy, buy.decimals, sell]);
+    const liqT = (pairLev?.liqTBps ?? WETH_LIQ_THRESHOLD_BPS) / 10000;
+    return collQty > 0 ? Number(formatUnits(openAmts.borrow, (sell as UIToken).decimals)) / (liqT * collQty) : null;
+  }, [openAmts, previewBuy, buy.decimals, sell, pairLev]);
   const entryPrice = useMemo(() => {
     if (!openAmts || !previewBuy) return null;
     const out = Number(formatUnits(previewBuy, buy.decimals));
@@ -320,7 +380,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
     else setBuy(t);
     setSelOpen(false);
   }
-  function pickPosition(p: LivePos) { setSell(p); setPosMode('close'); setAmount('100'); setBuy(WXDAI); setSelOpen(false); }
+  function pickPosition(p: LivePos) { setSell(p); setPosMode('close'); setAmount('100'); setBuy({ address: p.debtTok.address, symbol: p.debtTok.symbol, decimals: p.debtTok.decimals, kind: tokenKind(p.debtTok.address), name: p.debtTok.symbol }); setSelOpen(false); }
 
   // ── sign a Retarget intent over the LevManagerModule domain & relay it ──
   // wait=false: submit and return immediately (stop orders PARK in the auction until triggered)
@@ -339,8 +399,8 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
     await sleep(1200);
     const reduce = Number(intent.mode) === 0;
     const order = {
-      sellToken: reduce ? O.weth : O.wxdai,   // REDUCE sells collateral; INCREASE sells borrowed debt
-      buyToken: reduce ? O.wxdai : O.weth,
+      sellToken: reduce ? intent.collateral : intent.debt,   // REDUCE sells collateral; INCREASE sells borrowed debt
+      buyToken: reduce ? intent.debt : intent.collateral,
       receiver: intent.safe, sellAmount: (intent.sellAmount as bigint).toString(), buyAmount: (intent.minBuy as bigint).toString(),
       validTo: Number(intent.orderValidTo), appData: rl.appDataHash, feeAmount: '0', kind: 'sell', partiallyFillable: false,
       sellTokenBalance: 'erc20', buyTokenBalance: 'erc20', signingScheme: 'eip1271', signature: '0x', from: intent.safe,
@@ -368,14 +428,15 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
       const flash = (repayAmount * 103n) / 100n;
       // minBuy priced for the TRIGGER scenario: HF scales 1:1 with price (debt fixed), so the
       // WETH price when HF first touches the trigger is priceNow · trigger / hfNow; 3% slack.
-      const priceNow = p.collQty > 0n ? p.m.collateralUsd / Number(formatUnits(p.collQty, WETH.decimals)) : 0;
+      const priceNow = p.collQty > 0n ? p.m.collateralUsd / Number(formatUnits(p.collQty, p.collTok.decimals)) : 0;
       if (priceNow <= 0 || !isFinite(p.m.healthFactor) || p.m.healthFactor > 100) throw new Error('no live price/HF');
       const priceAtTrigger = priceNow * (trigger / p.m.healthFactor);
-      const minBuy = floatToWei(Number(formatUnits(sellAmount, WETH.decimals)) * priceAtTrigger * 0.97);
+      const debtPx = p.debtQty > 0n ? p.m.debtUsd / Number(formatUnits(p.debtQty, p.debtTok.decimals)) : 1;
+      const minBuy = floatToWei(Number(formatUnits(sellAmount, p.collTok.decimals)) * priceAtTrigger * 0.97 / debtPx, p.debtTok.decimals);
       const validTo = Math.floor(Date.now() / 1000) + 6 * 3600; // parked for up to 6h
       const intent = {
         safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0n,
-        collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
+        collateral: p.collTok.address, debt: p.debtTok.address, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
         receiver: '0x0000000000000000000000000000000000000000' as Address,
         triggerHealthFactor: floatToWei(trigger),
       };
@@ -398,10 +459,10 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
 
       // one-time vault-relayer allowance for the carrier order
       const sellAmt = BigInt(carrierOrder.sellAmount);
-      const allowance = await publicClient.readContract({ address: O.wxdai as Address, abi: ERC20_ABI, functionName: 'allowance', args: [address, O.relayer as Address] }) as bigint;
+      const allowance = await publicClient.readContract({ address: intent.debt, abi: ERC20_ABI, functionName: 'allowance', args: [address, O.relayer as Address] }) as bigint;
       if (allowance < sellAmt) {
         setStatus('One-time CoW approval (same as cowswap.exchange — never asked again)…');
-        const h = await walletClient.writeContract({ address: O.wxdai as Address, abi: ERC20_ABI, functionName: 'approve', args: [O.relayer as Address, MAXU], chain: undefined, account: address });
+        const h = await walletClient.writeContract({ address: intent.debt, abi: ERC20_ABI, functionName: 'approve', args: [O.relayer as Address, MAXU], chain: undefined, account: address });
         await publicClient.waitForTransactionReceipt({ hash: h });
       }
 
@@ -421,7 +482,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
 
       setStatus('Opening your position (waiting for a solver)…');
       await barn('appdata', { hash: levHash, fullAppData: levJson });
-      const lo = { sellToken: O.wxdai, buyToken: O.weth, receiver: safeAddr, sellAmount: intent.flash.toString(), buyAmount: intent.buyMin.toString(), validTo: intent.validTo, appData: levHash, feeAmount: '0', kind: 'sell', partiallyFillable: false, sellTokenBalance: 'erc20', buyTokenBalance: 'erc20', signingScheme: 'eip1271', signature: '0x', from: safeAddr };
+      const lo = { sellToken: intent.debt, buyToken: intent.collateral, receiver: safeAddr, sellAmount: intent.flash.toString(), buyAmount: intent.buyMin.toString(), validTo: intent.validTo, appData: levHash, feeAmount: '0', kind: 'sell', partiallyFillable: false, sellTokenBalance: 'erc20', buyTokenBalance: 'erc20', signingScheme: 'eip1271', signature: '0x', from: safeAddr };
       const ls = await barn('order', { order: lo });
       if (ls.status !== 201) throw new Error('leverage rejected: ' + JSON.stringify(ls.body));
       if (await pollFill(levUid, (s) => setStatus('Opening position (' + s + ')…')) !== 'fulfilled') throw new Error('leverage order expired — your Safe holds the equity; retry from the position list.');
@@ -447,13 +508,13 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
       const sellAmount = full ? p.collQty : (p.collQty * BigInt(pct)) / 100n;
       const repayAmount = full ? MAXU : (p.debtQty * BigInt(pct)) / 100n;
       const flash = ((full ? p.debtQty : repayAmount) * 103n) / 100n;
-      const q = await quoteOut(O.weth as Address, O.wxdai as Address, sellAmount, p.safe);
+      const q = await quoteOut(p.collTok.address, p.debtTok.address, sellAmount, p.safe);
       if (!q) throw new Error('quote failed');
       const minBuy = minOut(q, Math.max(slippagePct, 2));
       const validTo = Math.floor(Date.now() / 1000) + 1800;
       const intent = {
         safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0n,
-        collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
+        collateral: p.collTok.address, debt: p.debtTok.address, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
         receiver: recv, triggerHealthFactor: 0n,
       };
       await relayRetarget(intent, full ? 'Closing position' : `Reducing ${pct}%`);
@@ -471,37 +532,41 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
     if (Math.abs(target - cur) < 0.05) { setErr('Target leverage unchanged'); return; }
     setBusy(true); setErr(null); setStatus('Quoting…');
     try {
-      const equityWxdai = Math.max(p.m.equityUsd, 0); // WXDAI ≈ $1
-      const price = p.collQty > 0n ? p.m.collateralUsd / Number(formatUnits(p.collQty, WETH.decimals)) : 0;
-      if (price <= 0) throw new Error('no price');
+      const equityUsd = Math.max(p.m.equityUsd, 0);
+      const collPrice = p.collQty > 0n ? p.m.collateralUsd / Number(formatUnits(p.collQty, p.collTok.decimals)) : 0;
+      // debt-token USD price from the account's own balances (handles EURe ≠ $1, 6-dec tokens)
+      const debtPrice = p.debtQty > 0n ? p.m.debtUsd / Number(formatUnits(p.debtQty, p.debtTok.decimals)) : 1;
+      if (collPrice <= 0 || !(debtPrice > 0)) throw new Error('no price');
       const validTo = Math.floor(Date.now() / 1000) + 1800;
-      const deltaValue = Math.abs(target - cur) * equityWxdai; // WXDAI value to move
+      const deltaUsd = Math.abs(target - cur) * equityUsd;       // USD value to move
+      const deltaDebt = deltaUsd / debtPrice;                     // in debt-token units
       if (target > cur) {
-        // INCREASE: borrow Δ WXDAI, buy WETH, supply it
-        const sellAmount = floatToWei(deltaValue);
-        const cap = (p.availBase * (10n ** 10n) * 90n) / 100n; // availableBorrowsBase (8dec) → WXDAI, 90%
-        if (sellAmount > cap) throw new Error('exceeds Aave borrow capacity at that leverage');
-        const q = await quoteOut(O.wxdai as Address, O.weth as Address, sellAmount, p.safe);
+        // INCREASE: borrow Δ debt, buy collateral, supply it
+        const sellAmount = floatToWei(deltaDebt, p.debtTok.decimals);
+        const cap = (p.availBase * (10n ** 10n) * 90n) / 100n; // availableBorrowsBase (8dec) → 18dec USD, 90%
+        const sellUsd = floatToWei(deltaUsd); // 18-dec USD for the cap comparison
+        if (sellUsd > cap) throw new Error('exceeds Aave borrow capacity at that leverage');
+        const q = await quoteOut(p.debtTok.address, p.collTok.address, sellAmount, p.safe);
         if (!q) throw new Error('quote failed');
         const minBuy = minOut(q, Math.max(slippagePct, 2));
         const intent = {
           safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 1n,
-          collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount: 0n, minBuy, flash: 0n, orderValidTo: BigInt(validTo), minHealthFactor: 1050000000000000000n,
+          collateral: p.collTok.address, debt: p.debtTok.address, sellAmount, repayAmount: 0n, minBuy, flash: 0n, orderValidTo: BigInt(validTo), minHealthFactor: 1050000000000000000n,
           receiver: '0x0000000000000000000000000000000000000000' as Address, triggerHealthFactor: 0n, // not a close — nothing to sweep
         };
         await relayRetarget(intent, `Increasing to ${target.toFixed(1)}x`);
       } else {
-        // DECREASE: sell Δ-worth WETH (overshoot so guaranteed minBuy still covers flash+premium),
-        // repay Δ WXDAI debt. Any surplus WXDAI stays in the Safe (small equity bump).
-        const repayAmount = floatToWei(deltaValue);
-        const sellAmount = floatToWei((deltaValue / price) * 1.05); // 5% extra collateral
+        // DECREASE: sell Δ-worth collateral (overshoot so guaranteed minBuy still covers flash+premium),
+        // repay Δ debt. Any surplus debt token stays in the Safe (small equity bump).
+        const repayAmount = floatToWei(deltaDebt, p.debtTok.decimals);
+        const sellAmount = floatToWei((deltaUsd / collPrice) * 1.05, p.collTok.decimals); // 5% extra collateral
         const flash = (repayAmount * 103n) / 100n;
-        const q = await quoteOut(O.weth as Address, O.wxdai as Address, sellAmount, p.safe);
+        const q = await quoteOut(p.collTok.address, p.debtTok.address, sellAmount, p.safe);
         if (!q) throw new Error('quote failed');
         const minBuy = minOut(q, Math.max(slippagePct, 2));
         const intent = {
           safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0n,
-          collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
+          collateral: p.collTok.address, debt: p.debtTok.address, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
           receiver: '0x0000000000000000000000000000000000000000' as Address, triggerHealthFactor: 0n, // partial reduce — residual stays as position buffer
         };
         await relayRetarget(intent, `Decreasing to ${target.toFixed(1)}x`);
@@ -548,7 +613,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
 
   // ── CTA dispatch ──
   const samePair = !sellIsPos && (sell as UIToken).address.toLowerCase() === buy.address.toLowerCase();
-  const supportedOpen = !sellIsPos && (sell as UIToken).kind === 'debt' && buy.kind === 'collateral';
+  const supportedOpen = !sellIsPos && !!pairLev;
   function onCta() {
     if (!isConnected) return;
     if (!onGnosis) { switchChain({ chainId: gnosis.id }); return; }
@@ -561,7 +626,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   let ctaLabel = 'Enter an amount';
   if (sellIsPos && posMode === 'leverage') { const c = (sell as LivePos).m.leverage; ctaLabel = lev <= 1.01 ? 'Close Position' : lev > c + 0.05 ? 'Increase Leverage' : lev < c - 0.05 ? 'Decrease Leverage' : 'Adjust Leverage'; }
   else if (sellIsPos) ctaLabel = parseFloat(amount) >= 100 ? 'Close Position' : `Reduce ${parseFloat(amount) || 0}%`;
-  else if (lev > 1 && equity > 0n) ctaLabel = supportedOpen ? (insufficient ? 'Insufficient balance' : `Open ${lev}× Long`) : 'Unsupported pair (sell WXDAI, buy WETH)';
+  else if (lev > 1 && equity > 0n) ctaLabel = supportedOpen ? (insufficient ? 'Insufficient balance' : `Open ${lev}× Long`) : 'Leverage not available for this pair';
   else if (equity > 0n) ctaLabel = samePair ? 'Select two different tokens' : insufficient ? 'Insufficient balance' : 'Swap';
   const ctaDisabled = busy || !isConnected || !onGnosis
     || (sellIsPos ? (posMode === 'leverage' ? Math.abs(lev - (sell as LivePos).m.leverage) < 0.05 && lev > 1.01 : false)
@@ -598,13 +663,13 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
               </>
             ) : (
               <>
-                <div className="lbl"><span>{sellIsPos ? 'Reduce by' : 'Sell'}</span><span>{sellIsPos ? `Collat ${Number(formatUnits((sell as LivePos).collQty, WETH.decimals)).toFixed(4)} WETH` : bal != null ? `Balance ${Number(formatUnits(bal, (sell as UIToken).decimals)).toFixed(4)}` : ''}</span></div>
+                <div className="lbl"><span>{sellIsPos ? 'Reduce by' : 'Sell'}</span><span>{sellIsPos ? `Collat ${Number(formatUnits((sell as LivePos).collQty, (sell as LivePos).collTok.decimals)).toFixed(4)} ${(sell as LivePos).collTok.symbol}` : bal != null ? `Balance ${Number(formatUnits(bal, (sell as UIToken).decimals)).toFixed(4)}` : ''}</span></div>
                 <div className="lev-amtrow">
                   <input className="lev-amt" value={amount} inputMode="decimal" placeholder="0" onChange={(e) => { if (sellIsPos) { const v = parseFloat(e.target.value); setAmount(v > 100 ? '100' : e.target.value); } else setAmount(e.target.value); }} />
                   {sellIsPos && <span style={{ fontSize: 28, color: 'var(--lev-muted)' }}>%</span>}
                   <button className="lev-tok" onClick={() => openSelect('sell')}>
-                    {sellIsPos ? <span className="ph"><TokenIcon chainId={100} address={O.weth as Address} symbol="WETH" /></span> : <TokenIcon chainId={100} address={(sell as UIToken).address} symbol={(sell as UIToken).symbol} />}
-                    {sellIsPos ? `WETH ${(sell as LivePos).m.leverage.toFixed(1)}x` : (sell as UIToken).symbol} ▾
+                    {sellIsPos ? <span className="ph"><TokenIcon chainId={100} address={(sell as LivePos).collTok.address} symbol={(sell as LivePos).collTok.symbol} /></span> : <TokenIcon chainId={100} address={(sell as UIToken).address} symbol={(sell as UIToken).symbol} />}
+                    {sellIsPos ? `${(sell as LivePos).collTok.symbol} ${(sell as LivePos).m.leverage.toFixed(1)}x` : (sell as UIToken).symbol} ▾
                   </button>
                 </div>
                 {sellIsPos && <div className="lev-chips">{['25', '50', '75', '100'].map((v) => <button key={v} onClick={() => setAmount(v)}>{v === '100' ? 'Max' : v + '%'}</button>)}</div>}
@@ -627,15 +692,15 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
             </div>
             {showLev && !sellIsPos && (
               <div className="lev-levbox">
-                <div className="top"><span>Leverage</span><b>{lev.toFixed(1)}x</b></div>
-                <input className="lev-range" type="range" min={1} max={5} step={0.1} value={lev} onChange={(e) => setLev(parseFloat(e.target.value))} />
-                <div className="lev-stat" style={{ marginTop: 4 }}><span className="k">1.0x</span><span className="k">5.0x</span></div>
+                <div className="top"><span>Leverage{pairLev && pairLev.eMode > 0 ? ` · eMode: ${pairLev.label}` : ''}</span><b>{lev.toFixed(1)}x</b></div>
+                <input className="lev-range" type="range" min={1} max={maxLev} step={0.1} value={lev} onChange={(e) => setLev(parseFloat(e.target.value))} />
+                <div className="lev-stat" style={{ marginTop: 4 }}><span className="k">1.0x</span><span className="k">{maxLev.toFixed(1)}x</span></div>
               </div>
             )}
             <div className="lev-amtrow">
               <input className="lev-amt" style={{ color: 'var(--lev-pri)' }} readOnly value={
                 sellIsPos
-                  ? (posMode === 'close' ? (previewReduce != null ? Number(formatUnits(previewReduce, WXDAI.decimals)).toFixed(2) : '') : '')
+                  ? (posMode === 'close' ? (previewReduce != null ? Number(formatUnits(previewReduce, (sell as LivePos).debtTok.decimals)).toFixed(2) : '') : '')
                   : (previewBuy ? Number(formatUnits(previewBuy, buy.decimals)).toFixed(5) : '0')
               } placeholder="0" />
               <button className="lev-tok" onClick={() => openSelect('buy')}><TokenIcon chainId={100} address={buy.address} symbol={buy.symbol} /> {buy.symbol} ▾</button>
@@ -654,18 +719,19 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
             {!sellIsPos && lev > 1 && openAmts && (
               <div style={{ marginTop: 10 }}>
                 <div className="lev-stat"><span className="k">Debt (Aave V3)</span><span className="v" style={{ color: '#ffa53b' }}>{Number(formatUnits(openAmts.borrow, (sell as UIToken).decimals)).toFixed(4)} {(sell as UIToken).symbol}</span></div>
+                {pairLev && pairLev.eMode > 0 && <div className="lev-stat"><span className="k">Aave eMode</span><span className="v" style={{ color: '#46d39a' }}>{pairLev.label} · LTV {(pairLev.ltvBps / 100).toFixed(0)}%</span></div>}
                 <div className="lev-stat"><span className="k">Est. health factor</span><span className="v" style={{ color: estHF && estHF > 1.4 ? '#46d39a' : '#ffa53b' }}>{estHF ? estHF.toFixed(2) : '—'}</span></div>
-                {estLiqPrice && <div className="lev-stat"><span className="k">Deleverage price</span><span className="v" style={{ color: '#ff8e8e' }}>{estLiqPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })} WXDAI</span></div>}
+                {estLiqPrice && <div className="lev-stat"><span className="k">Deleverage price</span><span className="v" style={{ color: '#ff8e8e' }}>{estLiqPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })} {(sell as UIToken).symbol}</span></div>}
               </div>
             )}
             {/* pre-open plan: what will happen, the deterministic Safe + both order UIDs, with links */}
             {!sellIsPos && lev > 1 && openAmts && openPlan && (
               <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.06)' }}>
                 <div className="lev-stat"><span className="k" style={{ fontSize: 11 }}>What happens (you sign step 1 only):</span></div>
-                <div className="lev-stat"><span className="k">1 · Fund Safe</span><span className="v">{Number(formatUnits(BigInt(openPlan.carrierOrder.sellAmount), 18)).toFixed(4)} WXDAI → Safe</span></div>
-                <div className="lev-stat"><span className="k">2 · Flash-swap</span><span className="v">{Number(formatUnits(openPlan.intent.flash, 18)).toFixed(4)} WXDAI → ≥ {Number(formatUnits(openPlan.intent.buyMin, 18)).toFixed(5)} WETH</span></div>
-                <div className="lev-stat"><span className="k">3 · Supply + borrow</span><span className="v">supply WETH · borrow {Number(formatUnits(openPlan.intent.borrow, 18)).toFixed(4)} WXDAI</span></div>
-                <div className="lev-stat"><span className="k">4 · Repay flash</span><span className="v">{Number(formatUnits(openPlan.intent.repay, 18)).toFixed(4)} WXDAI</span></div>
+                <div className="lev-stat"><span className="k">1 · Fund Safe</span><span className="v">{Number(formatUnits(BigInt(openPlan.carrierOrder.sellAmount), (sell as UIToken).decimals)).toFixed(4)} {(sell as UIToken).symbol} → Safe</span></div>
+                <div className="lev-stat"><span className="k">2 · Flash-swap</span><span className="v">{Number(formatUnits(openPlan.intent.flash, (sell as UIToken).decimals)).toFixed(4)} {(sell as UIToken).symbol} → ≥ {Number(formatUnits(openPlan.intent.buyMin, buy.decimals)).toFixed(5)} {buy.symbol}</span></div>
+                <div className="lev-stat"><span className="k">3 · Supply + borrow</span><span className="v">supply {buy.symbol}{openPlan.intent.eMode > 0 ? ' (eMode)' : ''} · borrow {Number(formatUnits(openPlan.intent.borrow, (sell as UIToken).decimals)).toFixed(4)} {(sell as UIToken).symbol}</span></div>
+                <div className="lev-stat"><span className="k">4 · Repay flash</span><span className="v">{Number(formatUnits(openPlan.intent.repay, (sell as UIToken).decimals)).toFixed(4)} {(sell as UIToken).symbol}</span></div>
                 <div className="lev-stat" style={{ marginTop: 6 }}><span className="k">Your Safe (deterministic)</span><span className="v"><ExtLink href={safeAppUrl(openPlan.safe)}>{short(openPlan.safe)}</ExtLink>&nbsp;·&nbsp;<ExtLink href={scanUrl(openPlan.safe)}>scan</ExtLink></span></div>
                 <div className="lev-stat"><span className="k">Funding order UID</span><span className="v"><ExtLink href={explorerUrl(openPlan.carrierUid)}>{short(openPlan.carrierUid)}</ExtLink></span></div>
                 <div className="lev-stat"><span className="k">Open order UID (signed by the Safe)</span><span className="v"><ExtLink href={explorerUrl(openPlan.levUid)}>{short(openPlan.levUid)}</ExtLink></span></div>
@@ -698,7 +764,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
           )}
 
           {!sellIsPos && lev > 1 && entryPrice && (
-            <div className="lev-rate">1 WETH = {entryPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })} WXDAI · slippage {slippagePct}%</div>
+            <div className="lev-rate">1 {buy.symbol} = {entryPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })} {!sellIsPos ? (sell as UIToken).symbol : ''} · slippage {slippagePct}%</div>
           )}
 
           <button className={`lev-cta ${ctaLabel.includes('Increase') ? 'warn' : ctaLabel.includes('Close') ? 'danger' : ''}`} disabled={ctaDisabled} onClick={onCta}>{busy ? 'Working…' : ctaLabel}</button>
@@ -722,9 +788,9 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
                 <div className="lev-secttl">Your positions</div>
                 {positions.map((p) => (
                   <button key={p.safe} className="lev-trow pos" onClick={() => pickPosition(p)}>
-                    <span className="l"><span className="ph"><TokenIcon chainId={100} address={O.weth as Address} symbol="WETH" /></span>
-                      <span><span className="sym">WETH <span className="lev-tag">{p.m.leverage.toFixed(1)}x</span></span>
-                        <span style={{ fontSize: 12, color: 'var(--lev-muted)', display: 'block' }}>Collat {Number(formatUnits(p.collQty, WETH.decimals)).toFixed(4)} · Debt {Number(formatUnits(p.debtQty, WXDAI.decimals)).toFixed(2)} WXDAI</span></span></span>
+                    <span className="l"><span className="ph"><TokenIcon chainId={100} address={p.collTok.address} symbol={p.collTok.symbol} /></span>
+                      <span><span className="sym">{p.collTok.symbol} <span className="lev-tag">{p.m.leverage.toFixed(1)}x</span></span>
+                        <span style={{ fontSize: 12, color: 'var(--lev-muted)', display: 'block' }}>Collat {Number(formatUnits(p.collQty, p.collTok.decimals)).toFixed(4)} · Debt {Number(formatUnits(p.debtQty, p.debtTok.decimals)).toFixed(2)} {p.debtTok.symbol}</span></span></span>
                     <span className="r"><span style={{ fontSize: 12, color: 'var(--lev-muted)' }}>Liq {p.m.liqPrice ? p.m.liqPrice.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}</span>
                       <span style={{ fontSize: 11, display: 'block', color: (p.m.dropToLiqPct ?? 99) < 8 ? '#ff6b6b' : (p.m.dropToLiqPct ?? 99) < 15 ? '#ffa53b' : 'var(--lev-muted)' }}>{p.m.dropToLiqPct != null ? `-${p.m.dropToLiqPct.toFixed(1)}% to liq` : ''}</span></span>
                   </button>

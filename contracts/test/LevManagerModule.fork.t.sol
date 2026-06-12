@@ -197,6 +197,34 @@ contract LevManagerModuleForkTest is Test {
         assertGt(hf, 1e18, "live aave position exists");
     }
 
+    /// eMode unlock (fork): sDAI has base LTV 0 on Gnosis — borrowing USDC.e against it must
+    /// REVERT without eMode and SUCCEED inside category 3 ("sDAI/USDCe", LTV 90%). This is what
+    /// makes openPostE's category entry load-bearing, not an optimization.
+    function test_openPostE_emode_unlocks_sdai_pair() public {
+        address SDAI = 0xaf204776c7245bF4147c2612BF6e5972Ee483701;
+        address USDCE = 0x2a22f9c3b484c3629090FeED35F17Ff8F88f76F0;
+        LevSupplyHelper helper = new LevSupplyHelper();
+        address flashwrap = address(0xF1A5);
+
+        DelegateBox noEmode = new DelegateBox();
+        deal(SDAI, address(noEmode), 1e18);
+        vm.expectRevert(); // Aave error 57: LTV 0 outside the category
+        noEmode.run(address(helper), abi.encodeWithSignature(
+            "openPostE(address,address,address,uint256,address,uint256,uint8)",
+            SDAI, POOL, USDCE, uint256(5e5), flashwrap, uint256(5e5), uint8(0)
+        ));
+
+        DelegateBox withEmode = new DelegateBox();
+        deal(SDAI, address(withEmode), 1e18);
+        withEmode.run(address(helper), abi.encodeWithSignature(
+            "openPostE(address,address,address,uint256,address,uint256,uint8)",
+            SDAI, POOL, USDCE, uint256(5e5), flashwrap, uint256(5e5), uint8(3)
+        ));
+        assertEq(IERC20(USDCE).balanceOf(flashwrap), 5e5, "borrowed + flash repaid in eMode");
+        (,,,,, uint256 hf) = IAaveP(POOL).getUserAccountData(address(withEmode));
+        assertGt(hf, 1e18, "healthy eMode position");
+    }
+
     function _selHex(string memory sigStr) internal pure returns (string memory) {
         bytes4 sel = bytes4(keccak256(bytes(sigStr)));
         bytes memory HEX = "0123456789abcdef";
