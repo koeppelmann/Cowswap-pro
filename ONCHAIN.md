@@ -16,6 +16,8 @@ solvers. No custom solver privilege is used.
   derives the canonical pre/post + appData + UID on-chain (the user never signs opaque calldata),
   registers the meta-order, and emits it for the relayer to submit. Two modes:
   - **REDUCE** — close / partial close / decrease leverage (flash debt → repay → withdraw → sell → repay).
+    A **full close** with the signed `receiver` field set sweeps ALL residual tokens (proceeds + dust)
+    straight to the receiver (default: the owner's wallet) — the Safe ends completely empty.
   - **INCREASE** — increase leverage (borrow → buy collateral → supply full balance), with a signed
     `minHealthFactor` guard enforced on-chain.
 

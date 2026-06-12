@@ -40,7 +40,7 @@ contract LevManagerModule {
     address constant FLASHWRAP  = 0x2E3fdEe28D7224ED140B4ea08C57F47546679363; // CowFlashLoanWrapper
     address constant MULTISEND  = 0x40A2aCCbd92BCA938b02010E17A5b8929b49130D;
     address constant POOL       = 0xb50201558B00496A145fE76f7424749556E326D8; // Aave V3 pool
-    address constant SUPPLYHELP = 0x28168683E6115A99DA995f9fDA95A88e885C9A15; // LevSupplyHelper (delegatecall)
+    address constant SUPPLYHELP = 0x8960eD5CB0220CEA1c958E23D0f072BC074822Be; // LevSupplyHelper v3 (delegatecall: supplyAllAndCheck + closeAndSweep)
     // secp256k1n/2 — reject high-s ECDSA signatures (malleability hardening, codex low finding)
     uint256 constant HALF_N = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
 
@@ -65,10 +65,11 @@ contract LevManagerModule {
         uint256 flash;            // REDUCE: flash debt amount · INCREASE: 0
         uint32  orderValidTo;     // CoW order validity (<= deadline)
         uint256 minHealthFactor;  // postcondition (Aave 1e18 units); 0 = no check
+        address receiver;         // full close: sweep ALL residual tokens here (0 = leave in Safe)
     }
 
     bytes32 public constant RETARGET_TYPEHASH = keccak256(
-        "Retarget(address safe,uint256 nonce,uint256 deadline,uint8 mode,address collateral,address debt,uint256 sellAmount,uint256 repayAmount,uint256 minBuy,uint256 flash,uint32 orderValidTo,uint256 minHealthFactor)"
+        "Retarget(address safe,uint256 nonce,uint256 deadline,uint8 mode,address collateral,address debt,uint256 sellAmount,uint256 repayAmount,uint256 minBuy,uint256 flash,uint32 orderValidTo,uint256 minHealthFactor,address receiver)"
     );
     bytes32 public immutable DOMAIN_SEPARATOR;
 
@@ -160,11 +161,25 @@ contract LevManagerModule {
                 _ms(r.collateral, abi.encodeWithSignature("approve(address,uint256)", RELAYER, r.sellAmount))
             );
             pre = CoWSafeWrapper.SafeTx({ to: MULTISEND, value: 0, data: abi.encodeWithSignature("multiSend(bytes)", preCalls), operation: 1 });
-            bytes memory postCalls = abi.encodePacked(
-                _ms(r.debt, abi.encodeWithSignature("transfer(address,uint256)", FLASHWRAP, _repay(r.flash))),
-                _ms(address(this), abi.encodeWithSignature("requireHF(address,uint256)", r.safe, r.minHealthFactor))
-            );
-            post = CoWSafeWrapper.SafeTx({ to: MULTISEND, value: 0, data: abi.encodeWithSignature("multiSend(bytes)", postCalls), operation: 1 });
+            if (full && r.receiver != address(0)) {
+                // full close with a signed receiver: ONE delegatecall (MULTISEND is MultiSendCallOnly —
+                // inner delegatecalls revert) that repays the flash, checks minHF and sweeps ALL residual
+                // tokens (debt proceeds + collateral dust) to the receiver, balances read at execution time.
+                post = CoWSafeWrapper.SafeTx({
+                    to: SUPPLYHELP, value: 0,
+                    data: abi.encodeWithSignature(
+                        "closeAndSweep(address,address,address,uint256,address,uint256,address)",
+                        r.debt, r.collateral, FLASHWRAP, _repay(r.flash), POOL, r.minHealthFactor, r.receiver
+                    ),
+                    operation: 1
+                });
+            } else {
+                bytes memory postCalls = abi.encodePacked(
+                    _ms(r.debt, abi.encodeWithSignature("transfer(address,uint256)", FLASHWRAP, _repay(r.flash))),
+                    _ms(address(this), abi.encodeWithSignature("requireHF(address,uint256)", r.safe, r.minHealthFactor))
+                );
+                post = CoWSafeWrapper.SafeTx({ to: MULTISEND, value: 0, data: abi.encodeWithSignature("multiSend(bytes)", postCalls), operation: 1 });
+            }
         } else {
             bytes memory preCalls = abi.encodePacked(
                 _ms(POOL,    abi.encodeWithSignature("borrow(address,uint256,uint256,uint16,address)", r.debt, r.sellAmount, uint256(2), uint16(0), r.safe)),
@@ -221,7 +236,7 @@ contract LevManagerModule {
     function _digest(Retarget calldata r) internal view returns (bytes32) {
         bytes32 structHash = keccak256(abi.encode(
             RETARGET_TYPEHASH, r.safe, r.nonce, r.deadline, r.mode, r.collateral, r.debt,
-            r.sellAmount, r.repayAmount, r.minBuy, r.flash, r.orderValidTo, r.minHealthFactor
+            r.sellAmount, r.repayAmount, r.minBuy, r.flash, r.orderValidTo, r.minHealthFactor, r.receiver
         ));
         return keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash));
     }

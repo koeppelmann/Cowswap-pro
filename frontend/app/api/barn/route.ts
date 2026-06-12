@@ -50,6 +50,9 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ error: 'unknown op' }, { status: 400 });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 502 });
+    // HTTP 200 + error field: Cloudflare replaces origin 5xx bodies with its own HTML page,
+    // which the browser would then fail to parse as JSON.
+    console.error('[barn] failed:', (e as Error).message);
+    return NextResponse.json({ error: (e as Error).message });
   }
 }

@@ -1,43 +1,168 @@
-# CoW Swap Leverage UI Prototype
+# CoW Swap Leverage
 
-A React-based front-end prototype demonstrating a CoW Swap-style decentralized exchange interface with integrated leverage trading functionality. 
+Leveraged long positions as **CoW Protocol intents**: open, increase, decrease, partially close and
+fully close an Aave V3 position with **one human-readable signature per action**. Every trade is a
+regular CoW order settled by **organic solvers** in the competitive auction — no custom solver, no
+solver privilege, no keeper.
 
-This project explores how intent-based swapping interfaces (like CoW Swap) can be extended to support advanced trading features such as opening and managing leveraged positions directly from the swap interface.
+Live demo (Gnosis **staging/barn**): the `/leverage` page of this repo's frontend, e2e-proven with
+real solver fills (see [`onchain/PROVEN.md`](onchain/PROVEN.md) and
+[`onchain/web-e2e-PROVEN.md`](onchain/web-e2e-PROVEN.md)).
 
-## Features
+> This branch (`feat/onchain-leverage`) turns the original UI mockup (still in `client/`) into a
+> working on-chain product. Contracts are unaudited staging code.
 
-- **Token Swapping:** Standard token swap interface supporting mock assets (USDC, WETH, WBTC, GNO, DAI).
-- **Leveraged Trading:** Seamlessly open leveraged positions (up to 5x) directly from the swap UI.
-- **Position Management:** 
-  - View active positions in the token selector.
-  - Adjust leverage on existing positions via a dedicated slider.
-  - Close or partially reduce positions using an intuitive percentage-based input (with 25%, 50%, 75%, and Max shortcuts).
-- **Advanced Metrics:** Displays mock liquidation prices, debt amounts, and dynamic quotes based on user input and leverage selection.
-- **Polished UI:** Matches the clean, user-friendly aesthetics of modern decentralized exchanges, featuring interactive dialogs, tooltips, and responsive design.
+---
 
-## Tech Stack
+## The core idea
 
-- **Framework:** React 18 with Vite
-- **Styling:** Tailwind CSS
-- **Components:** shadcn/ui
-- **Icons:** Lucide React
-- **Routing:** Wouter
+A leveraged position is just a swap with extra pre/post steps. CoW already lets a solver execute
+hooks and flash loans around a swap — the hard part is doing that **trustlessly**, so the user signs
+*what they mean* (an intent: "2× long WETH with 100 WXDAI") and not opaque calldata, while solvers
+remain free to route the swap however they like.
 
-## Getting Started
+The user only ever signs **two kinds of EIP-712 messages**:
 
-To run this project locally:
+1. a **GPv2 order** (the same struct cowswap.exchange users sign every day), and
+2. a **`Retarget` intent** — a named, human-readable struct (`safe`, `mode`, `sellAmount`,
+   `repayAmount`, `minBuy`, `minHealthFactor`, `receiver`, …) over the `LevManagerModule` domain.
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+Everything else — Safe deployment, appData reconstruction, order registration, flash-loan plumbing,
+health-factor checks, sweeping proceeds — is derived **on-chain** from those signed intents.
 
-2. Start the development server:
-   ```bash
-   npm run dev
-   ```
+## Architecture
 
-3. Open your browser and navigate to the local port provided in the terminal (usually `http://localhost:5000`).
+Each position lives in its own **1/1 Gnosis Safe** owned by the user. The Safe's CREATE2 address
+commits to the full opening intent, and three modules are enabled at setup:
 
-## Notes
-This is a **frontend-only prototype/mockup**. It does not interact with real smart contracts, backend servers, or actual blockchain networks. All prices, positions, and trades are stored in local component state for demonstration purposes.
+```
+                        ┌────────────────────────────────────────────────┐
+   user EOA ──owns──►   │  position Safe (1/1, deterministic CREATE2)    │
+                        │  modules: CoWSafeWrapper · IntentBootstrap ·   │
+                        │           LevManagerModule                     │
+                        └────────────────────────────────────────────────┘
+                                ▲                          ▲
+            registers meta-orders                    holds aWETH (collateral)
+                        │                            and vWXDAI (debt) on Aave V3
+        settlement chain:
+        CowFlashLoanWrapper ──► CoWSafeWrapper ──► GPv2 settle
+        (flash loans)           (enforced pre/post  (CoW auction,
+                                 around the fill)    organic solvers)
+```
+
+| contract | role |
+|---|---|
+| **CoWSafeWrapper** | solver wrapper enforcing hash-committed `pre`/`post` Safe transactions around a fill, and `filledAmount ≥ expectedFill`. Meta-orders are registered through the Safe's module slot — only code the *Safe* authorized can register. |
+| **CowFlashLoanWrapper** | generic Aave flash-loan layer (`wrapperData = abi.encode(Loan[])`), trampoline-guarded so the pool cannot tamper with the settle calldata. |
+| **IntentBootstrap** (current: `IntentBootstrap9`) | one call deploys the user's Safe (if needed) and registers the opening meta-order. The Safe address **commits to every intent field**, so a front-run with different parameters lands on a *different* address — public `bootstrap()` is grief-free. Reconstructs the order's appData JSON and UID fully on-chain. |
+| **LevManagerModule** | owner-signed, **anyone-relayed** management. Verifies the EIP-712 `Retarget` signature, replay nonce and module-enablement, derives the canonical pre/post + appData + UID on-chain, registers the meta-order, emits everything the relayer needs. |
+| **LevSupplyHelper** | stateless delegatecall helpers run *as the Safe*: `supplyAllAndCheck` (supply full bought balance + enforce signed `minHealthFactor`) and `closeAndSweep` (repay flash → HF check → sweep **all** residual tokens, incl. dust, to the signed `receiver`). |
+
+Current deployed addresses (Gnosis staging/barn) are in
+[`contracts/DEPLOYMENTS.md`](contracts/DEPLOYMENTS.md).
+
+## Flow 1 — opening a position (one signature, gasless)
+
+The user picks equity `E` and leverage `L`. The app derives `flash = E·L`,
+`repay = flash·1.0006` (covers Aave's 5 bps premium), `borrow = repay − E`, and shows the
+**deterministic Safe address and both order UIDs before anything is signed**.
+
+```
+user signs ───► carrier order: sell E·1.05 WXDAI → receiver = counterfactual Safe
+                appData pre-hook: IntentBootstrap.bootstrap(intent)
+
+solver settles the carrier order:
+  1. pre-hook bootstrap(intent):
+       · CREATE2-deploys the 1/1 Safe (address commits to the whole intent)
+       · enables the three modules, registers the leverage meta-order on CoWSafeWrapper
+  2. the fill itself delivers the user's equity to the Safe
+
+the leverage order (EIP-1271, signature "0x", from = the Safe) then fills:
+  CowFlashLoanWrapper: flash-borrow `flash` WXDAI to the Safe
+    CoWSafeWrapper pre:  approve relayer / pool
+      GPv2 settle:       sell `flash` WXDAI → ≥ `buyMin` WETH (receiver = Safe)
+    CoWSafeWrapper post: supply ALL bought WETH · borrow `borrow` WXDAI · repay `repay` to the wrapper
+```
+
+The user's only on-chain prerequisite is the standard one-time WXDAI approval to the CoW vault
+relayer (WXDAI has no permit) — identical to using cowswap.exchange.
+
+Both order UIDs are deterministic: the leverage UID is reconstructed on-chain by
+`IntentBootstrap.uid(intent, safe)`; the carrier UID is `GPv2 digest ++ owner ++ validTo`.
+
+## Flow 2 — managing a position (one signature, anyone relays)
+
+The owner signs a `Retarget` intent; a relay EOA (or anyone) calls
+`LevManagerModule.execute(intent, sig)`. The module checks *owner signature*, *replay nonce*,
+*deadline* and *module-enabled*, then registers a meta-order whose pre/post it derived itself —
+the relayer contributes gas, never authority. The resulting CoW order is submitted with
+`signingScheme: eip1271, signature: "0x"`; the Safe's sig-handler attests it because the wrapper
+registration exists.
+
+Two modes cover all management verbs:
+
+**REDUCE (mode 0)** — close / partial close / decrease leverage:
+
+```
+flash-borrow `flash` WXDAI
+  pre:  repay `repayAmount` debt (MAX = full close) · withdraw collateral · approve relayer
+  fill: sell `sellAmount` WETH → ≥ `minBuy` WXDAI   (the CoW order)
+  post: repay flash + premium
+        · full close with `receiver` set: closeAndSweep — sweep ALL residual WXDAI + WETH
+          (proceeds *and* dust) to the receiver, balances read at execution time
+        · otherwise: residual stays in the Safe; enforce signed minHealthFactor
+```
+
+**INCREASE (mode 1)** — increase leverage (no flash; bounded by current Aave capacity):
+
+```
+pre:  borrow `sellAmount` WXDAI · approve relayer
+fill: sell WXDAI → ≥ `minBuy` WETH
+post: supplyAllAndCheck — supply the FULL bought balance, require HF ≥ minHealthFactor
+```
+
+Safety properties of `Retarget` (see `contracts/src/LevManagerModule.sol`):
+- domain binds `chainId` + module address; `safe` is part of the signed struct;
+- per-Safe replay nonces; deadline; `orderValidTo ≤ deadline`;
+- partial REDUCE requires `repayAmount ≤ flash` (always flash-covered);
+- INCREASE forbids flash/repay and enforces a signed `minHealthFactor` post-condition on-chain;
+- `receiver` is signed — a relayer can never redirect proceeds;
+- low-s + v∈{27,28} signature malleability hardening.
+
+### A gotcha worth knowing
+
+The canonical MultiSend `0x40A2…130D` used for pre/post blobs is **MultiSendCallOnly** — inner
+`delegatecall` ops revert. Balance-dependent steps (supply-all, sweep-all) therefore run as a
+**single delegatecall SafeTx** to `LevSupplyHelper`, never inside a MultiSend blob. The fork test
+suite executes these delegatecalls for real (`contracts/LevManagerModule.fork.t.sol`).
+
+## Repo layout
+
+- `contracts/` — Solidity sources (module, bootstrap, helpers, wrapper stack) + fork tests + deployments.
+- `onchain/` — `open.py` / `manage.py` / `test_adjust.py`: scriptable reproductions of every flow, plus on-chain proofs.
+- `frontend/` — the real Next.js surfaces: `app/leverage/page.tsx` (swap-style UI: implicit onboarding,
+  positions in the token list, close/adjust with receiver), `lib/onboard.ts` (constants/ABIs),
+  `app/api/barn` (orderbook proxy), `app/api/relay-execute` (gas-paying relay for `execute()`).
+- `docs/` — design plan and codex security reviews.
+- `client/` — the original UI mockup this work implements.
+
+## Proven end-to-end (organic solvers)
+
+Open (carrier, 1 sig) · increase (HF-guarded) · decrease (partial REDUCE) · full close with
+**sweep-to-owner** (Safe ends 0/0/0/0; owner EOA receives proceeds + dust) — all through the real
+web routes against the barn orderbook. Receipts and UIDs: [`onchain/PROVEN.md`](onchain/PROVEN.md),
+[`onchain/web-e2e-PROVEN.md`](onchain/web-e2e-PROVEN.md).
+
+## Known limitations (staging demo)
+
+1/1 Safe only; `minBuy` comes from a fresh quote (an oracle-relative bound is a planned hardening);
+flash premium fixed at 5 bps; no-flash INCREASE is capped by current Aave borrow capacity; the
+positions list is localStorage-seeded (filtered on-chain by `isOwner` + `isModuleEnabled`);
+contracts are unaudited.
+
+---
+
+### Running the original UI mockup
+
+The design prototype lives in `client/` (React + Vite + Tailwind + shadcn/ui):
+`npm install && npm run dev`, then open the printed local port.

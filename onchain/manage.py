@@ -10,7 +10,7 @@ from eth_abi import encode as abi_encode, decode as abi_decode
 
 RPC = "https://rpc.gnosischain.com"
 BARN = "https://barn.api.cow.fi/xdai/api/v1"
-MODULE = "0xd504138eD8d6bF01A6C2c3e6f83298aE7242E985"
+MODULE = "0xA3044558D8459E37dC26b7d4ee8901e8e6f40fd2"  # v3: closeAndSweep single-delegatecall post
 POOL = "0xb50201558B00496A145fE76f7424749556E326D8"
 AWETH = "0xa818F1B57c201E092C4A2017A91815034326Efd1"
 VDEBT = "0x281963D7471eCdC3A2Bd4503e24e89691cfe420D"
@@ -49,9 +49,9 @@ def put_appdata(h, doc):
 
 RETARGET_TYPE = ("Retarget(address safe,uint256 nonce,uint256 deadline,uint8 mode,address collateral,"
                  "address debt,uint256 sellAmount,uint256 repayAmount,uint256 minBuy,uint256 flash,"
-                 "uint32 orderValidTo,uint256 minHealthFactor)")
+                 "uint32 orderValidTo,uint256 minHealthFactor,address receiver)")
 
-def build_retarget(mode, safe, slippage_bps=2000, fraction_bps=10000, extra=None):
+def build_retarget(mode, safe, slippage_bps=2000, fraction_bps=10000, extra=None, receiver="0x0000000000000000000000000000000000000000"):
     """REDUCE: sell `fraction` of collateral, repay proportional debt (MAX if fraction==100%).
     INCREASE: borrow + sell `extra` debt (default = current debt) for collateral, supply it."""
     coll = bal(AWETH, safe); debt = bal(VDEBT, safe)
@@ -67,7 +67,7 @@ def build_retarget(mode, safe, slippage_bps=2000, fraction_bps=10000, extra=None
         minBuy = quote(WETH, WXDAI, safe, sellAmount) * (10000 - slippage_bps) // 10000
         r = dict(safe=safe, nonce=int(time.time()), deadline=deadline, mode=0, collateral=WETH, debt=WXDAI,
                  sellAmount=sellAmount, repayAmount=repayAmount, minBuy=minBuy, flash=flash,
-                 orderValidTo=validTo, minHealthFactor=0)
+                 orderValidTo=validTo, minHealthFactor=0, receiver=receiver)
     else:  # INCREASE (no flash → borrow is capped by CURRENT Aave capacity, since the new collateral
            # is only supplied in `post`, after the borrow). Bigger increases need a flash-assisted flow.
         acct = call(POOL, "getUserAccountData(address)(uint256,uint256,uint256,uint256,uint256,uint256)", safe).split("\n")
@@ -77,7 +77,7 @@ def build_retarget(mode, safe, slippage_bps=2000, fraction_bps=10000, extra=None
         minBuy = quote(WXDAI, WETH, safe, borrowAmt) * (10000 - slippage_bps) // 10000
         r = dict(safe=safe, nonce=int(time.time()), deadline=deadline, mode=1, collateral=WETH, debt=WXDAI,
                  sellAmount=borrowAmt, repayAmount=0, minBuy=minBuy, flash=0,
-                 orderValidTo=validTo, minHealthFactor=1050000000000000000)  # HF >= 1.05 postcondition
+                 orderValidTo=validTo, minHealthFactor=1050000000000000000, receiver="0x0000000000000000000000000000000000000000")  # HF >= 1.05 postcondition
     return r
 
 def domain_separator():
@@ -87,15 +87,15 @@ def domain_separator():
 
 def sign_intent(r, owner_key):
     struct_hash = keccak(abi_encode(
-        ["bytes32","address","uint256","uint256","uint8","address","address","uint256","uint256","uint256","uint256","uint32","uint256"],
+        ["bytes32","address","uint256","uint256","uint8","address","address","uint256","uint256","uint256","uint256","uint32","uint256","address"],
         [keccak(text=RETARGET_TYPE), r["safe"], r["nonce"], r["deadline"], r["mode"], r["collateral"], r["debt"],
-         r["sellAmount"], r["repayAmount"], r["minBuy"], r["flash"], r["orderValidTo"], r["minHealthFactor"]]))
+         r["sellAmount"], r["repayAmount"], r["minBuy"], r["flash"], r["orderValidTo"], r["minHealthFactor"], r["receiver"]]))
     digest = keccak(b"\x19\x01" + domain_separator() + struct_hash)
     return Account._sign_hash(digest, owner_key).signature.hex()
 
 def tuple_of(r):
     return (r["safe"], r["nonce"], r["deadline"], r["mode"], r["collateral"], r["debt"], r["sellAmount"],
-            r["repayAmount"], r["minBuy"], r["flash"], r["orderValidTo"], r["minHealthFactor"])
+            r["repayAmount"], r["minBuy"], r["flash"], r["orderValidTo"], r["minHealthFactor"], r["receiver"])
 
 def cast_tuple(r):
     """cast-CLI tuple literal: addresses unquoted, ints decimal."""
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     sig = "0x" + sign_intent(r, owner_key)
     print("intent:", json.dumps({k: str(v) for k, v in r.items()}))
     # relay execute()
-    T = "(address,uint256,uint256,uint8,address,address,uint256,uint256,uint256,uint256,uint32,uint256)"
+    T = "(address,uint256,uint256,uint8,address,address,uint256,uint256,uint256,uint256,uint32,uint256,address)"
     txt = cast("send", MODULE, f"execute({T},bytes)", cast_tuple(r), sig,
                "--private-key", RELAY_KEY, "--rpc-url", RPC, "--json")
     rec = json.loads(txt)
