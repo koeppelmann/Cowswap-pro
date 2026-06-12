@@ -9,7 +9,7 @@ from eth_account import Account
 
 RPC = "https://rpc.gnosischain.com"
 BARN = "https://barn.api.cow.fi/xdai/api/v1"
-IB7 = "0xfdC5A861c3C7541bD4351b82d7d08dc835Fd99b3"  # IntentBootstrap9 (LevManagerModule v3)
+IB7 = "0x68d25304A69A9F63288Da73ea6a2d72D01dF0DcF"  # IntentBootstrap10 (module v4, supply-all open post)
 SETTLEMENT = "0xf553d092b50bdcbddeD1A99aF2cA29FBE5E2CB13"
 RELAYER = "0xC7242d167563352E2BCA4d71C043fbe542DB8FB2"
 WXDAI = "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d"

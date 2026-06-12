@@ -6,6 +6,12 @@ import {LevManagerModule} from "../src/LevManagerModule.sol";
 import {LevSupplyHelper} from "../src/LevSupplyHelper.sol";
 
 interface IERC20 { function balanceOf(address) external view returns (uint256); }
+interface IERC20A { function approve(address, uint256) external returns (bool); }
+interface IAaveP {
+    function supply(address, uint256, address, uint16) external;
+    function borrow(address, uint256, uint256, uint16, address) external;
+    function getUserAccountData(address) external view returns (uint256,uint256,uint256,uint256,uint256,uint256);
+}
 
 /// Delegatecall stand-in for the Safe executing a post SafeTx with operation == 1.
 contract DelegateBox {
@@ -33,6 +39,7 @@ contract LevManagerModuleForkTest is Test {
     address constant WRAPPER = 0x531636e6e18F3A52c283aCCda39D7185E4597A37;
     address constant WXDAI   = 0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d;
     address constant WETH    = 0x6A023CCd1ff6F2045C3309768eAd9E68F978f6e1;
+    address constant POOL    = 0xb50201558B00496A145fE76f7424749556E326D8;
 
     LevManagerModule mod;
     MockSafe safe;
@@ -51,7 +58,7 @@ contract LevManagerModuleForkTest is Test {
             safe: address(safe), nonce: 1, deadline: block.timestamp + 3600, mode: 0,
             collateral: WETH, debt: WXDAI, sellAmount: 1e13, repayAmount: type(uint256).max,
             minBuy: 1e16, flash: 11e15, orderValidTo: uint32(block.timestamp + 1800), minHealthFactor: 0,
-            receiver: owner
+            receiver: owner, triggerHealthFactor: 0
         });
     }
 
@@ -59,7 +66,7 @@ contract LevManagerModuleForkTest is Test {
         // all-static fields: two concatenated abi.encode chunks are byte-identical to one (stack-depth workaround)
         bytes32 structHash = keccak256(bytes.concat(
             abi.encode(mod.RETARGET_TYPEHASH(), r.safe, r.nonce, r.deadline, r.mode, r.collateral, r.debt),
-            abi.encode(r.sellAmount, r.repayAmount, r.minBuy, r.flash, r.orderValidTo, r.minHealthFactor, r.receiver)
+            abi.encode(r.sellAmount, r.repayAmount, r.minBuy, r.flash, r.orderValidTo, r.minHealthFactor, r.receiver, r.triggerHealthFactor)
         ));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", mod.DOMAIN_SEPARATOR(), structHash));
         (uint8 v, bytes32 rr, bytes32 ss) = vm.sign(key, digest);
@@ -142,6 +149,52 @@ contract LevManagerModuleForkTest is Test {
         assertEq(IERC20(WETH).balanceOf(owner), 1e15, "collateral dust swept");
         assertEq(IERC20(WXDAI).balanceOf(address(box)), 0, "no WXDAI left");
         assertEq(IERC20(WETH).balanceOf(address(box)), 0, "no WETH left");
+    }
+
+    function test_trigger_encoded_in_pre() public view {
+        LevManagerModule.Retarget memory r = _reduce();
+        r.triggerHealthFactor = 1.05e18;
+        (, string memory json,) = mod.preview(r);
+        assertEq(_count(json, _selHex("requireHFBelow(address,uint256)")), 1, "stop trigger in pre");
+        r.triggerHealthFactor = 0;
+        (, string memory json2,) = mod.preview(r);
+        assertEq(_count(json2, _selHex("requireHFBelow(address,uint256)")), 0, "no trigger when 0");
+    }
+
+    /// LIVE semantics on the fork: build a real Aave position, then check the gate both ways.
+    function test_requireHFBelow_gates_on_live_hf() public {
+        address user = address(0xCAFE01);
+        deal(WETH, user, 1e16);
+        vm.startPrank(user);
+        IERC20A(WETH).approve(POOL, type(uint256).max);
+        IAaveP(POOL).supply(WETH, 1e16, user, 0);
+        IAaveP(POOL).borrow(WXDAI, 1e18, 2, 0, user); // small debt -> finite HF
+        vm.stopPrank();
+        (,,,,, uint256 hf) = IAaveP(POOL).getUserAccountData(user);
+        assertGt(hf, 1e18, "sane fixture");
+        mod.requireHFBelow(user, hf + 1);              // HF < trigger -> passes
+        vm.expectRevert(bytes("HF above trigger"));
+        mod.requireHFBelow(user, hf);                  // HF == trigger -> not below -> reverts
+        // no-debt account: HF = max -> can never be below any finite trigger
+        vm.expectRevert(bytes("HF above trigger"));
+        mod.requireHFBelow(address(0xCAFE02), type(uint256).max);
+    }
+
+    /// EXECUTES the open post path (delegatecall, fork): full balance supplied, debt borrowed,
+    /// flash repaid — nothing idle in the Safe.
+    function test_openPost_supplies_all_borrows_repays() public {
+        DelegateBox box = new DelegateBox();
+        LevSupplyHelper helper = new LevSupplyHelper();
+        address flashwrap = address(0xF1A5);
+        deal(WETH, address(box), 12e14); // buyMin would be 1e15; box got positive slippage on top
+        box.run(address(helper), abi.encodeWithSignature(
+            "openPost(address,address,address,uint256,address,uint256)",
+            WETH, POOL, WXDAI, uint256(1e18), flashwrap, uint256(1e18)
+        ));
+        assertEq(IERC20(WETH).balanceOf(address(box)), 0, "ALL collateral supplied (none idle)");
+        assertEq(IERC20(WXDAI).balanceOf(flashwrap), 1e18, "flash repaid");
+        (,,,,, uint256 hf) = IAaveP(POOL).getUserAccountData(address(box));
+        assertGt(hf, 1e18, "live aave position exists");
     }
 
     function _selHex(string memory sigStr) internal pure returns (string memory) {

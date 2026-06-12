@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 
 // Relay a signed Retarget intent through LevManagerModule.execute (gas paid by the relay EOA).
 // The relay can only land what the owner signed; it cannot forge intents.
-const MODULE = '0xA3044558D8459E37dC26b7d4ee8901e8e6f40fd2'; // LevManagerModule v3 (closeAndSweep single-delegatecall post)
+const MODULE = '0xbd913B8626DD7ACe1810E1797C93f27dD7906A5C'; // LevManagerModule v4 (stop trigger + receiver sweep)
 const RPC = process.env.GNOSIS_RPC || 'https://rpc.gnosischain.com';
 
 const RETARGET = {
@@ -18,7 +18,7 @@ const RETARGET = {
     { name: 'mode', type: 'uint8' }, { name: 'collateral', type: 'address' }, { name: 'debt', type: 'address' },
     { name: 'sellAmount', type: 'uint256' }, { name: 'repayAmount', type: 'uint256' }, { name: 'minBuy', type: 'uint256' },
     { name: 'flash', type: 'uint256' }, { name: 'orderValidTo', type: 'uint32' }, { name: 'minHealthFactor', type: 'uint256' },
-    { name: 'receiver', type: 'address' },
+    { name: 'receiver', type: 'address' }, { name: 'triggerHealthFactor', type: 'uint256' },
   ],
 } as const;
 const ABI = [
@@ -50,6 +50,7 @@ export async function POST(req: Request) {
       collateral: i.collateral as Hex, debt: i.debt as Hex, sellAmount: BigInt(i.sellAmount), repayAmount: BigInt(i.repayAmount),
       minBuy: BigInt(i.minBuy), flash: BigInt(i.flash), orderValidTo: Number(i.orderValidTo), minHealthFactor: BigInt(i.minHealthFactor),
       receiver: (i.receiver ?? '0x0000000000000000000000000000000000000000') as Hex,
+      triggerHealthFactor: BigInt(i.triggerHealthFactor ?? '0'),
     };
   } catch { return NextResponse.json({ error: 'malformed intent fields' }, { status: 400 }); }
   const lockKey = `${tuple.safe.toLowerCase()}:${tuple.nonce}`;

@@ -38,3 +38,27 @@ an inner delegatecall op inside its blob reverts, so a sweep cannot ride inside 
 post (solver simulation failed; nobody filled). Hence the single-delegatecall post, mirroring
 the proven INCREASE pattern. New fork test EXECUTES the sweep delegatecall and asserts fund
 movement (preview-only assertions cannot catch this class of bug).
+
+## v4: HF-triggered stop orders (trustless deleverage-if-HF<x) — e2e proven (2026-06-12)
+
+LevManagerModule v4 `0xbd913B8626DD7ACe1810E1797C93f27dD7906A5C` + LevSupplyHelper v4
+`0xf663f3f18aEe1632C9FFC801dd30D7FfE7196dCb` + IntentBootstrap10 `0x68d25304A69A9F63288Da73ea6a2d72D01dF0DcF`.
+`Retarget.triggerHealthFactor` != 0 prepends `requireHFBelow(safe, trigger)` as the FIRST pre op:
+solver simulations revert while HF >= trigger, so the order parks and turns fillable exactly when
+live HF crosses under the signed threshold. IB10's open post is now ONE delegatecall `openPost`
+(supply-ALL bought collateral — closes the codex 'buyMin only' finding; verified: 0 idle WETH after open).
+
+Live sequence on barn (Safe `0x0C9A1ca6eaA4715EC290A7ca7f9C9b0af07F069B`, organic solvers, real /api routes):
+1. open 0.015 @ 2x via IB10 -> HF 1.653, idle WETH 0 (supply-all ✓)
+2. armed stop: sell 50% if HF < 1.521 (one signature) -> order parked, uid 0x0dd48d29…
+3. `requireHFBelow` on-chain: REVERTS while healthy ✓; order sat UNTOUCHED in the open auction 120s ✓
+4. INCREASE filled -> HF 1.388 < trigger; `requireHFBelow` flips to PASSING on-chain ✓
+5. caveat found: solver drivers cache an order's failed simulations — the 30-min test order was not
+   retried within its remaining validity and expired. Mitigation: long-validity stops (the UI signs
+   6h) so driver caches expire and retries happen; with many solvers the fastest cache wins.
+6. stop #2 with the trigger already breached at submission: **FILLED in 16s** — collateral and debt
+   both exactly halved (0.0372→0.0186 / 0.0221→0.0111 USD), HF preserved.
+7. full close w/ receiver: Safe 0/0/0/0, ALL proceeds + dust swept to the owner EOA ✓
+
+Conclusion: HF-conditional validity is enforced ON-CHAIN end to end (park ✓ gate-flip ✓ triggered
+fill ✓); the only soft spot is solver-side retry latency for orders that spent time unfillable.

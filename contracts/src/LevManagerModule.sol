@@ -40,7 +40,7 @@ contract LevManagerModule {
     address constant FLASHWRAP  = 0x2E3fdEe28D7224ED140B4ea08C57F47546679363; // CowFlashLoanWrapper
     address constant MULTISEND  = 0x40A2aCCbd92BCA938b02010E17A5b8929b49130D;
     address constant POOL       = 0xb50201558B00496A145fE76f7424749556E326D8; // Aave V3 pool
-    address constant SUPPLYHELP = 0x8960eD5CB0220CEA1c958E23D0f072BC074822Be; // LevSupplyHelper v3 (delegatecall: supplyAllAndCheck + closeAndSweep)
+    address constant SUPPLYHELP = 0xf663f3f18aEe1632C9FFC801dd30D7FfE7196dCb; // LevSupplyHelper v4 (delegatecall: supplyAllAndCheck + closeAndSweep + openPost)
     // secp256k1n/2 — reject high-s ECDSA signatures (malleability hardening, codex low finding)
     uint256 constant HALF_N = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
 
@@ -66,10 +66,11 @@ contract LevManagerModule {
         uint32  orderValidTo;     // CoW order validity (<= deadline)
         uint256 minHealthFactor;  // postcondition (Aave 1e18 units); 0 = no check
         address receiver;         // full close: sweep ALL residual tokens here (0 = leave in Safe)
+        uint256 triggerHealthFactor; // stop trigger: order fillable ONLY while HF < this (0 = always)
     }
 
     bytes32 public constant RETARGET_TYPEHASH = keccak256(
-        "Retarget(address safe,uint256 nonce,uint256 deadline,uint8 mode,address collateral,address debt,uint256 sellAmount,uint256 repayAmount,uint256 minBuy,uint256 flash,uint32 orderValidTo,uint256 minHealthFactor,address receiver)"
+        "Retarget(address safe,uint256 nonce,uint256 deadline,uint8 mode,address collateral,address debt,uint256 sellAmount,uint256 repayAmount,uint256 minBuy,uint256 flash,uint32 orderValidTo,uint256 minHealthFactor,address receiver,uint256 triggerHealthFactor)"
     );
     bytes32 public immutable DOMAIN_SEPARATOR;
 
@@ -148,13 +149,27 @@ contract LevManagerModule {
         require(hf >= minHealthFactor, "HF too low");
     }
 
+    /// Stop trigger — FIRST `pre` step (before the flash repay raises HF): the order is fillable
+    /// ONLY while the Safe's live health factor is BELOW `trigger`. While HF >= trigger every
+    /// solver's settlement simulation reverts here, so the order parks in the orderbook and turns
+    /// fillable the moment the market pushes HF under the signed threshold — a trustless stop.
+    function requireHFBelow(address safe, uint256 trigger) external view {
+        (,,,,, uint256 hf) = IAavePoolHF(POOL).getUserAccountData(safe);
+        require(hf < trigger, "HF above trigger");
+    }
+
     // ---------------------------------------------------------------- builders
     function _prePost(Retarget calldata r)
         internal view returns (CoWSafeWrapper.SafeTx memory pre, CoWSafeWrapper.SafeTx memory post)
     {
+        // optional stop trigger: prepended as the FIRST pre op, evaluated on live Aave state
+        bytes memory trig = r.triggerHealthFactor == 0
+            ? bytes("")
+            : _ms(address(this), abi.encodeWithSignature("requireHFBelow(address,uint256)", r.safe, r.triggerHealthFactor));
         if (r.mode == REDUCE) {
             bool full = (r.repayAmount == MAX);
             bytes memory preCalls = abi.encodePacked(
+                trig,
                 _ms(r.debt,       abi.encodeWithSignature("approve(address,uint256)", POOL, r.flash)),
                 _ms(POOL,         abi.encodeWithSignature("repay(address,uint256,uint256,address)", r.debt, r.repayAmount, uint256(2), r.safe)),
                 _ms(POOL,         abi.encodeWithSignature("withdraw(address,uint256,address)", r.collateral, full ? MAX : r.sellAmount, r.safe)),
@@ -182,6 +197,7 @@ contract LevManagerModule {
             }
         } else {
             bytes memory preCalls = abi.encodePacked(
+                trig,
                 _ms(POOL,    abi.encodeWithSignature("borrow(address,uint256,uint256,uint16,address)", r.debt, r.sellAmount, uint256(2), uint16(0), r.safe)),
                 _ms(r.debt,  abi.encodeWithSignature("approve(address,uint256)", RELAYER, r.sellAmount))
             );
@@ -234,9 +250,10 @@ contract LevManagerModule {
 
     // ---------------------------------------------------------------- EIP-712 + helpers
     function _digest(Retarget calldata r) internal view returns (bytes32) {
-        bytes32 structHash = keccak256(abi.encode(
-            RETARGET_TYPEHASH, r.safe, r.nonce, r.deadline, r.mode, r.collateral, r.debt,
-            r.sellAmount, r.repayAmount, r.minBuy, r.flash, r.orderValidTo, r.minHealthFactor, r.receiver
+        // all-static fields: two concatenated abi.encode chunks are byte-identical to one (stack depth)
+        bytes32 structHash = keccak256(bytes.concat(
+            abi.encode(RETARGET_TYPEHASH, r.safe, r.nonce, r.deadline, r.mode, r.collateral, r.debt),
+            abi.encode(r.sellAmount, r.repayAmount, r.minBuy, r.flash, r.orderValidTo, r.minHealthFactor, r.receiver, r.triggerHealthFactor)
         ));
         return keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash));
     }

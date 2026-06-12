@@ -25,7 +25,8 @@ The user only ever signs **two kinds of EIP-712 messages**:
 
 1. a **GPv2 order** (the same struct cowswap.exchange users sign every day), and
 2. a **`Retarget` intent** — a named, human-readable struct (`safe`, `mode`, `sellAmount`,
-   `repayAmount`, `minBuy`, `minHealthFactor`, `receiver`, …) over the `LevManagerModule` domain.
+   `repayAmount`, `minBuy`, `minHealthFactor`, `receiver`, `triggerHealthFactor`, …) over the
+   `LevManagerModule` domain.
 
 Everything else — Safe deployment, appData reconstruction, order registration, flash-loan plumbing,
 health-factor checks, sweeping proceeds — is derived **on-chain** from those signed intents.
@@ -81,9 +82,9 @@ the leverage order (EIP-1271, signature "0x", from = the Safe) then fills:
   CowFlashLoanWrapper: flash-borrow `flash` WXDAI to the Safe
     CoWSafeWrapper pre:  approve relayer / pool
       GPv2 settle:       sell `flash` WXDAI → ≥ `buyMin` WETH (receiver = Safe)
-    CoWSafeWrapper post: supply `buyMin` WETH · borrow `borrow` WXDAI · repay `repay` to the wrapper
-                         (positive slippage above `buyMin` stays as WETH in the Safe — it is swept
-                          to the receiver on full close)
+    CoWSafeWrapper post: openPost (one delegatecall) — supply the FULL bought WETH balance
+                         (positive slippage earns yield immediately) · borrow `borrow` WXDAI ·
+                         repay `repay` to the wrapper
 ```
 
 The user's only on-chain prerequisite is the standard one-time WXDAI approval to the CoW vault
@@ -122,6 +123,21 @@ pre:  borrow `sellAmount` WXDAI · approve relayer
 fill: sell WXDAI → ≥ `minBuy` WETH
 post: supplyAllAndCheck — supply the FULL bought balance, require HF ≥ minHealthFactor
 ```
+
+**Stop protection (HF-triggered deleverage)** — a REDUCE intent with `triggerHealthFactor` set
+parks in the orderbook and is fillable **only while the live health factor is below the trigger**:
+
+```
+pre[0]: requireHFBelow(safe, trigger)   ← reverts while HF >= trigger (on-chain, every simulation)
+pre[1…]: the normal REDUCE steps        ← unchanged
+```
+
+One signature arms it. While the position is healthy every solver simulation reverts at `pre[0]`,
+so the order sits untouched; the moment the market pushes HF under the signed threshold the whole
+competitive auction races to deleverage you — no keeper decides the timing, the trigger lives
+on-chain, and `minBuy` is priced for the trigger scenario (HF scales 1:1 with price at constant
+debt). Caveat: solvers cache failed simulations per order, so a stop that parked for a while may
+be retried with some delay after triggering — sign stops with long validity (the UI uses 6h).
 
 Safety properties of `Retarget` (see `contracts/src/LevManagerModule.sol`):
 - domain binds `chainId` + module address; `safe` is part of the signed struct;

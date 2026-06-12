@@ -10,6 +10,7 @@ pragma solidity 0.8.34;
 interface IERC20S { function balanceOf(address) external view returns (uint256); function approve(address,uint256) external returns (bool); function transfer(address,uint256) external returns (bool); }
 interface IAaveSupply {
     function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode) external;
+    function borrow(address asset, uint256 amount, uint256 interestRateMode, uint16 referralCode, address onBehalfOf) external;
     function getUserAccountData(address) external view returns (uint256,uint256,uint256,uint256,uint256,uint256);
 }
 
@@ -54,5 +55,21 @@ contract LevSupplyHelper {
         if (a > 0) require(IERC20S(debtToken).transfer(receiver, a), "sweep debt failed");
         uint256 b = IERC20S(collToken).balanceOf(address(this));
         if (b > 0) require(IERC20S(collToken).transfer(receiver, b), "sweep coll failed");
+    }
+
+    /// DELEGATECALLed by the Safe as the ENTIRE open `post` (codex medium: supplying only `buyMin`
+    /// left positive slippage idle as plain ERC20): supply the FULL bought collateral balance,
+    /// borrow the signed debt, repay the flash loan. One SafeTx — the canonical MultiSend is
+    /// CallOnly, so this cannot ride inside a MultiSend blob.
+    function openPost(
+        address collToken, address pool, address debtToken, uint256 borrowAmt,
+        address flashwrap, uint256 repayAmt
+    ) external {
+        uint256 amt = IERC20S(collToken).balanceOf(address(this));
+        require(amt > 0, "nothing to supply");
+        IERC20S(collToken).approve(pool, amt);
+        IAaveSupply(pool).supply(collToken, amt, address(this), 0);
+        IAaveSupply(pool).borrow(debtToken, borrowAmt, 2, 0, address(this));
+        require(IERC20S(debtToken).transfer(flashwrap, repayAmt), "flash repay failed");
     }
 }
