@@ -5,8 +5,8 @@ fully close an Aave V3 position with **one human-readable signature per action**
 regular CoW order settled by **organic solvers** in the competitive auction — no custom solver, no
 solver privilege, no keeper.
 
-Live demo (Gnosis **staging/barn**): the `/leverage` page of this repo's frontend, e2e-proven with
-real solver fills (see [`onchain/PROVEN.md`](onchain/PROVEN.md) and
+Live demo (Gnosis **staging/barn**): **https://cowswap.koeppelmann.dev** — the Swap tab of the
+merged app, e2e-proven with real solver fills (see [`onchain/PROVEN.md`](onchain/PROVEN.md) and
 [`onchain/web-e2e-PROVEN.md`](onchain/web-e2e-PROVEN.md)).
 
 > This branch (`feat/onchain-leverage`) turns the original UI mockup (still in `client/`) into a
@@ -55,9 +55,9 @@ commits to the full opening intent, and three modules are enabled at setup:
 |---|---|
 | **CoWSafeWrapper** | solver wrapper enforcing hash-committed `pre`/`post` Safe transactions around a fill, and `filledAmount ≥ expectedFill`. Meta-orders are registered through the Safe's module slot — only code the *Safe* authorized can register. |
 | **CowFlashLoanWrapper** | generic Aave flash-loan layer (`wrapperData = abi.encode(Loan[])`), trampoline-guarded so the pool cannot tamper with the settle calldata. |
-| **IntentBootstrap** (current: `IntentBootstrap12`) | one call deploys the user's Safe (if needed) and registers the opening meta-order. The Intent carries `collateral`/`debt`/`eMode`, so ANY Aave pair (borrow sell against buy) can be opened; shared eMode categories are entered automatically for their boosted LTV. The Safe address **commits to every intent field**, so a front-run with different parameters lands on a *different* address — public `bootstrap()` is grief-free. Reconstructs the order's appData JSON and UID fully on-chain. |
+| **IntentBootstrap** (current: `IntentBootstrap14`) | one call deploys the user's Safe (if needed) and registers the opening meta-order. The Intent carries `collateral`/`debt`/`eMode`, so ANY Aave pair (borrow sell against buy) can be opened; shared eMode categories are entered automatically for their boosted LTV. The Safe address **commits to every intent field**, so a front-run with different parameters lands on a *different* address — public `bootstrap()` is grief-free. Reconstructs the order's appData JSON and UID fully on-chain. |
 | **LevManagerModule** | owner-signed, **anyone-relayed** management. Verifies the EIP-712 `Retarget` signature, replay nonce and module-enablement, derives the canonical pre/post + appData + UID on-chain, registers the meta-order, emits everything the relayer needs. |
-| **LevSupplyHelper** | stateless delegatecall helpers run *as the Safe*: `supplyAllAndCheck` (supply full bought balance + enforce signed `minHealthFactor`) and `closeAndSweep` (repay flash → HF check → sweep **all** residual tokens, incl. dust, to the signed `receiver`). |
+| **LevSupplyHelper** | stateless delegatecall helpers run *as the Safe*: `openPostA` (ADAPTIVE open: supply the full bought balance, enter eMode, borrow exactly what the settlement fee shaved off the delivered equity, repay the flash — the user's outlay is EXACT), `supplyAllAndCheck` (INCREASE) and `closeAndSweep` (repay flash → HF check → pay residual tokens to the signed `receiver`). |
 
 Current deployed addresses (Gnosis staging/barn) are in
 [`contracts/DEPLOYMENTS.md`](contracts/DEPLOYMENTS.md).
@@ -69,7 +69,7 @@ The user picks equity `E` and leverage `L`. The app derives `flash = E·L`,
 **deterministic Safe address and both order UIDs before anything is signed**.
 
 ```
-user signs ───► carrier order: sell E·1.05 WXDAI → receiver = counterfactual Safe
+user signs ───► carrier order: sell EXACTLY E (the stated amount) → receiver = counterfactual Safe
                 appData pre-hook: IntentBootstrap.bootstrap(intent)
 
 solver settles the carrier order:
@@ -82,9 +82,10 @@ the leverage order (EIP-1271, signature "0x", from = the Safe) then fills:
   CowFlashLoanWrapper: flash-borrow `flash` WXDAI to the Safe
     CoWSafeWrapper pre:  approve relayer / pool
       GPv2 settle:       sell `flash` WXDAI → ≥ `buyMin` WETH (receiver = Safe)
-    CoWSafeWrapper post: openPost (one delegatecall) — supply the FULL bought WETH balance
-                         (positive slippage earns yield immediately) · borrow `borrow` WXDAI ·
-                         repay `repay` to the wrapper
+    CoWSafeWrapper post: openPostA (one delegatecall) — supply the FULL bought balance (positive
+                         slippage earns yield immediately) · enter the pair's eMode category (if
+                         any) · borrow exactly `repay − equity_received` (settlement fees shift the
+                         borrow by their size, never the user's outlay) · repay the flash loan
 ```
 
 The user's only on-chain prerequisite is the standard one-time WXDAI approval to the CoW vault
@@ -111,9 +112,11 @@ flash-borrow `flash` WXDAI
   pre:  repay `repayAmount` debt (MAX = full close) · withdraw collateral · approve relayer
   fill: sell `sellAmount` WETH → ≥ `minBuy` WXDAI   (the CoW order)
   post: repay flash + premium
-        · full close with `receiver` set: closeAndSweep — sweep ALL residual WXDAI + WETH
-          (proceeds *and* dust) to the receiver, balances read at execution time
-        · otherwise: residual stays in the Safe; enforce signed minHealthFactor
+        · with `receiver` set (full OR partial): closeAndSweep — pay the freed equity to the
+          receiver, balances read at execution time. Full close sweeps everything; a partial close
+          pays the debt-token surplus plus `withdrawExtra` collateral, so the user can choose to
+          receive EITHER asset. Default receiver = the owner's wallet.
+        · receiver = 0: residual stays in the Safe; enforce signed minHealthFactor
 ```
 
 **INCREASE (mode 1)** — increase leverage (no flash; bounded by current Aave capacity):
