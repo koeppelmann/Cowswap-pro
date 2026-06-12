@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 
 // Relay a signed Retarget intent through LevManagerModule.execute (gas paid by the relay EOA).
 // The relay can only land what the owner signed; it cannot forge intents.
-const MODULE = '0xd504138eD8d6bF01A6C2c3e6f83298aE7242E985';
+const MODULE = '0xA3044558D8459E37dC26b7d4ee8901e8e6f40fd2'; // LevManagerModule v3 (closeAndSweep single-delegatecall post)
 const RPC = process.env.GNOSIS_RPC || 'https://rpc.gnosischain.com';
 
 const RETARGET = {
@@ -18,6 +18,7 @@ const RETARGET = {
     { name: 'mode', type: 'uint8' }, { name: 'collateral', type: 'address' }, { name: 'debt', type: 'address' },
     { name: 'sellAmount', type: 'uint256' }, { name: 'repayAmount', type: 'uint256' }, { name: 'minBuy', type: 'uint256' },
     { name: 'flash', type: 'uint256' }, { name: 'orderValidTo', type: 'uint32' }, { name: 'minHealthFactor', type: 'uint256' },
+    { name: 'receiver', type: 'address' },
   ],
 } as const;
 const ABI = [
@@ -41,18 +42,21 @@ export async function POST(req: Request) {
     safe: i.safe as Hex, nonce: BigInt(i.nonce), deadline: BigInt(i.deadline), mode: Number(i.mode),
     collateral: i.collateral as Hex, debt: i.debt as Hex, sellAmount: BigInt(i.sellAmount), repayAmount: BigInt(i.repayAmount),
     minBuy: BigInt(i.minBuy), flash: BigInt(i.flash), orderValidTo: Number(i.orderValidTo), minHealthFactor: BigInt(i.minHealthFactor),
+    receiver: (i.receiver ?? '0x0000000000000000000000000000000000000000') as Hex,
   };
   try {
     const account = relayAccount();
     const wallet = createWalletClient({ account, chain: gnosis, transport: http(RPC) });
     const pub = createPublicClient({ chain: gnosis, transport: http(RPC) });
-    // Price the tx explicitly with a buffer above the live gas price. viem's default 1559
-    // estimation on the Gnosis public RPC can pick a priority fee of a few wei, leaving the tx
-    // permanently under-priced and unmineable — which made the relay request hang until the edge
-    // proxy returned an HTML timeout page. Legacy gasPrice = 2× live (+ a floor) guarantees inclusion.
-    const live = await pub.getGasPrice();
-    const gasPrice = (live > 2_000_000_000n ? live : 2_000_000_000n) * 2n; // ≥ ~2 gwei, then ×2
-    const hash = await wallet.writeContract({ address: MODULE as Hex, abi: ABI, functionName: 'execute', args: [tuple, b.sig], gasPrice });
+    // 1) simulate via eth_call (no fee accounting) — surfaces a clean revert reason up front.
+    await pub.simulateContract({ address: MODULE as Hex, abi: ABI, functionName: 'execute', args: [tuple, b.sig], account });
+    // 2) send with EXPLICIT gas + price, skipping eth_estimateGas entirely (flaky on the public
+    //    RPC) . viem's default 1559 estimation once picked a ~4 wei priority fee, leaving the tx
+    //    permanently under-priced and unmineable — the relay request then hung until the edge proxy
+    //    returned an HTML timeout page. 3× the live price guarantees inclusion (Gnosis gas is
+    //    mwei-scale, so this costs fractions of a cent); 4M gas covers execute (~2.3M measured).
+    const gasPrice = (await pub.getGasPrice()) * 3n;
+    const hash = await wallet.writeContract({ address: MODULE as Hex, abi: ABI, functionName: 'execute', args: [tuple, b.sig], gas: 4_000_000n, gasPrice });
     // Bounded wait: never let this request run long enough to trip an edge/proxy HTML timeout
     // (a Cloudflare 524 HTML page would make the client's `.json()` choke on "<!DOCTYPE"). On
     // Gnosis (~5s blocks) 90s is ample; if it isn't mined we return JSON with the hash to poll.

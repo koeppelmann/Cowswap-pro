@@ -118,6 +118,7 @@ export default function LeveragePage() {
   const [showLev, setShowLev] = useState(false);
   const [slippagePct, setSlippagePct] = useState(1);
   const [posMode, setPosMode] = useState<'close' | 'leverage'>('close');
+  const [receiver, setReceiver] = useState('');   // close proceeds receiver; '' = the connected owner
   const isPos = (x: UIToken | LivePos): x is LivePos => 'safe' in x;
   const sellIsPos = isPos(sell);
 
@@ -342,6 +343,12 @@ export default function LeveragePage() {
     setBusy(true); setErr(null); setStatus('Quoting…');
     try {
       const full = pct >= 100;
+      // full close sweeps ALL residual (WXDAI proceeds + WETH dust) to the receiver — default = the owner
+      let recv: Address = '0x0000000000000000000000000000000000000000';
+      if (full) {
+        try { recv = getAddress((receiver.trim() || address) as string); }
+        catch { throw new Error('receiver is not a valid address'); }
+      }
       const sellAmount = full ? p.collQty : (p.collQty * BigInt(pct)) / 100n;
       const repayAmount = full ? MAXU : (p.debtQty * BigInt(pct)) / 100n;
       const flash = ((full ? p.debtQty : repayAmount) * 103n) / 100n;
@@ -352,6 +359,7 @@ export default function LeveragePage() {
       const intent = {
         safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0n,
         collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
+        receiver: recv,
       };
       await relayRetarget(intent, full ? 'Closing position' : `Reducing ${pct}%`);
       setStatus(full ? '✅ Position closed' : `✅ Reduced ${pct}%`);
@@ -384,6 +392,7 @@ export default function LeveragePage() {
         const intent = {
           safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 1n,
           collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount: 0n, minBuy, flash: 0n, orderValidTo: BigInt(validTo), minHealthFactor: 1050000000000000000n,
+          receiver: '0x0000000000000000000000000000000000000000' as Address, // not a close — nothing to sweep
         };
         await relayRetarget(intent, `Increasing to ${target.toFixed(1)}x`);
       } else {
@@ -398,6 +407,7 @@ export default function LeveragePage() {
         const intent = {
           safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0n,
           collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
+          receiver: '0x0000000000000000000000000000000000000000' as Address, // partial reduce — residual stays as position buffer
         };
         await relayRetarget(intent, `Decreasing to ${target.toFixed(1)}x`);
       }
@@ -543,6 +553,17 @@ export default function LeveragePage() {
               } placeholder="0" />
               <button className="lev-tok" onClick={() => openSelect('buy')}><TokenIcon chainId={100} address={buy.address} symbol={buy.symbol} /> {buy.symbol} ▾</button>
             </div>
+            {sellIsPos && posMode === 'close' && parseFloat(amount) >= 100 && (
+              <div style={{ marginTop: 10 }}>
+                <div className="lev-stat"><span className="k">Send proceeds to</span></div>
+                <input
+                  className="lev-amt" style={{ fontSize: 13, width: '100%' }} spellCheck={false}
+                  placeholder={address ? `${address} (you)` : 'connect wallet'}
+                  value={receiver} onChange={(e) => setReceiver(e.target.value)}
+                />
+                <div className="lev-stat"><span className="k" style={{ fontSize: 11 }}>All remaining funds (incl. dust) are sent here on close · default: your wallet</span></div>
+              </div>
+            )}
             {!sellIsPos && lev > 1 && openAmts && (
               <div style={{ marginTop: 10 }}>
                 <div className="lev-stat"><span className="k">Debt (Aave V3)</span><span className="v" style={{ color: '#ffa53b' }}>{Number(formatUnits(openAmts.borrow, (sell as UIToken).decimals)).toFixed(4)} {(sell as UIToken).symbol}</span></div>
