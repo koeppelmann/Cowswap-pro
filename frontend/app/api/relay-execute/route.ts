@@ -33,17 +33,28 @@ function relayAccount() {
   return privateKeyToAccount((key.startsWith('0x') ? key : `0x${key}`) as Hex);
 }
 
+// idempotency: one in-flight relay per (safe, nonce) — concurrent duplicates of the same valid
+// intent would all pass simulation, then all-but-one revert on 'used' with the relay paying gas
+// (codex medium finding). Entries are dropped when the request settles.
+const inFlight = new Map<string, true>();
+
 export async function POST(req: Request) {
   let b: { intent?: Record<string, string>; sig?: Hex };
   try { b = await req.json(); } catch { return NextResponse.json({ error: 'bad json' }, { status: 400 }); }
   if (!b.intent || !b.sig) return NextResponse.json({ error: 'missing intent/sig' }, { status: 400 });
   const i = b.intent;
-  const tuple = {
-    safe: i.safe as Hex, nonce: BigInt(i.nonce), deadline: BigInt(i.deadline), mode: Number(i.mode),
-    collateral: i.collateral as Hex, debt: i.debt as Hex, sellAmount: BigInt(i.sellAmount), repayAmount: BigInt(i.repayAmount),
-    minBuy: BigInt(i.minBuy), flash: BigInt(i.flash), orderValidTo: Number(i.orderValidTo), minHealthFactor: BigInt(i.minHealthFactor),
-    receiver: (i.receiver ?? '0x0000000000000000000000000000000000000000') as Hex,
-  };
+  let tuple;
+  try {
+    tuple = {
+      safe: i.safe as Hex, nonce: BigInt(i.nonce), deadline: BigInt(i.deadline), mode: Number(i.mode),
+      collateral: i.collateral as Hex, debt: i.debt as Hex, sellAmount: BigInt(i.sellAmount), repayAmount: BigInt(i.repayAmount),
+      minBuy: BigInt(i.minBuy), flash: BigInt(i.flash), orderValidTo: Number(i.orderValidTo), minHealthFactor: BigInt(i.minHealthFactor),
+      receiver: (i.receiver ?? '0x0000000000000000000000000000000000000000') as Hex,
+    };
+  } catch { return NextResponse.json({ error: 'malformed intent fields' }, { status: 400 }); }
+  const lockKey = `${tuple.safe.toLowerCase()}:${tuple.nonce}`;
+  if (inFlight.has(lockKey)) return NextResponse.json({ ok: false, error: 'this intent is already being relayed — wait for it to settle' });
+  inFlight.set(lockKey, true);
   try {
     const account = relayAccount();
     const wallet = createWalletClient({ account, chain: gnosis, transport: http(RPC) });
@@ -87,5 +98,7 @@ export async function POST(req: Request) {
     // surface a short reason (viem errors bury the revert string in a multi-line message)
     const m = msg.match(/reverted with the following reason:\s*\n?([^\n]+)/);
     return NextResponse.json({ ok: false, error: m ? `execute would revert: ${m[1].trim()}` : msg.split('\n')[0] });
+  } finally {
+    inFlight.delete(lockKey);
   }
 }

@@ -341,6 +341,9 @@ export default function LeveragePage() {
       // consume the displayed plan VERBATIM — the user saw this Safe address and these UIDs
       const { intent, safe: safeAddr, levUid, levJson, levHash, carrierJson, carrierHash, carrierOrder } = openPlan;
       if (intent.validTo - 120 < Math.floor(Date.now() / 1000)) throw new Error('quote went stale — try again');
+      // stale-plan guards (codex): the plan must belong to the connected account and pay into its own Safe
+      if (intent.owner.toLowerCase() !== address.toLowerCase()) throw new Error('account changed — plan re-deriving, try again');
+      if (carrierOrder.receiver.toLowerCase() !== safeAddr.toLowerCase()) throw new Error('inconsistent plan — try again');
 
       // one-time vault-relayer allowance for the carrier order
       const sellAmt = BigInt(carrierOrder.sellAmount);

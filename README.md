@@ -81,7 +81,9 @@ the leverage order (EIP-1271, signature "0x", from = the Safe) then fills:
   CowFlashLoanWrapper: flash-borrow `flash` WXDAI to the Safe
     CoWSafeWrapper pre:  approve relayer / pool
       GPv2 settle:       sell `flash` WXDAI → ≥ `buyMin` WETH (receiver = Safe)
-    CoWSafeWrapper post: supply ALL bought WETH · borrow `borrow` WXDAI · repay `repay` to the wrapper
+    CoWSafeWrapper post: supply `buyMin` WETH · borrow `borrow` WXDAI · repay `repay` to the wrapper
+                         (positive slippage above `buyMin` stays as WETH in the Safe — it is swept
+                          to the receiver on full close)
 ```
 
 The user's only on-chain prerequisite is the standard one-time WXDAI approval to the CoW vault
@@ -127,6 +129,8 @@ Safety properties of `Retarget` (see `contracts/src/LevManagerModule.sol`):
 - partial REDUCE requires `repayAmount ≤ flash` (always flash-covered);
 - INCREASE forbids flash/repay and enforces a signed `minHealthFactor` post-condition on-chain;
 - `receiver` is signed — a relayer can never redirect proceeds;
+- on a *full* close `minHealthFactor` is vacuous (no debt remains → HF is ∞); execution quality is
+  protected by the signed `minBuy` only, so the UI signs `minHealthFactor = 0` there;
 - low-s + v∈{27,28} signature malleability hardening.
 
 ### A gotcha worth knowing
@@ -156,7 +160,8 @@ web routes against the barn orderbook. Receipts and UIDs: [`onchain/PROVEN.md`](
 ## Known limitations (staging demo)
 
 1/1 Safe only; `minBuy` comes from a fresh quote (an oracle-relative bound is a planned hardening);
-flash premium fixed at 5 bps; no-flash INCREASE is capped by current Aave borrow capacity; the
+flash premium fixed at 5 bps (a premium *increase* makes closes revert until redeploy; a decrease
+strands the difference in the flash wrapper rather than the receiver); no-flash INCREASE is capped by current Aave borrow capacity; the
 positions list is localStorage-seeded (filtered on-chain by `isOwner` + `isModuleEnabled`);
 contracts are unaudited.
 
