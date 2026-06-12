@@ -263,6 +263,10 @@ input.mini { max-width: 72px; }
 .lev-chips{ display:flex; gap:6px; margin-top:10px; }
 .lev-chips button{ flex:1; background:#1a1f3d; border:1px solid var(--lev-border); color:var(--lev-muted); border-radius:8px; padding:5px 0; font-size:12px; cursor:pointer; }
 .lev-chips button:hover{ color:#fff; }
+.lev-chips button.on{ background:var(--lev-pri); color:#fff; border-color:var(--lev-pri); }
+.lev-gear{ background:transparent; border:0; color:var(--lev-muted); font-size:18px; cursor:pointer; line-height:1; }
+.lev-gear:hover{ color:#fff; }
+.lev-rate{ text-align:center; color:var(--lev-muted); font-size:12px; margin:8px 0 2px; font-variant-numeric:tabular-nums; }
 .lev-levbadge{ display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:4px 10px; font-size:12px; font-weight:600; cursor:pointer; border:0; }
 .lev-levbadge.off{ background:rgba(76,130,251,.12); color:var(--lev-pri); }
 .lev-levbadge.on{ background:var(--lev-pri); color:#fff; }
