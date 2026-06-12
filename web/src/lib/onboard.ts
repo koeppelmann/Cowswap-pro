@@ -123,6 +123,16 @@ const RETARGET_STRUCT = {
   ],
 } as const;
 
+// v4 preview (14-field Retarget, no withdrawExtra) — for Safes opened before v5
+const RETARGET_STRUCT_V4 = {
+  type: 'tuple', name: 'r',
+  components: RETARGET_STRUCT.components.filter((c) => c.name !== 'withdrawExtra'),
+} as const;
+export const MODULE_ABI_V4 = [
+  { type: 'function', stateMutability: 'view', name: 'preview', inputs: [RETARGET_STRUCT_V4],
+    outputs: [{ name: 'uid', type: 'bytes' }, { name: 'json', type: 'string' }, { name: 'appHash', type: 'bytes32' }] },
+] as const;
+
 export const MODULE_ABI = [
   { type: 'function', stateMutability: 'view', name: 'preview', inputs: [RETARGET_STRUCT],
     outputs: [{ name: 'uid', type: 'bytes' }, { name: 'json', type: 'string' }, { name: 'appHash', type: 'bytes32' }] },
