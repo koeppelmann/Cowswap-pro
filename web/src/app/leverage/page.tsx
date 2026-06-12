@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { encodeFunctionData, formatUnits, keccak256, parseUnits, toHex, type Address } from 'viem';
+import { encodeFunctionData, formatUnits, getAddress, keccak256, parseUnits, toHex, type Address } from 'viem';
 import { gnosis } from 'wagmi/chains';
 import { useAccount, useChainId, usePublicClient, useSwitchChain, useWalletClient } from 'wagmi';
 import { ConnectButton } from '../../components/ConnectButton';
@@ -262,7 +262,7 @@ export default function LeveragePage() {
       const sig = await walletClient.signTypedData({
         account: address, domain: { name: 'Gnosis Protocol', version: 'v2', chainId: 100, verifyingContract: O.settlement as Address },
         types: GPV2_ORDER_TYPES, primaryType: 'Order',
-        message: { ...carrierOrder, sellAmount: BigInt(carrierOrder.sellAmount), buyAmount: BigInt(carrierOrder.buyAmount), feeAmount: 0n } as never,
+        message: { ...carrierOrder, sellAmount: BigInt(carrierOrder.sellAmount), buyAmount: BigInt(carrierOrder.buyAmount), validTo: BigInt(carrierOrder.validTo), feeAmount: 0n } as never,
       });
       saveSafe(safeAddr);
 
@@ -299,8 +299,8 @@ export default function LeveragePage() {
       const minBuy = minOut(q, Math.max(slippagePct, 2));
       const validTo = Math.floor(Date.now() / 1000) + 1800;
       const intent = {
-        safe: p.safe, nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0,
-        collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount, minBuy, flash, orderValidTo: validTo, minHealthFactor: 0n,
+        safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0n,
+        collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
       };
       await relayRetarget(intent, full ? 'Closing position' : `Reducing ${pct}%`);
       setStatus(full ? '✅ Position closed' : `✅ Reduced ${pct}%`);
@@ -331,8 +331,8 @@ export default function LeveragePage() {
         if (!q) throw new Error('quote failed');
         const minBuy = minOut(q, Math.max(slippagePct, 2));
         const intent = {
-          safe: p.safe, nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 1,
-          collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount: 0n, minBuy, flash: 0n, orderValidTo: validTo, minHealthFactor: 1050000000000000000n,
+          safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 1n,
+          collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount: 0n, minBuy, flash: 0n, orderValidTo: BigInt(validTo), minHealthFactor: 1050000000000000000n,
         };
         await relayRetarget(intent, `Increasing to ${target.toFixed(1)}x`);
       } else {
@@ -345,8 +345,8 @@ export default function LeveragePage() {
         if (!q) throw new Error('quote failed');
         const minBuy = minOut(q, Math.max(slippagePct, 2));
         const intent = {
-          safe: p.safe, nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0,
-          collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount, minBuy, flash, orderValidTo: validTo, minHealthFactor: 0n,
+          safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0n,
+          collateral: O.weth, debt: O.wxdai, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
         };
         await relayRetarget(intent, `Decreasing to ${target.toFixed(1)}x`);
       }
@@ -378,7 +378,7 @@ export default function LeveragePage() {
       const sig = await walletClient.signTypedData({
         account: address, domain: { name: 'Gnosis Protocol', version: 'v2', chainId: 100, verifyingContract: O.settlement as Address },
         types: GPV2_ORDER_TYPES, primaryType: 'Order',
-        message: { ...order, sellAmount: BigInt(order.sellAmount), buyAmount: BigInt(order.buyAmount), feeAmount: 0n } as never,
+        message: { ...order, sellAmount: BigInt(order.sellAmount), buyAmount: BigInt(order.buyAmount), validTo: BigInt(order.validTo), feeAmount: 0n } as never,
       });
       await barn('appdata', { hash: appHash, fullAppData: appDoc });
       const os = await barn('order', { order: { ...order, signingScheme: 'eip712', signature: sig, from: address } });
