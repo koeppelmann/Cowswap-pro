@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { encodeFunctionData, formatUnits, getAddress, keccak256, parseUnits, toHex, type Address } from 'viem';
+import { encodeFunctionData, formatUnits, getAddress, hashTypedData, keccak256, parseUnits, toHex, type Address } from 'viem';
 import { gnosis } from 'wagmi/chains';
 import { useAccount, useChainId, usePublicClient, useSwitchChain, useWalletClient } from 'wagmi';
 import { ConnectButton } from '../../components/ConnectButton';
@@ -84,6 +84,24 @@ async function pollFill(uid: string, onTick?: (s: string) => void, tries = 90): 
   return 'expired';
 }
 
+// external links (barn explorer knows staging orders; Safe app + Gnosisscan for the Safe)
+const explorerUrl = (uid: string) => `https://barn.explorer.cow.fi/gc/orders/${uid}`;
+const safeAppUrl = (safe: string) => `https://app.safe.global/home?safe=gno:${safe}`;
+const scanUrl = (addr: string) => `https://gnosisscan.io/address/${addr}`;
+const short = (x: string) => `${x.slice(0, 8)}…${x.slice(-6)}`;
+function ExtLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return <a href={href} target="_blank" rel="noreferrer" style={{ color: '#6ea8ff', textDecoration: 'none' }}>{children} ↗</a>;
+}
+
+// the frozen open plan: everything below is shown to the user BEFORE signing and then used
+// verbatim in doOpen — the Safe address commits to every intent field (incl. nonce/validTo/minBuy),
+// so displaying one intent and signing another would show the wrong deterministic address.
+type OpenPlan = {
+  intent: Intent; safe: Address; levUid: string; carrierUid: string;
+  levJson: string; levHash: `0x${string}`; carrierJson: string; carrierHash: `0x${string}`;
+  carrierOrder: { sellToken: string; buyToken: string; receiver: string; sellAmount: string; buyAmount: string; validTo: number; appData: string; feeAmount: string; kind: string; partiallyFillable: boolean; sellTokenBalance: string; buyTokenBalance: string };
+};
+
 // localStorage helpers (shared with /onboard + /manage via the `levSafes` key)
 function loadSavedSafes(): Address[] {
   const set = new Set<string>();
@@ -133,6 +151,7 @@ export default function LeveragePage() {
   const [bal, setBal] = useState<bigint | null>(null);
   const [previewBuy, setPreviewBuy] = useState<bigint | null>(null);
   const [previewReduce, setPreviewReduce] = useState<bigint | null>(null); // est. WXDAI freed by a close/reduce
+  const [openPlan, setOpenPlan] = useState<OpenPlan | null>(null);         // frozen pre-open derivation (Safe + UIDs)
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -199,6 +218,43 @@ export default function LeveragePage() {
     quoteOut((sell as UIToken).address, buy.address, amt, (address ?? '0x25a9A92F3bD7Ce47cFD48a896C5590Cf8F5A03Fb') as Address).then((q) => { if (live) setPreviewBuy(q); });
     return () => { live = false; };
   }, [sellIsPos, lev, openAmts, equity, sell, buy, address]);
+
+  // derive the FULL open plan before any signature: deterministic Safe, both order UIDs, appData.
+  // Reruns whenever the quote/amount/leverage changes; doOpen consumes it verbatim.
+  useEffect(() => {
+    setOpenPlan(null);
+    if (sellIsPos || !address || !publicClient || !openAmts || !previewBuy || lev <= 1) return;
+    if ((sell as UIToken).address.toLowerCase() !== (O.wxdai as string).toLowerCase() || buy.address.toLowerCase() !== (O.weth as string).toLowerCase()) return;
+    let live = true;
+    (async () => {
+      try {
+        const validTo = Math.floor(Date.now() / 1000) + 3600;
+        const buyMin = minOut(previewBuy, slippagePct);
+        const nonce = BigInt('0x' + [...crypto.getRandomValues(new Uint8Array(12))].map((x) => x.toString(16).padStart(2, '0')).join(''));
+        const intent: Intent = { owner: address, equity, flash: openAmts.flash, buyMin, borrow: openAmts.borrow, repay: openAmts.repay, validTo, nonce };
+        const safeAddr = await publicClient.readContract({ address: O.intentBootstrap as Address, abi: IB_ABI, functionName: 'safeOf', args: [intent] }) as Address;
+        const [levJson, levHash] = await publicClient.readContract({ address: O.intentBootstrap as Address, abi: IB_ABI, functionName: 'appData', args: [intent, safeAddr] }) as [string, `0x${string}`];
+        const levUid = await publicClient.readContract({ address: O.intentBootstrap as Address, abi: IB_ABI, functionName: 'uid', args: [intent, safeAddr] }) as `0x${string}`;
+        const bootstrapCalldata = encodeFunctionData({ abi: IB_ABI, functionName: 'bootstrap', args: [intent] });
+        const { json: carrierJson, hash: carrierHash } = carrierAppData(bootstrapCalldata);
+        const sellAmt = (equity * 105n) / 100n; // sell a touch more so the Safe nets >= equity after fee
+        const carrierOrder = {
+          sellToken: O.wxdai, buyToken: O.wxdai, receiver: safeAddr, sellAmount: sellAmt.toString(),
+          buyAmount: ((sellAmt * 96n) / 100n).toString(), validTo, appData: carrierHash, feeAmount: '0', kind: 'sell',
+          partiallyFillable: false, sellTokenBalance: 'erc20', buyTokenBalance: 'erc20',
+        };
+        // the carrier (funding) order UID is deterministic too: GPv2 digest ++ owner ++ validTo
+        const digest = hashTypedData({
+          domain: { name: 'Gnosis Protocol', version: 'v2', chainId: 100, verifyingContract: O.settlement as Address },
+          types: GPV2_ORDER_TYPES, primaryType: 'Order',
+          message: { ...carrierOrder, sellAmount: BigInt(carrierOrder.sellAmount), buyAmount: BigInt(carrierOrder.buyAmount), validTo: BigInt(validTo), feeAmount: 0n } as never,
+        });
+        const carrierUid = (digest + address.slice(2) + validTo.toString(16).padStart(8, '0')).toLowerCase();
+        if (live) setOpenPlan({ intent, safe: safeAddr, levUid, carrierUid, levJson, levHash, carrierJson, carrierHash, carrierOrder });
+      } catch { /* leave plan null; CTA stays disabled */ }
+    })();
+    return () => { live = false; };
+  }, [sellIsPos, address, publicClient, openAmts, previewBuy, slippagePct, equity, lev, sell, buy]);
 
   // close/reduce estimate: sell `pct` of collateral → WXDAI, minus the proportional debt repaid.
   // Net is the WXDAI freed (full close ≈ your equity back; partial ≈ small, it mostly deleverages).
@@ -279,23 +335,15 @@ export default function LeveragePage() {
 
   // ── OPEN: carrier order (one signature, gasless) → solver deploys Safe + opens ──
   async function doOpen() {
-    if (!walletClient || !publicClient || !address || !openAmts) return;
-    setBusy(true); setErr(null); setStatus('Quoting…');
+    if (!walletClient || !publicClient || !address || !openAmts || !openPlan) return;
+    setBusy(true); setErr(null);
     try {
-      const validTo = Math.floor(Date.now() / 1000) + 3600;
-      const q = previewBuy ?? await quoteOut((sell as UIToken).address, buy.address, openAmts.flash, address);
-      if (!q) throw new Error('quote failed');
-      const buyMin = minOut(q, slippagePct);
-      const nonce = BigInt('0x' + [...crypto.getRandomValues(new Uint8Array(12))].map((b) => b.toString(16).padStart(2, '0')).join(''));
-      const intent: Intent = { owner: address, equity, flash: openAmts.flash, buyMin, borrow: openAmts.borrow, repay: openAmts.repay, validTo, nonce };
-
-      setStatus('Deriving your Safe + order on-chain…');
-      const safeAddr = await publicClient.readContract({ address: O.intentBootstrap as Address, abi: IB_ABI, functionName: 'safeOf', args: [intent] }) as Address;
-      const [levJson, levHash] = await publicClient.readContract({ address: O.intentBootstrap as Address, abi: IB_ABI, functionName: 'appData', args: [intent, safeAddr] }) as [string, `0x${string}`];
-      const levUid = await publicClient.readContract({ address: O.intentBootstrap as Address, abi: IB_ABI, functionName: 'uid', args: [intent, safeAddr] }) as `0x${string}`;
+      // consume the displayed plan VERBATIM — the user saw this Safe address and these UIDs
+      const { intent, safe: safeAddr, levUid, levJson, levHash, carrierJson, carrierHash, carrierOrder } = openPlan;
+      if (intent.validTo - 120 < Math.floor(Date.now() / 1000)) throw new Error('quote went stale — try again');
 
       // one-time vault-relayer allowance for the carrier order
-      const sellAmt = (equity * 105n) / 100n; // sell a touch more so the Safe nets >= equity after fee
+      const sellAmt = BigInt(carrierOrder.sellAmount);
       const allowance = await publicClient.readContract({ address: O.wxdai as Address, abi: ERC20_ABI, functionName: 'allowance', args: [address, O.relayer as Address] }) as bigint;
       if (allowance < sellAmt) {
         setStatus('One-time CoW approval (same as cowswap.exchange — never asked again)…');
@@ -304,13 +352,6 @@ export default function LeveragePage() {
       }
 
       setStatus('Sign your leverage swap (your only signature)…');
-      const bootstrapCalldata = encodeFunctionData({ abi: IB_ABI, functionName: 'bootstrap', args: [intent] });
-      const { json: carrierJson, hash: carrierHash } = carrierAppData(bootstrapCalldata);
-      const carrierOrder = {
-        sellToken: O.wxdai, buyToken: O.wxdai, receiver: safeAddr, sellAmount: sellAmt.toString(),
-        buyAmount: ((sellAmt * 96n) / 100n).toString(), validTo, appData: carrierHash, feeAmount: '0', kind: 'sell',
-        partiallyFillable: false, sellTokenBalance: 'erc20', buyTokenBalance: 'erc20',
-      };
       const sig = await walletClient.signTypedData({
         account: address, domain: { name: 'Gnosis Protocol', version: 'v2', chainId: 100, verifyingContract: O.settlement as Address },
         types: GPV2_ORDER_TYPES, primaryType: 'Order',
@@ -326,7 +367,7 @@ export default function LeveragePage() {
 
       setStatus('Opening your position (waiting for a solver)…');
       await barn('appdata', { hash: levHash, fullAppData: levJson });
-      const lo = { sellToken: O.wxdai, buyToken: O.weth, receiver: safeAddr, sellAmount: openAmts.flash.toString(), buyAmount: buyMin.toString(), validTo, appData: levHash, feeAmount: '0', kind: 'sell', partiallyFillable: false, sellTokenBalance: 'erc20', buyTokenBalance: 'erc20', signingScheme: 'eip1271', signature: '0x', from: safeAddr };
+      const lo = { sellToken: O.wxdai, buyToken: O.weth, receiver: safeAddr, sellAmount: intent.flash.toString(), buyAmount: intent.buyMin.toString(), validTo: intent.validTo, appData: levHash, feeAmount: '0', kind: 'sell', partiallyFillable: false, sellTokenBalance: 'erc20', buyTokenBalance: 'erc20', signingScheme: 'eip1271', signature: '0x', from: safeAddr };
       const ls = await barn('order', { order: lo });
       if (ls.status !== 201) throw new Error('leverage rejected: ' + JSON.stringify(ls.body));
       if (await pollFill(levUid, (s) => setStatus('Opening position (' + s + ')…')) !== 'fulfilled') throw new Error('leverage order expired — your Safe holds the equity; retry from the position list.');
@@ -470,7 +511,7 @@ export default function LeveragePage() {
   else if (equity > 0n) ctaLabel = samePair ? 'Select two different tokens' : insufficient ? 'Insufficient balance' : 'Swap';
   const ctaDisabled = busy || !isConnected || !onGnosis
     || (sellIsPos ? (posMode === 'leverage' ? Math.abs(lev - (sell as LivePos).m.leverage) < 0.05 && lev > 1.01 : false)
-                  : !(equity > 0n && !insufficient && !samePair && (lev <= 1 || supportedOpen)));
+                  : !(equity > 0n && !insufficient && !samePair && (lev <= 1 || (supportedOpen && !!openPlan))));
 
   // ── render ──
   const allowed: UIToken[] = sellIsPos
@@ -570,6 +611,22 @@ export default function LeveragePage() {
                 <div className="lev-stat"><span className="k">Est. health factor</span><span className="v" style={{ color: estHF && estHF > 1.4 ? '#46d39a' : '#ffa53b' }}>{estHF ? estHF.toFixed(2) : '—'}</span></div>
                 {estLiqPrice && <div className="lev-stat"><span className="k">Deleverage price</span><span className="v" style={{ color: '#ff8e8e' }}>{estLiqPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })} WXDAI</span></div>}
               </div>
+            )}
+            {/* pre-open plan: what will happen, the deterministic Safe + both order UIDs, with links */}
+            {!sellIsPos && lev > 1 && openAmts && openPlan && (
+              <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.06)' }}>
+                <div className="lev-stat"><span className="k" style={{ fontSize: 11 }}>What happens (you sign step 1 only):</span></div>
+                <div className="lev-stat"><span className="k">1 · Fund Safe</span><span className="v">{Number(formatUnits(BigInt(openPlan.carrierOrder.sellAmount), 18)).toFixed(4)} WXDAI → Safe</span></div>
+                <div className="lev-stat"><span className="k">2 · Flash-swap</span><span className="v">{Number(formatUnits(openPlan.intent.flash, 18)).toFixed(4)} WXDAI → ≥ {Number(formatUnits(openPlan.intent.buyMin, 18)).toFixed(5)} WETH</span></div>
+                <div className="lev-stat"><span className="k">3 · Supply + borrow</span><span className="v">supply WETH · borrow {Number(formatUnits(openPlan.intent.borrow, 18)).toFixed(4)} WXDAI</span></div>
+                <div className="lev-stat"><span className="k">4 · Repay flash</span><span className="v">{Number(formatUnits(openPlan.intent.repay, 18)).toFixed(4)} WXDAI</span></div>
+                <div className="lev-stat" style={{ marginTop: 6 }}><span className="k">Your Safe (deterministic)</span><span className="v"><ExtLink href={safeAppUrl(openPlan.safe)}>{short(openPlan.safe)}</ExtLink>&nbsp;·&nbsp;<ExtLink href={scanUrl(openPlan.safe)}>scan</ExtLink></span></div>
+                <div className="lev-stat"><span className="k">Funding order UID</span><span className="v"><ExtLink href={explorerUrl(openPlan.carrierUid)}>{short(openPlan.carrierUid)}</ExtLink></span></div>
+                <div className="lev-stat"><span className="k">Open order UID (signed by the Safe)</span><span className="v"><ExtLink href={explorerUrl(openPlan.levUid)}>{short(openPlan.levUid)}</ExtLink></span></div>
+              </div>
+            )}
+            {!sellIsPos && lev > 1 && openAmts && !openPlan && (
+              <div className="lev-stat" style={{ marginTop: 10 }}><span className="k">Deriving your Safe + order UIDs…</span></div>
             )}
           </div>
 
