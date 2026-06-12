@@ -35,6 +35,7 @@ const poolAbi = [
 ] as const;
 const safeAbi = [
   { type: 'function', name: 'isOwner', stateMutability: 'view', inputs: [{ type: 'address' }], outputs: [{ type: 'bool' }] },
+  { type: 'function', name: 'isModuleEnabled', stateMutability: 'view', inputs: [{ type: 'address' }], outputs: [{ type: 'bool' }] },
 ] as const;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -147,6 +148,10 @@ export default function LeveragePage() {
         // of the user's accounts must not appear under this one (it can't be managed here).
         const owned = await publicClient.readContract({ address: safe, abi: safeAbi, functionName: 'isOwner', args: [address] }).catch(() => false) as boolean;
         if (!owned) continue;
+        // a Safe without LevManagerModule enabled (stale/old-flow artifact) can't be managed
+        // here — showing it would render Close/Adjust buttons that can only revert.
+        const managed = await publicClient.readContract({ address: safe, abi: safeAbi, functionName: 'isModuleEnabled', args: [LEV_MODULE as Address] }).catch(() => false) as boolean;
+        if (!managed) continue;
         const acct = await publicClient.readContract({ address: POOL_ADDR as Address, abi: poolAbi, functionName: 'getUserAccountData', args: [safe] }) as readonly bigint[];
         if (acct[0] === 0n && acct[1] === 0n) continue; // closed / empty
         const collQty = await publicClient.readContract({ address: O.aweth as Address, abi: erc20Abi, functionName: 'balanceOf', args: [safe] }) as bigint;
