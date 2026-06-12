@@ -9,13 +9,13 @@ from eth_account import Account
 
 RPC = "https://rpc.gnosischain.com"
 BARN = "https://barn.api.cow.fi/xdai/api/v1"
-IB7 = "0x3D3191d57c871172882F45F9bd68A87eC7158ce8"  # IntentBootstrap14 (module v5)
+IB7 = "0x325afB837204D46A3D4158deD26a8BE2681761B5"  # IntentBootstrap15 (module v5 + signed open minHF)
 SETTLEMENT = "0xf553d092b50bdcbddeD1A99aF2cA29FBE5E2CB13"
 RELAYER = "0xC7242d167563352E2BCA4d71C043fbe542DB8FB2"
 WXDAI = "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d"
 WETH = "0x6A023CCd1ff6F2045C3309768eAd9E68F978f6e1"
 DEPLOYER_KEY = json.load(open("/home/ubuntu/code/twap/.deployer/key.json"))[0]["private_key"]
-INTENT_T = "(address,uint256,uint256,uint256,uint256,uint256,uint32,uint256,address,address,uint8)"
+INTENT_T = "(address,uint256,uint256,uint256,uint256,uint256,uint32,uint256,address,address,uint8,uint256)"
 
 def cast(*a): return subprocess.run(["cast", *map(str, a)], capture_output=True, text=True).stdout.strip()
 def send(*a): return json.loads(cast("send", *a, "--rpc-url", RPC, "--json"))
@@ -44,7 +44,7 @@ repay = flash * 10006 // 10000
 borrow = repay - equity
 buyMin = quote(DEBT, COLL, "0x25a9A92F3bD7Ce47cFD48a896C5590Cf8F5A03Fb", flash) * 80 // 100
 validTo = int(time.time()) + 86400
-intent = (owner, equity, flash, buyMin, borrow, repay, validTo, 1, COLL, DEBT, EMODE)
+intent = (owner, equity, flash, buyMin, borrow, repay, validTo, 1, COLL, DEBT, EMODE, 0)  # minHF 0 for scripted opens
 itup = "(" + ",".join(str(x) for x in intent) + ")"
 safe = cast("call", IB7, f"safeOf({INTENT_T})(address)", itup, "--rpc-url", RPC)
 

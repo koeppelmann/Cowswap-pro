@@ -239,8 +239,8 @@ contract LevManagerModuleForkTest is Test {
         deal(WETH, address(shortfall), 1e15);        // bought collateral
         deal(WXDAI, address(shortfall), 0.98e18);    // received equity (fee-shaved)
         shortfall.run(address(helper), abi.encodeWithSignature(
-            "openPostA(address,address,address,address,uint256,uint8)",
-            WETH, POOL, WXDAI, flashwrap, uint256(1.5e18), uint8(0)
+            "openPostA(address,address,address,address,uint256,uint8,uint256)",
+            WETH, POOL, WXDAI, flashwrap, uint256(1.5e18), uint8(0), uint256(0)
         ));
         assertEq(IERC20(WXDAI).balanceOf(flashwrap), 1.5e18, "flash repaid in full");
         assertEq(IERC20(WXDAI).balanceOf(address(shortfall)), 0, "no idle debt token");
@@ -251,11 +251,35 @@ contract LevManagerModuleForkTest is Test {
         deal(WETH, address(surplus), 1e15);
         deal(WXDAI, address(surplus), 2e18);
         surplus.run(address(helper), abi.encodeWithSignature(
-            "openPostA(address,address,address,address,uint256,uint8)",
-            WETH, POOL, WXDAI, flashwrap, uint256(1.5e18), uint8(0)
+            "openPostA(address,address,address,address,uint256,uint8,uint256)",
+            WETH, POOL, WXDAI, flashwrap, uint256(1.5e18), uint8(0), uint256(0)
         ));
         (, uint256 debt2,,,,) = IAaveP(POOL).getUserAccountData(address(surplus));
         assertEq(debt2, 0, "no borrow needed");
+    }
+
+    /// openPostA HF floor (codex high, fork): a too-high minHF (simulating a solver that
+    /// under-delivered equity → larger borrow → weaker position) REVERTS; a sane floor passes.
+    function test_openPostA_enforces_minHF_floor() public {
+        LevSupplyHelper helper = new LevSupplyHelper();
+        address flashwrap = address(0xF1A5);
+        // healthy: borrow modest debt against the supplied collateral, floor 1.05 → passes
+        DelegateBox ok = new DelegateBox();
+        deal(WETH, address(ok), 1e15);
+        ok.run(address(helper), abi.encodeWithSignature(
+            "openPostA(address,address,address,address,uint256,uint8,uint256)",
+            WETH, POOL, WXDAI, flashwrap, uint256(0.5e18), uint8(0), uint256(1.05e18)
+        ));
+        (,,,,, uint256 hf) = IAaveP(POOL).getUserAccountData(address(ok));
+        assertGe(hf, 1.05e18, "passes a sane floor");
+        // unreachable floor → the whole post reverts (settlement would too)
+        DelegateBox bad = new DelegateBox();
+        deal(WETH, address(bad), 1e15);
+        vm.expectRevert(bytes("HF too low"));
+        bad.run(address(helper), abi.encodeWithSignature(
+            "openPostA(address,address,address,address,uint256,uint8,uint256)",
+            WETH, POOL, WXDAI, flashwrap, uint256(0.5e18), uint8(0), uint256(100e18)
+        ));
     }
 
     function _selHex(string memory sigStr) internal pure returns (string memory) {
