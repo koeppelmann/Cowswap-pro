@@ -182,9 +182,12 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
     const B = market.reserves.find((r) => lc(r.address) === lc(buy.address));
     if (!S || !B || S.address === B.address) return null;
     const live = (r: AaveReserve) => r.active && !r.frozen && !r.paused;
-    if (!live(S) || !live(B) || !S.borrowEnabled || !S.flashEnabled) return null;
+    if (!live(S) || !live(B) || !S.flashEnabled) return null;
     let best: { eMode: number; label: string; ltvBps: number; liqTBps: number } | null = null;
-    if (B.collateralEnabled) best = { eMode: 0, label: '', ltvBps: B.ltvBps, liqTBps: B.liqThresholdBps };
+    // base path needs the reserve's global borrow flag…
+    if (B.collateralEnabled && S.borrowEnabled) best = { eMode: 0, label: '', ltvBps: B.ltvBps, liqTBps: B.liqThresholdBps };
+    // …but inside an eMode category the borrowable BITMAP overrides it (verified on a fork:
+    // WETH borrows fine in cat 1 despite borrowEnabled=false; outside the category it reverts)
     for (const c of market.emodes) {
       if (c.collateral.some((a) => lc(a) === lc(B.address)) && c.borrowable.some((a) => lc(a) === lc(S.address))
           && (!best || c.ltvBps > best.ltvBps)) {
@@ -282,7 +285,9 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
     const borrow = repay > equity ? repay - equity : 0n;
     return { flash, repay, borrow };
   }, [sellIsPos, lev, equity]);
-  const insufficient = bal != null && !sellIsPos && equity > bal;
+  // a leveraged open's carrier order sells equity*1.05 (fee buffer) — check THAT against the balance
+  const sellNeeded = lev > 1 ? (equity * 105n) / 100n : equity;
+  const insufficient = bal != null && !sellIsPos && sellNeeded > bal;
 
   // preview quote: leveraged flash leg when lev>1, otherwise the plain-swap amount
   useEffect(() => {
@@ -674,7 +679,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
                 </div>
                 {sellIsPos && <div className="lev-chips">{['25', '50', '75', '100'].map((v) => <button key={v} onClick={() => setAmount(v)}>{v === '100' ? 'Max' : v + '%'}</button>)}</div>}
                 {!sellIsPos && bal != null && (
-                  <div className="lev-chips">{['25', '50', '75', '100'].map((pc) => <button key={pc} onClick={() => setAmount(formatUnits((bal * BigInt(pc)) / 100n, (sell as UIToken).decimals))}>{pc === '100' ? 'Max' : pc + '%'}</button>)}</div>
+                  <div className="lev-chips">{['25', '50', '75', '100'].map((pc) => <button key={pc} onClick={() => setAmount(formatUnits((bal * BigInt(pc)) / (lev > 1 ? 105n : 100n), (sell as UIToken).decimals))}>{pc === '100' ? 'Max' : pc + '%'}</button>)}</div>
                 )}
               </>
             )}
