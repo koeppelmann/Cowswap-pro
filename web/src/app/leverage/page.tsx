@@ -33,15 +33,30 @@ type LivePos = {
 const poolAbi = [
   { type: 'function', name: 'getUserAccountData', stateMutability: 'view', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }] },
 ] as const;
+const safeAbi = [
+  { type: 'function', name: 'isOwner', stateMutability: 'view', inputs: [{ type: 'address' }], outputs: [{ type: 'bool' }] },
+] as const;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // slippage in fractional percent (e.g. 0.5) → integer-safe min-out (bps math; BigInt(99.5) would throw)
 const minOut = (q: bigint, pct: number) => (q * BigInt(Math.round((100 - pct) * 100))) / 10000n;
 // float → wei without exponential notation / >18-decimal strings that parseUnits rejects
 const floatToWei = (x: number, decimals = 18) => (!isFinite(x) || x <= 0 ? 0n : BigInt(Math.round(x * 1e6)) * 10n ** BigInt(decimals - 6));
+// POST JSON and parse defensively: a non-JSON body (e.g. a Cloudflare/Next HTML error page)
+// throws a readable error instead of the cryptic `Unexpected token '<', "<!DOCTYPE"...`.
+async function postJson(url: string, body: unknown): Promise<any> {
+  let r: Response;
+  try { r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); }
+  catch (e) { throw new Error('network error reaching ' + url + ' — check your connection and retry'); }
+  const txt = await r.text();
+  try { return JSON.parse(txt); }
+  catch {
+    const snippet = txt.trim().slice(0, 80).replace(/\s+/g, ' ');
+    throw new Error(`server returned a non-JSON response (HTTP ${r.status})${snippet ? ' — ' + snippet : ''}. The relayer/proxy may be busy; retry in a moment.`);
+  }
+}
 async function barn(op: string, extra: Record<string, unknown>) {
-  const r = await fetch('/api/barn', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ op, ...extra }) });
-  return r.json();
+  return postJson('/api/barn', { op, ...extra });
 }
 async function quoteOut(sellToken: Address, buyToken: Address, sellAmount: bigint, from: Address): Promise<bigint | null> {
   const q = await barn('quote', { sellToken, buyToken, from, sellAmount: sellAmount.toString() });
@@ -115,6 +130,7 @@ export default function LeveragePage() {
   const [positions, setPositions] = useState<LivePos[]>([]);
   const [bal, setBal] = useState<bigint | null>(null);
   const [previewBuy, setPreviewBuy] = useState<bigint | null>(null);
+  const [previewReduce, setPreviewReduce] = useState<bigint | null>(null); // est. WXDAI freed by a close/reduce
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -122,10 +138,15 @@ export default function LeveragePage() {
   // ── load positions (localStorage + live Aave reads) ──
   const loadPositions = useCallback(async () => {
     if (!publicClient) return;
+    if (!address) { setPositions([]); return; } // no account → no positions to show
     const safes = loadSavedSafes();
     const live: LivePos[] = [];
     for (const safe of safes) {
       try {
+        // only show Safes the *connected* account owns — a saved Safe from another
+        // of the user's accounts must not appear under this one (it can't be managed here).
+        const owned = await publicClient.readContract({ address: safe, abi: safeAbi, functionName: 'isOwner', args: [address] }).catch(() => false) as boolean;
+        if (!owned) continue;
         const acct = await publicClient.readContract({ address: POOL_ADDR as Address, abi: poolAbi, functionName: 'getUserAccountData', args: [safe] }) as readonly bigint[];
         if (acct[0] === 0n && acct[1] === 0n) continue; // closed / empty
         const collQty = await publicClient.readContract({ address: O.aweth as Address, abi: erc20Abi, functionName: 'balanceOf', args: [safe] }) as bigint;
@@ -137,10 +158,13 @@ export default function LeveragePage() {
       } catch { /* skip */ }
     }
     setPositions(live);
-    // keep a live selection fresh after an action
+    // keep a live selection fresh after an action (?? cur tolerates a transient RPC blip
+    // without deselecting; account-switch deselection is handled by the effect below).
     setSell((cur) => (isPos(cur) ? live.find((p) => p.safe.toLowerCase() === cur.safe.toLowerCase()) ?? cur : cur));
-  }, [publicClient]);
+  }, [publicClient, address]);
   useEffect(() => { loadPositions(); }, [loadPositions]);
+  // on account switch, drop any position selection (it belongs to the previous account)
+  useEffect(() => { setSell((cur) => (isPos(cur) ? WXDAI : cur)); }, [address]);
 
   // wallet balance of the sell token (plain-token sell only)
   useEffect(() => {
@@ -169,6 +193,28 @@ export default function LeveragePage() {
     quoteOut((sell as UIToken).address, buy.address, amt, (address ?? '0x25a9A92F3bD7Ce47cFD48a896C5590Cf8F5A03Fb') as Address).then((q) => { if (live) setPreviewBuy(q); });
     return () => { live = false; };
   }, [sellIsPos, lev, openAmts, equity, sell, buy, address]);
+
+  // close/reduce estimate: sell `pct` of collateral → WXDAI, minus the proportional debt repaid.
+  // Net is the WXDAI freed (full close ≈ your equity back; partial ≈ small, it mostly deleverages).
+  useEffect(() => {
+    setPreviewReduce(null);
+    if (!sellIsPos || posMode !== 'close') return;
+    const p = sell as LivePos;
+    const pct = Math.min(100, Math.max(0, parseFloat(amount) || 0));
+    if (pct <= 0 || p.collQty === 0n) return;
+    const full = pct >= 100;
+    const sellAmount = full ? p.collQty : (p.collQty * BigInt(Math.round(pct))) / 100n;
+    const debtPortion = full ? p.debtQty : (p.debtQty * BigInt(Math.round(pct))) / 100n;
+    let live = true;
+    quoteOut(O.weth as Address, O.wxdai as Address, sellAmount, p.safe).then((gross) => {
+      if (!live) return;
+      if (gross == null) { setPreviewReduce(null); return; }
+      const premium = (debtPortion * 5n) / 10000n; // ~5bps Aave flash premium
+      const net = gross - debtPortion - premium;
+      setPreviewReduce(net > 0n ? net : 0n);
+    });
+    return () => { live = false; };
+  }, [sellIsPos, posMode, sell, amount]);
 
   const estHF = useMemo(() => {
     if (!openAmts || openAmts.borrow === 0n) return null;
@@ -205,7 +251,7 @@ export default function LeveragePage() {
     });
     setStatus('Relaying through the module…');
     const intentStr = Object.fromEntries(Object.entries(intent).map(([k, v]) => [k, v.toString()]));
-    const rl = await (await fetch('/api/relay-execute', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ intent: intentStr, sig }) })).json();
+    const rl = await postJson('/api/relay-execute', { intent: intentStr, sig });
     if (!rl.ok) throw new Error('relay: ' + (rl.error ?? JSON.stringify(rl)));
     setStatus('Order registered — submitting to the auction…');
     await barn('appdata', { hash: rl.appDataHash, fullAppData: rl.fullAppData });
@@ -486,7 +532,9 @@ export default function LeveragePage() {
             )}
             <div className="lev-amtrow">
               <input className="lev-amt" style={{ color: 'var(--lev-pri)' }} readOnly value={
-                sellIsPos ? '' : (lev > 1 && previewBuy ? Number(formatUnits(previewBuy, buy.decimals)).toFixed(5) : '0')
+                sellIsPos
+                  ? (posMode === 'close' ? (previewReduce != null ? Number(formatUnits(previewReduce, WXDAI.decimals)).toFixed(2) : '') : '')
+                  : (lev > 1 && previewBuy ? Number(formatUnits(previewBuy, buy.decimals)).toFixed(5) : '0')
               } placeholder="0" />
               <button className="lev-tok" onClick={() => openSelect('buy')}><TokenIcon chainId={100} address={buy.address} symbol={buy.symbol} /> {buy.symbol} ▾</button>
             </div>
