@@ -9,23 +9,26 @@ export const runtime = 'nodejs';
 
 // Relay a signed Retarget intent through LevManagerModule.execute (gas paid by the relay EOA).
 // The relay can only land what the owner signed; it cannot forge intents.
-const MODULE = '0xbd913B8626DD7ACe1810E1797C93f27dD7906A5C'; // LevManagerModule v4 (stop trigger + receiver sweep)
+const MODULE_V5 = '0x239D413A6Ac5322D3ccAaaf43e34045bdAcD7E74'; // current
+const MODULE_V4 = '0xbd913B8626DD7ACe1810E1797C93f27dD7906A5C'; // Safes opened before v5 still use this
+const MODULES: Record<string, string> = { v5: MODULE_V5, v4: MODULE_V4 };
 const RPC = process.env.GNOSIS_RPC || 'https://rpc.gnosischain.com';
 
-const RETARGET = {
-  type: 'tuple', name: 'r', components: [
-    { name: 'safe', type: 'address' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' },
-    { name: 'mode', type: 'uint8' }, { name: 'collateral', type: 'address' }, { name: 'debt', type: 'address' },
-    { name: 'sellAmount', type: 'uint256' }, { name: 'repayAmount', type: 'uint256' }, { name: 'minBuy', type: 'uint256' },
-    { name: 'flash', type: 'uint256' }, { name: 'orderValidTo', type: 'uint32' }, { name: 'minHealthFactor', type: 'uint256' },
-    { name: 'receiver', type: 'address' }, { name: 'triggerHealthFactor', type: 'uint256' },
-  ],
-} as const;
-const ABI = [
-  { type: 'function', stateMutability: 'nonpayable', name: 'execute', inputs: [RETARGET, { name: 'sig', type: 'bytes' }], outputs: [{ type: 'bytes' }] },
-  { type: 'event', name: 'Registered', inputs: [
-    { name: 'safe', type: 'address', indexed: true }, { name: 'nonce', type: 'uint256' }, { name: 'mode', type: 'uint8' },
-    { name: 'uid', type: 'bytes' }, { name: 'appDataHash', type: 'bytes32' }, { name: 'fullAppData', type: 'string' }] },
+const FIELDS_V4 = [
+  { name: 'safe', type: 'address' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' },
+  { name: 'mode', type: 'uint8' }, { name: 'collateral', type: 'address' }, { name: 'debt', type: 'address' },
+  { name: 'sellAmount', type: 'uint256' }, { name: 'repayAmount', type: 'uint256' }, { name: 'minBuy', type: 'uint256' },
+  { name: 'flash', type: 'uint256' }, { name: 'orderValidTo', type: 'uint32' }, { name: 'minHealthFactor', type: 'uint256' },
+  { name: 'receiver', type: 'address' }, { name: 'triggerHealthFactor', type: 'uint256' },
+];
+const REGISTERED_EVT = { type: 'event', name: 'Registered', inputs: [
+  { name: 'safe', type: 'address', indexed: true }, { name: 'nonce', type: 'uint256' }, { name: 'mode', type: 'uint8' },
+  { name: 'uid', type: 'bytes' }, { name: 'appDataHash', type: 'bytes32' }, { name: 'fullAppData', type: 'string' }] };
+const abiFor = (v4: boolean) => [
+  { type: 'function', stateMutability: 'nonpayable', name: 'execute',
+    inputs: [{ type: 'tuple', name: 'r', components: v4 ? FIELDS_V4 : [...FIELDS_V4, { name: 'withdrawExtra', type: 'uint256' }] }, { name: 'sig', type: 'bytes' }],
+    outputs: [{ type: 'bytes' }] },
+  REGISTERED_EVT,
 ] as const;
 
 function relayAccount() {
@@ -39,9 +42,14 @@ function relayAccount() {
 const inFlight = new Map<string, true>();
 
 export async function POST(req: Request) {
-  let b: { intent?: Record<string, string>; sig?: Hex };
+  let b: { intent?: Record<string, string>; sig?: Hex; module?: string };
   try { b = await req.json(); } catch { return NextResponse.json({ error: 'bad json' }, { status: 400 }); }
   if (!b.intent || !b.sig) return NextResponse.json({ error: 'missing intent/sig' }, { status: 400 });
+  // module selection is WHITELISTED — the relay never calls arbitrary addresses
+  const MODULE = Object.values(MODULES).find((m) => m.toLowerCase() === (b.module ?? MODULE_V5).toLowerCase());
+  if (!MODULE) return NextResponse.json({ error: 'unknown module' }, { status: 400 });
+  const isV4 = MODULE.toLowerCase() === MODULE_V4.toLowerCase();
+  const ABI = abiFor(isV4) as any;
   const i = b.intent;
   let tuple;
   try {
@@ -51,7 +59,9 @@ export async function POST(req: Request) {
       minBuy: BigInt(i.minBuy), flash: BigInt(i.flash), orderValidTo: Number(i.orderValidTo), minHealthFactor: BigInt(i.minHealthFactor),
       receiver: (i.receiver ?? '0x0000000000000000000000000000000000000000') as Hex,
       triggerHealthFactor: BigInt(i.triggerHealthFactor ?? '0'),
+      withdrawExtra: BigInt(i.withdrawExtra ?? '0'),
     };
+    if (isV4) delete (tuple as Record<string, unknown>).withdrawExtra; // v4 struct has 14 fields
   } catch { return NextResponse.json({ error: 'malformed intent fields' }, { status: 400 }); }
   const lockKey = `${tuple.safe.toLowerCase()}:${tuple.nonce}`;
   if (inFlight.has(lockKey)) return NextResponse.json({ ok: false, error: 'this intent is already being relayed — wait for it to settle' });
@@ -85,7 +95,7 @@ export async function POST(req: Request) {
     for (const log of rcpt.logs) {
       if (log.address.toLowerCase() !== MODULE.toLowerCase()) continue;
       try {
-        const ev = decodeEventLog({ abi: ABI, data: log.data, topics: log.topics });
+        const ev = decodeEventLog({ abi: ABI, data: log.data, topics: log.topics }) as { eventName: string; args: unknown };
         if (ev.eventName === 'Registered') {
           const a = ev.args as { uid: Hex; appDataHash: Hex; fullAppData: string };
           return NextResponse.json({ ok: true, txHash: hash, uid: a.uid, appDataHash: a.appDataHash, fullAppData: a.fullAppData });

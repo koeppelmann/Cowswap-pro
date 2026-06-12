@@ -58,7 +58,7 @@ contract LevManagerModuleForkTest is Test {
             safe: address(safe), nonce: 1, deadline: block.timestamp + 3600, mode: 0,
             collateral: WETH, debt: WXDAI, sellAmount: 1e13, repayAmount: type(uint256).max,
             minBuy: 1e16, flash: 11e15, orderValidTo: uint32(block.timestamp + 1800), minHealthFactor: 0,
-            receiver: owner, triggerHealthFactor: 0
+            receiver: owner, triggerHealthFactor: 0, withdrawExtra: 0
         });
     }
 
@@ -66,7 +66,7 @@ contract LevManagerModuleForkTest is Test {
         // all-static fields: two concatenated abi.encode chunks are byte-identical to one (stack-depth workaround)
         bytes32 structHash = keccak256(bytes.concat(
             abi.encode(mod.RETARGET_TYPEHASH(), r.safe, r.nonce, r.deadline, r.mode, r.collateral, r.debt),
-            abi.encode(r.sellAmount, r.repayAmount, r.minBuy, r.flash, r.orderValidTo, r.minHealthFactor, r.receiver, r.triggerHealthFactor)
+            abi.encode(r.sellAmount, r.repayAmount, r.minBuy, r.flash, r.orderValidTo, r.minHealthFactor, r.receiver, r.triggerHealthFactor, r.withdrawExtra)
         ));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", mod.DOMAIN_SEPARATOR(), structHash));
         (uint8 v, bytes32 rr, bytes32 ss) = vm.sign(key, digest);
@@ -123,11 +123,14 @@ contract LevManagerModuleForkTest is Test {
         assertEq(_count(json, _selHex("closeAndSweep(address,address,address,uint256,address,uint256,address)")), 0, "no sweep without receiver");
     }
 
-    function test_partial_reduce_never_sweeps() public view {
+    function test_partial_reduce_payout_semantics() public view {
         LevManagerModule.Retarget memory r = _reduce();
-        r.repayAmount = 5e15; r.flash = 6e15; // partial: residual is returned equity, stays as position buffer
+        r.repayAmount = 5e15; r.flash = 6e15; r.withdrawExtra = 2e12; // partial w/ receiver: freed equity pays out
         (, string memory json,) = mod.preview(r);
-        assertEq(_count(json, _selHex("closeAndSweep(address,address,address,uint256,address,uint256,address)")), 0, "partial keeps residual in Safe");
+        assertEq(_count(json, _selHex("closeAndSweep(address,address,address,uint256,address,uint256,address)")), 1, "partial w/ receiver pays out");
+        r.receiver = address(0); // legacy: residual stays in the Safe
+        (, string memory json2,) = mod.preview(r);
+        assertEq(_count(json2, _selHex("closeAndSweep(address,address,address,uint256,address,uint256,address)")), 0, "no payout without receiver");
     }
 
     /// EXECUTES the full-close post path (delegatecall, fork): flash repay leaves, BOTH residual
@@ -223,6 +226,36 @@ contract LevManagerModuleForkTest is Test {
         assertEq(IERC20(USDCE).balanceOf(flashwrap), 5e5, "borrowed + flash repaid in eMode");
         (,,,,, uint256 hf) = IAaveP(POOL).getUserAccountData(address(withEmode));
         assertGt(hf, 1e18, "healthy eMode position");
+    }
+
+    /// ADAPTIVE open post (fork): the Safe received LESS debt token than nominal (settlement
+    /// fee) — openPostA borrows exactly the shortfall so the flash repayment still clears, and
+    /// with a SURPLUS it borrows less. The user's outlay is exact; fees shift the borrow.
+    function test_openPostA_adapts_borrow_to_received_equity() public {
+        LevSupplyHelper helper = new LevSupplyHelper();
+        address flashwrap = address(0xF1A5);
+        // case 1: shortfall — nominal equity 1.0, received 0.98 (2% fee), repay 3.0
+        DelegateBox shortfall = new DelegateBox();
+        deal(WETH, address(shortfall), 1e15);        // bought collateral
+        deal(WXDAI, address(shortfall), 0.98e18);    // received equity (fee-shaved)
+        shortfall.run(address(helper), abi.encodeWithSignature(
+            "openPostA(address,address,address,address,uint256,uint8)",
+            WETH, POOL, WXDAI, flashwrap, uint256(1.5e18), uint8(0)
+        ));
+        assertEq(IERC20(WXDAI).balanceOf(flashwrap), 1.5e18, "flash repaid in full");
+        assertEq(IERC20(WXDAI).balanceOf(address(shortfall)), 0, "no idle debt token");
+        (, uint256 debtUsd,,,,) = IAaveP(POOL).getUserAccountData(address(shortfall));
+        assertGt(debtUsd, 0, "borrowed the shortfall (0.52)");
+        // case 2: surplus — received MORE than repay: no borrow at all
+        DelegateBox surplus = new DelegateBox();
+        deal(WETH, address(surplus), 1e15);
+        deal(WXDAI, address(surplus), 2e18);
+        surplus.run(address(helper), abi.encodeWithSignature(
+            "openPostA(address,address,address,address,uint256,uint8)",
+            WETH, POOL, WXDAI, flashwrap, uint256(1.5e18), uint8(0)
+        ));
+        (, uint256 debt2,,,,) = IAaveP(POOL).getUserAccountData(address(surplus));
+        assertEq(debt2, 0, "no borrow needed");
     }
 
     function _selHex(string memory sigStr) internal pure returns (string memory) {

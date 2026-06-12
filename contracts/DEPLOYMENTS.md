@@ -52,7 +52,17 @@ one the live Safe/orders use: CoWSafeWrapper `0x27EBDB6Cefd590FEAF79B20F6e77BF79
 CoWSafeSigHandler `0x311A5e7B318e8f2f09B4f7C9b06f5BcF980e8F23`, CowFlashLoanWrapper (old proof-of-settle)
 `0x7c20a2ca046c08b9509035D84BeE79f7B28F781D`.
 
-## Leverage management stack (Gnosis staging/barn) — CURRENT (2026-06-12 late, v4 module + IB12)
+## Leverage management stack (Gnosis staging/barn) — CURRENT (2026-06-12 night, v5 module + IB14)
+| contract | address | notes |
+|---|---|---|
+| LevManagerModule **v5** | `0x239D413A6Ac5322D3ccAaaf43e34045bdAcD7E74` | Retarget +`withdrawExtra` (15 fields): partial closes pay the freed equity to the signed receiver — in the debt token or (via withdrawExtra) the collateral |
+| LevSupplyHelper **v7** | `0x3E349D3789ce820202a0D35799077c343a9C2b41` | + `openPostA`: ADAPTIVE borrow — carrier sells EXACTLY the user amount; the post borrows whatever the fee shaved off |
+| **IntentBootstrap14** | `0x3D3191d57c871172882F45F9bd68A87eC7158ce8` | exact-outlay open post + module v5 |
+
+Module **v4** `0xbd913B86…6A5C` remains live for Safes opened before v5 (the web app signs 14-field
+intents against it; partial-close payout degrades gracefully).
+
+## Superseded leverage stack (v4 module + IB12, 2026-06-12 late)
 | contract | address | notes |
 |---|---|---|
 | LevManagerModule v4 | `0xbd913B8626DD7ACe1810E1797C93f27dD7906A5C` | unchanged — Retarget was already token-parameterized |

@@ -13,7 +13,7 @@ import { useTokenBalances } from '../lib/useTokenBalances';
 import { useTokenList } from '../lib/useTokenList';
 import { positionMetrics, type PositionMetrics } from '../lib/leverage';
 import {
-  ONBOARD, IB_ABI, ERC20_ABI, GPV2_ORDER_TYPES, RETARGET_TYPES, LEV_MODULE, POOL_ADDR, type Intent,
+  ONBOARD, IB_ABI, ERC20_ABI, GPV2_ORDER_TYPES, RETARGET_TYPES, RETARGET_TYPES_V4, LEV_MODULE, LEV_MODULE_V4, POOL_ADDR, type Intent,
 } from '../lib/onboard';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -36,6 +36,7 @@ type PosTok = { address: Address; symbol: string; decimals: number };
 type LivePos = {
   safe: Address; m: PositionMetrics; collQty: bigint; debtQty: bigint; availBase: bigint;
   collTok: PosTok; debtTok: PosTok;
+  module: Address; // which LevManagerModule version this Safe has enabled (v4 Safes predate withdrawExtra)
 };
 
 // /api/aave-market shapes (which pairs can be levered + eMode categories)
@@ -198,6 +199,22 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   }, [sellIsPos, market, sell, buy]);
   // max leverage from the pair's LTV: borrow ≤ ltv·coll → L ≤ 1/(1−ltv), with 3% headroom, cap 10×
   const maxLev = pairLev ? Math.max(1.5, Math.min(10, Math.floor((0.97 / (1 - pairLev.ltvBps / 10000)) * 10) / 10)) : 5;
+  // adjust-slider ceiling for a SELECTED POSITION: its own pair's max — never below current leverage
+  const posMaxLev = useMemo(() => {
+    if (!sellIsPos) return 5;
+    const p = sell as LivePos;
+    let cap = 5;
+    if (market) {
+      const lc = (x: string) => x.toLowerCase();
+      const B = market.reserves.find((r) => lc(r.address) === lc(p.collTok.address));
+      let ltv = B?.collateralEnabled ? B.ltvBps : 0;
+      for (const c of market.emodes) {
+        if (c.collateral.some((a) => lc(a) === lc(p.collTok.address)) && c.borrowable.some((a) => lc(a) === lc(p.debtTok.address)) && c.ltvBps > ltv) ltv = c.ltvBps;
+      }
+      if (ltv > 0) cap = Math.min(10, Math.floor((0.97 / (1 - ltv / 10000)) * 10) / 10);
+    }
+    return Math.max(cap, Math.ceil(p.m.leverage * 10) / 10);
+  }, [sellIsPos, sell, market]);
   // leaving an eligible pair drops any selected leverage back to a plain swap
   useEffect(() => { if (!pairLev && !sellIsPos && lev > 1) { setLev(1); setShowLev(false); } }, [pairLev, sellIsPos, lev]);
 
@@ -230,10 +247,14 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
         // of the user's accounts must not appear under this one (it can't be managed here).
         const owned = await publicClient.readContract({ address: safe, abi: safeAbi, functionName: 'isOwner', args: [address] }).catch(() => false) as boolean;
         if (!owned) continue;
-        // a Safe without LevManagerModule enabled (stale/old-flow artifact) can't be managed
-        // here — showing it would render Close/Adjust buttons that can only revert.
-        const managed = await publicClient.readContract({ address: safe, abi: safeAbi, functionName: 'isModuleEnabled', args: [LEV_MODULE as Address] }).catch(() => false) as boolean;
-        if (!managed) continue;
+        // a Safe without a known LevManagerModule enabled can't be managed here. Safes opened
+        // before v5 still run v4 (no withdrawExtra) — keep them manageable with degraded features.
+        let posModule: Address | null = null;
+        for (const m of [LEV_MODULE, LEV_MODULE_V4] as Address[]) {
+          const on = await publicClient.readContract({ address: safe, abi: safeAbi, functionName: 'isModuleEnabled', args: [m] }).catch(() => false) as boolean;
+          if (on) { posModule = m; break; }
+        }
+        if (!posModule) continue;
         const acct = await publicClient.readContract({ address: POOL_ADDR as Address, abi: poolAbi, functionName: 'getUserAccountData', args: [safe] }) as readonly bigint[];
         if (acct[0] === 0n && acct[1] === 0n) continue; // closed / empty
         // ONE multicall over every reserve's aToken + vDebt balance: a position is one
@@ -258,7 +279,8 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
         const m = positionMetrics({ collateralBase: acct[0], debtBase: acct[1], liqThresholdBps: Number(acct[3]), healthFactor1e18: acct[5], collateralQty: collQtyF, collateralPriceUsd: collQtyF > 0 ? (Number(acct[0]) / 1e8) / collQtyF : 0 });
         live.push({ safe, m, collQty, debtQty, availBase: acct[2],
           collTok: { address: cR.address, symbol: cR.symbol, decimals: cR.decimals },
-          debtTok: { address: dR.address, symbol: dR.symbol, decimals: dR.decimals } });
+          debtTok: { address: dR.address, symbol: dR.symbol, decimals: dR.decimals },
+          module: posModule });
       } catch { /* skip */ }
     }
     setPositions(live);
@@ -285,9 +307,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
     const borrow = repay > equity ? repay - equity : 0n;
     return { flash, repay, borrow };
   }, [sellIsPos, lev, equity]);
-  // a leveraged open's carrier order sells equity*1.05 (fee buffer) — check THAT against the balance
-  const sellNeeded = lev > 1 ? (equity * 105n) / 100n : equity;
-  const insufficient = bal != null && !sellIsPos && sellNeeded > bal;
+  const insufficient = bal != null && !sellIsPos && equity > bal;
 
   // preview quote: leveraged flash leg when lev>1, otherwise the plain-swap amount
   useEffect(() => {
@@ -318,10 +338,12 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
         const levUid = await publicClient.readContract({ address: O.intentBootstrap as Address, abi: IB_ABI, functionName: 'uid', args: [intent, safeAddr] }) as `0x${string}`;
         const bootstrapCalldata = encodeFunctionData({ abi: IB_ABI, functionName: 'bootstrap', args: [intent] });
         const { json: carrierJson, hash: carrierHash } = carrierAppData(bootstrapCalldata);
-        const sellAmt = (equity * 105n) / 100n; // sell a touch more so the Safe nets >= equity after fee
+        // EXACT outlay: the carrier sells precisely the user's amount; the adaptive post
+        // (openPostA) borrows whatever the settlement fee shaved off. 99% min-receive floor.
+        const sellAmt = equity;
         const carrierOrder = {
           sellToken: (sell as UIToken).address, buyToken: (sell as UIToken).address, receiver: safeAddr, sellAmount: sellAmt.toString(),
-          buyAmount: ((sellAmt * 96n) / 100n).toString(), validTo, appData: carrierHash, feeAmount: '0', kind: 'sell',
+          buyAmount: ((sellAmt * 99n) / 100n).toString(), validTo, appData: carrierHash, feeAmount: '0', kind: 'sell',
           partiallyFillable: false, sellTokenBalance: 'erc20', buyTokenBalance: 'erc20',
         };
         // the carrier (funding) order UID is deterministic too: GPv2 digest ++ owner ++ validTo
@@ -346,8 +368,19 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
     const pct = Math.min(100, Math.max(0, parseFloat(amount) || 0));
     if (pct <= 0 || p.collQty === 0n) return;
     const full = pct >= 100;
-    const sellAmount = full ? p.collQty : (p.collQty * BigInt(Math.round(pct))) / 100n;
+    const intoColl = buy.address.toLowerCase() === p.collTok.address.toLowerCase();
     const debtPortion = full ? p.debtQty : (p.debtQty * BigInt(Math.round(pct))) / 100n;
+    if (intoColl) {
+      // freed collateral ≈ the portion minus what must be sold to repay the freed debt (+premium, overshoot)
+      const price = p.collQty > 0n ? p.m.collateralUsd / Number(formatUnits(p.collQty, p.collTok.decimals)) : 0;
+      const debtPx = p.debtQty > 0n ? p.m.debtUsd / Number(formatUnits(p.debtQty, p.debtTok.decimals)) : 1;
+      if (price <= 0) { setPreviewReduce(null); return; }
+      const portion = full ? p.collQty : (p.collQty * BigInt(Math.round(pct))) / 100n;
+      const sellNeeded = floatToWei((Number(formatUnits(debtPortion, p.debtTok.decimals)) * debtPx * 1.035 / price) * 1.05, p.collTok.decimals);
+      setPreviewReduce(portion > sellNeeded ? portion - sellNeeded : 0n);
+      return;
+    }
+    const sellAmount = full ? p.collQty : (p.collQty * BigInt(Math.round(pct))) / 100n;
     let live = true;
     quoteOut(p.collTok.address, p.debtTok.address, sellAmount, p.safe).then((gross) => {
       if (!live) return;
@@ -357,7 +390,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
       setPreviewReduce(net > 0n ? net : 0n);
     });
     return () => { live = false; };
-  }, [sellIsPos, posMode, sell, amount]);
+  }, [sellIsPos, posMode, sell, amount, buy]);
 
   const estHF = useMemo(() => {
     if (!openAmts || openAmts.borrow === 0n) return null;
@@ -382,22 +415,25 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   function openSelect(side: 'sell' | 'buy') { setSelSide(side); setSearch(''); setSelOpen(true); }
   function pickToken(t: UIToken) {
     if (selSide === 'sell') { setSell(t); setLev(1); setShowLev(false); setAmount('1'); }
-    else setBuy(t);
+    else setBuy(t); // for a position this is one of its two assets (universe is restricted)
     setSelOpen(false);
   }
   function pickPosition(p: LivePos) { setSell(p); setPosMode('close'); setAmount('100'); setBuy({ address: p.debtTok.address, symbol: p.debtTok.symbol, decimals: p.debtTok.decimals, kind: tokenKind(p.debtTok.address), name: p.debtTok.symbol }); setSelOpen(false); }
 
   // ── sign a Retarget intent over the LevManagerModule domain & relay it ──
   // wait=false: submit and return immediately (stop orders PARK in the auction until triggered)
-  async function relayRetarget(intent: Record<string, bigint | number | string>, label: string, wait = true): Promise<{ uid: string }> {
+  async function relayRetarget(intent: Record<string, bigint | number | string>, label: string, wait = true, moduleAddr: Address = LEV_MODULE as Address): Promise<{ uid: string }> {
     setStatus('Sign the management intent (one signature)…');
+    const isV4 = moduleAddr.toLowerCase() === (LEV_MODULE_V4 as string).toLowerCase();
+    const msg = { ...intent };
+    if (isV4) delete (msg as Record<string, unknown>).withdrawExtra; // v4 struct has 14 fields
     const sig = await walletClient!.signTypedData({
-      account: address!, domain: { name: 'LevManagerModule', version: '1', chainId: 100, verifyingContract: LEV_MODULE as Address },
-      types: RETARGET_TYPES, primaryType: 'Retarget', message: intent as never,
+      account: address!, domain: { name: 'LevManagerModule', version: '1', chainId: 100, verifyingContract: moduleAddr },
+      types: isV4 ? RETARGET_TYPES_V4 : RETARGET_TYPES, primaryType: 'Retarget', message: msg as never,
     });
     setStatus('Relaying through the module…');
-    const intentStr = Object.fromEntries(Object.entries(intent).map(([k, v]) => [k, v.toString()]));
-    const rl = await postJson('/api/relay-execute', { intent: intentStr, sig });
+    const intentStr = Object.fromEntries(Object.entries(msg).map(([k, v]) => [k, v.toString()]));
+    const rl = await postJson('/api/relay-execute', { intent: intentStr, sig, module: moduleAddr });
     if (!rl.ok) throw new Error('relay: ' + (rl.error ?? JSON.stringify(rl)));
     setStatus('Order registered — submitting to the auction…');
     await barn('appdata', { hash: rl.appDataHash, fullAppData: rl.fullAppData });
@@ -443,9 +479,9 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
         safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0n,
         collateral: p.collTok.address, debt: p.debtTok.address, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
         receiver: '0x0000000000000000000000000000000000000000' as Address,
-        triggerHealthFactor: floatToWei(trigger),
+        triggerHealthFactor: floatToWei(trigger), withdrawExtra: 0n,
       };
-      const { uid } = await relayRetarget(intent, 'Arming stop', false);
+      const { uid } = await relayRetarget(intent, 'Arming stop', false, p.module);
       setStatus(`🛡 Stop armed — sells ${pct}% if HF < ${trigger.toFixed(2)} · parked until ${new Date(validTo * 1000).toLocaleTimeString()} · ${short(uid)}`);
     } catch (e) { setErr((e as Error).message); setStatus(null); } finally { setBusy(false); }
   }
@@ -504,25 +540,51 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
     setBusy(true); setErr(null); setStatus('Quoting…');
     try {
       const full = pct >= 100;
-      // full close sweeps ALL residual (WXDAI proceeds + WETH dust) to the receiver — default = the owner
-      let recv: Address = '0x0000000000000000000000000000000000000000';
-      if (full) {
-        try { recv = getAddress((receiver.trim() || address) as string); }
-        catch { throw new Error('receiver is not a valid address'); }
-      }
-      const sellAmount = full ? p.collQty : (p.collQty * BigInt(pct)) / 100n;
+      // every close (full or partial) pays the freed equity to the receiver — default = the owner
+      let recv: Address;
+      try { recv = getAddress((receiver.trim() || address) as string); }
+      catch { throw new Error('receiver is not a valid address'); }
+      const isV4 = p.module.toLowerCase() === (LEV_MODULE_V4 as string).toLowerCase();
+      const intoColl = buy.address.toLowerCase() === p.collTok.address.toLowerCase(); // receive collateral instead of debt token
+      if (isV4 && intoColl && !full) throw new Error('this position predates collateral payout — receive the debt token, or close and reopen');
+      if (isV4 && intoColl && full) throw new Error('this position predates collateral payout — receive the debt token');
       const repayAmount = full ? MAXU : (p.debtQty * BigInt(pct)) / 100n;
       const flash = ((full ? p.debtQty : repayAmount) * 103n) / 100n;
-      const q = await quoteOut(p.collTok.address, p.debtTok.address, sellAmount, p.safe);
-      if (!q) throw new Error('quote failed');
-      const minBuy = minOut(q, Math.max(slippagePct, 2));
+      const flashRepay = flash + (flash * 5n + 9999n) / 10000n;
+      let sellAmount: bigint; let withdrawExtra = 0n; let minBuy: bigint;
+      if (intoColl) {
+        // sell only enough collateral to cover the flash repayment (5% overshoot); the rest of the
+        // freed portion is withdrawn as collateral and paid out by the module
+        const price = p.collQty > 0n ? p.m.collateralUsd / Number(formatUnits(p.collQty, p.collTok.decimals)) : 0;
+        const debtPx = p.debtQty > 0n ? p.m.debtUsd / Number(formatUnits(p.debtQty, p.debtTok.decimals)) : 1;
+        if (price <= 0) throw new Error('no price');
+        const repayUsd = Number(formatUnits(flashRepay, p.debtTok.decimals)) * debtPx;
+        sellAmount = floatToWei((repayUsd / price) * 1.05, p.collTok.decimals);
+        const portion = full ? p.collQty : (p.collQty * BigInt(pct)) / 100n;
+        if (sellAmount >= portion) throw new Error('position too small to pay out in collateral — receive the debt token instead');
+        withdrawExtra = full ? 0n : portion - sellAmount; // full close withdraws everything anyway
+        const q = await quoteOut(p.collTok.address, p.debtTok.address, sellAmount, p.safe);
+        if (!q) throw new Error('quote failed');
+        minBuy = minOut(q, Math.max(slippagePct, 2));
+        if (minBuy < flashRepay) throw new Error('quote too low to cover the flash loan — try receiving the debt token');
+      } else {
+        sellAmount = full ? p.collQty : (p.collQty * BigInt(pct)) / 100n;
+        const q = await quoteOut(p.collTok.address, p.debtTok.address, sellAmount, p.safe);
+        if (!q) throw new Error('quote failed');
+        minBuy = minOut(q, Math.max(slippagePct, 2));
+      }
       const validTo = Math.floor(Date.now() / 1000) + 1800;
       const intent = {
         safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0n,
         collateral: p.collTok.address, debt: p.debtTok.address, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
-        receiver: recv, triggerHealthFactor: 0n,
+        receiver: recv, triggerHealthFactor: 0n, withdrawExtra,
       };
-      await relayRetarget(intent, full ? 'Closing position' : `Reducing ${pct}%`);
+      if (isV4) {
+        // v4 has no partial payout: partial closes leave the freed equity in the Safe
+        if (!full) (intent as Record<string, unknown>).receiver = '0x0000000000000000000000000000000000000000';
+        (intent as Record<string, unknown>).withdrawExtra = 0n;
+      }
+      await relayRetarget(intent, full ? 'Closing position' : `Reducing ${pct}%`, true, p.module);
       setStatus(full ? '✅ Position closed' : `✅ Reduced ${pct}%`);
       if (full) { setSell(WXDAI); setAmount('1'); }
       await loadPositions();
@@ -557,9 +619,9 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
         const intent = {
           safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 1n,
           collateral: p.collTok.address, debt: p.debtTok.address, sellAmount, repayAmount: 0n, minBuy, flash: 0n, orderValidTo: BigInt(validTo), minHealthFactor: 1050000000000000000n,
-          receiver: '0x0000000000000000000000000000000000000000' as Address, triggerHealthFactor: 0n, // not a close — nothing to sweep
+          receiver: '0x0000000000000000000000000000000000000000' as Address, triggerHealthFactor: 0n, withdrawExtra: 0n, // not a close — nothing to sweep
         };
-        await relayRetarget(intent, `Increasing to ${target.toFixed(1)}x`);
+        await relayRetarget(intent, `Increasing to ${target.toFixed(1)}x`, true, p.module);
       } else {
         // DECREASE: sell Δ-worth collateral (overshoot so guaranteed minBuy still covers flash+premium),
         // repay Δ debt. Any surplus debt token stays in the Safe (small equity bump).
@@ -572,9 +634,9 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
         const intent = {
           safe: getAddress(p.safe), nonce: BigInt(Math.floor(Date.now() / 1000)), deadline: BigInt(validTo + 1800), mode: 0n,
           collateral: p.collTok.address, debt: p.debtTok.address, sellAmount, repayAmount, minBuy, flash, orderValidTo: BigInt(validTo), minHealthFactor: 0n,
-          receiver: '0x0000000000000000000000000000000000000000' as Address, triggerHealthFactor: 0n, // partial reduce — residual stays as position buffer
+          receiver: '0x0000000000000000000000000000000000000000' as Address, triggerHealthFactor: 0n, withdrawExtra: 0n, // partial reduce — residual stays as position buffer
         };
-        await relayRetarget(intent, `Decreasing to ${target.toFixed(1)}x`);
+        await relayRetarget(intent, `Decreasing to ${target.toFixed(1)}x`, true, p.module);
       }
       setStatus('✅ Leverage adjusted');
       await loadPositions();
@@ -638,7 +700,12 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
                   : !(equity > 0n && !insufficient && !samePair && (lev <= 1 || (supportedOpen && !!openPlan))));
 
   // ── render ──
-  const filtered = TOKENS.filter((t) => !search || t.symbol.toLowerCase().includes(search.toLowerCase()) || t.name.toLowerCase().includes(search.toLowerCase()) || t.address.toLowerCase() === search.toLowerCase());
+  const posTokens: UIToken[] = sellIsPos
+    ? [(sell as LivePos).debtTok, (sell as LivePos).collTok].map((t) => ({ address: t.address, symbol: t.symbol, decimals: t.decimals, kind: tokenKind(t.address), name: t.symbol }))
+    : [];
+  // with a position selected, the receive side can ONLY be one of its two assets
+  const universe = sellIsPos && selSide === 'buy' ? posTokens : TOKENS;
+  const filtered = universe.filter((t) => !search || t.symbol.toLowerCase().includes(search.toLowerCase()) || t.name.toLowerCase().includes(search.toLowerCase()) || t.address.toLowerCase() === search.toLowerCase());
   // one multicall for all listed balances, only while the picker is open (same as the TWAP picker)
   const selBalances = useTokenBalances(selOpen ? listTokens : [], 100, selOpen ? address : undefined);
   const { token: customTok } = useToken(GNOSIS_CFG, isAddress(search) ? (search as Address) : undefined);
@@ -663,8 +730,8 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
             {sellIsPos && posMode === 'leverage' ? (
               <>
                 <div className="lev-stat"><span className="k">Current Leverage: {(sell as LivePos).m.leverage.toFixed(2)}x</span><span className="v">Target: {lev.toFixed(1)}x</span></div>
-                <input className="lev-range" type="range" min={1} max={5} step={0.1} value={lev} onChange={(e) => setLev(parseFloat(e.target.value))} />
-                <div className="lev-stat" style={{ marginTop: 4 }}><span className="k">1.0x</span><span className="k">5.0x</span></div>
+                <input className="lev-range" type="range" min={1} max={posMaxLev} step={0.1} value={lev} onChange={(e) => setLev(parseFloat(e.target.value))} />
+                <div className="lev-stat" style={{ marginTop: 4 }}><span className="k">1.0x</span><span className="k">{posMaxLev.toFixed(1)}x</span></div>
               </>
             ) : (
               <>
@@ -679,7 +746,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
                 </div>
                 {sellIsPos && <div className="lev-chips">{['25', '50', '75', '100'].map((v) => <button key={v} onClick={() => setAmount(v)}>{v === '100' ? 'Max' : v + '%'}</button>)}</div>}
                 {!sellIsPos && bal != null && (
-                  <div className="lev-chips">{['25', '50', '75', '100'].map((pc) => <button key={pc} onClick={() => setAmount(formatUnits((bal * BigInt(pc)) / (lev > 1 ? 105n : 100n), (sell as UIToken).decimals))}>{pc === '100' ? 'Max' : pc + '%'}</button>)}</div>
+                  <div className="lev-chips">{['25', '50', '75', '100'].map((pc) => <button key={pc} onClick={() => setAmount(formatUnits((bal * BigInt(pc)) / 100n, (sell as UIToken).decimals))}>{pc === '100' ? 'Max' : pc + '%'}</button>)}</div>
                 )}
               </>
             )}
@@ -705,12 +772,12 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
             <div className="lev-amtrow">
               <input className="lev-amt" style={{ color: 'var(--lev-pri)' }} readOnly value={
                 sellIsPos
-                  ? (posMode === 'close' ? (previewReduce != null ? Number(formatUnits(previewReduce, (sell as LivePos).debtTok.decimals)).toFixed(2) : '') : '')
+                  ? (posMode === 'close' ? (previewReduce != null ? Number(formatUnits(previewReduce, buy.decimals)).toFixed(buy.decimals === 6 ? 2 : 5) : '') : '')
                   : (previewBuy ? Number(formatUnits(previewBuy, buy.decimals)).toFixed(5) : '0')
               } placeholder="0" />
               <button className="lev-tok" onClick={() => openSelect('buy')}><TokenIcon chainId={100} address={buy.address} symbol={buy.symbol} /> {buy.symbol} ▾</button>
             </div>
-            {sellIsPos && posMode === 'close' && parseFloat(amount) >= 100 && (
+            {sellIsPos && posMode === 'close' && parseFloat(amount) > 0 && (
               <div style={{ marginTop: 10 }}>
                 <div className="lev-stat"><span className="k">Send proceeds to</span></div>
                 <input
@@ -718,7 +785,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
                   placeholder={address ? `${address} (you)` : 'connect wallet'}
                   value={receiver} onChange={(e) => setReceiver(e.target.value)}
                 />
-                <div className="lev-stat"><span className="k" style={{ fontSize: 11 }}>All remaining funds (incl. dust) are sent here on close · default: your wallet</span></div>
+                <div className="lev-stat"><span className="k" style={{ fontSize: 11 }}>{parseFloat(amount) >= 100 ? 'All remaining funds (incl. dust) are sent here on close' : 'The freed equity is sent here'} · default: your wallet</span></div>
               </div>
             )}
             {!sellIsPos && lev > 1 && openAmts && (
@@ -733,9 +800,9 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
             {!sellIsPos && lev > 1 && openAmts && openPlan && (
               <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.06)' }}>
                 <div className="lev-stat"><span className="k" style={{ fontSize: 11 }}>What happens (you sign step 1 only):</span></div>
-                <div className="lev-stat"><span className="k">1 · Fund Safe</span><span className="v">{Number(formatUnits(BigInt(openPlan.carrierOrder.sellAmount), (sell as UIToken).decimals)).toFixed(4)} {(sell as UIToken).symbol} → Safe</span></div>
+                <div className="lev-stat"><span className="k">1 · Fund Safe (exact)</span><span className="v">{Number(formatUnits(BigInt(openPlan.carrierOrder.sellAmount), (sell as UIToken).decimals)).toFixed(4)} {(sell as UIToken).symbol} → Safe</span></div>
                 <div className="lev-stat"><span className="k">2 · Flash-swap</span><span className="v">{Number(formatUnits(openPlan.intent.flash, (sell as UIToken).decimals)).toFixed(4)} {(sell as UIToken).symbol} → ≥ {Number(formatUnits(openPlan.intent.buyMin, buy.decimals)).toFixed(5)} {buy.symbol}</span></div>
-                <div className="lev-stat"><span className="k">3 · Supply + borrow</span><span className="v">supply {buy.symbol}{openPlan.intent.eMode > 0 ? ' (eMode)' : ''} · borrow {Number(formatUnits(openPlan.intent.borrow, (sell as UIToken).decimals)).toFixed(4)} {(sell as UIToken).symbol}</span></div>
+                <div className="lev-stat"><span className="k">3 · Supply + borrow</span><span className="v">supply {buy.symbol}{openPlan.intent.eMode > 0 ? ' (eMode)' : ''} · borrow ≈{Number(formatUnits(openPlan.intent.borrow, (sell as UIToken).decimals)).toFixed(4)} {(sell as UIToken).symbol} (auto-adjusts for fees)</span></div>
                 <div className="lev-stat"><span className="k">4 · Repay flash</span><span className="v">{Number(formatUnits(openPlan.intent.repay, (sell as UIToken).decimals)).toFixed(4)} {(sell as UIToken).symbol}</span></div>
                 <div className="lev-stat" style={{ marginTop: 6 }}><span className="k">Your Safe (deterministic)</span><span className="v"><ExtLink href={safeAppUrl(openPlan.safe)}>{short(openPlan.safe)}</ExtLink>&nbsp;·&nbsp;<ExtLink href={scanUrl(openPlan.safe)}>scan</ExtLink></span></div>
                 <div className="lev-stat"><span className="k">Funding order UID</span><span className="v"><ExtLink href={explorerUrl(openPlan.carrierUid)}>{short(openPlan.carrierUid)}</ExtLink></span></div>

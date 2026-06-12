@@ -1,7 +1,7 @@
 // Carrier-order onboarding constants + IntentBootstrap6 ABI (Gnosis staging/barn).
 export const ONBOARD = {
   chainId: 100,
-  intentBootstrap: '0x7Da9A9043be2DE12348fe0668b72b9da315cE821', // IntentBootstrap12 (any Aave pair + eMode)
+  intentBootstrap: '0x3D3191d57c871172882F45F9bd68A87eC7158ce8', // IntentBootstrap14 (module v5)
   settlement: '0xf553d092b50bdcbddeD1A99aF2cA29FBE5E2CB13', // barn
   relayer: '0xC7242d167563352E2BCA4d71C043fbe542DB8FB2', // barn vault relayer
   wxdai: '0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d',
@@ -95,7 +95,18 @@ export const SAFE_TX_TYPES = {
 export const WRAPPER_ADDR = '0x531636e6e18F3A52c283aCCda39D7185E4597A37';
 
 // ---- Management (LevManagerModule, signed Retarget intents) ----
-export const LEV_MODULE = '0xbd913B8626DD7ACe1810E1797C93f27dD7906A5C'; // v4: stop trigger (HF<x) + receiver sweep
+export const LEV_MODULE = '0x239D413A6Ac5322D3ccAaaf43e34045bdAcD7E74'; // v5: partial-close payout to receiver (withdrawExtra)
+export const LEV_MODULE_V4 = '0xbd913B8626DD7ACe1810E1797C93f27dD7906A5C'; // v4 — still enabled on Safes opened before v5
+// v4 Retarget lacks withdrawExtra (14 fields)
+export const RETARGET_TYPES_V4 = {
+  Retarget: [
+    { name: 'safe', type: 'address' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' },
+    { name: 'mode', type: 'uint8' }, { name: 'collateral', type: 'address' }, { name: 'debt', type: 'address' },
+    { name: 'sellAmount', type: 'uint256' }, { name: 'repayAmount', type: 'uint256' }, { name: 'minBuy', type: 'uint256' },
+    { name: 'flash', type: 'uint256' }, { name: 'orderValidTo', type: 'uint32' }, { name: 'minHealthFactor', type: 'uint256' },
+    { name: 'receiver', type: 'address' }, { name: 'triggerHealthFactor', type: 'uint256' },
+  ],
+} as const;
 export const POOL_ADDR = '0xb50201558B00496A145fE76f7424749556E326D8';
 export const AWETH_ADDR = '0xa818F1B57c201E092C4A2017A91815034326Efd1';
 export const VDEBT_WXDAI = '0x281963D7471eCdC3A2Bd4503e24e89691cfe420D';
@@ -108,6 +119,7 @@ const RETARGET_STRUCT = {
     { name: 'sellAmount', type: 'uint256' }, { name: 'repayAmount', type: 'uint256' }, { name: 'minBuy', type: 'uint256' },
     { name: 'flash', type: 'uint256' }, { name: 'orderValidTo', type: 'uint32' }, { name: 'minHealthFactor', type: 'uint256' },
     { name: 'receiver', type: 'address' }, { name: 'triggerHealthFactor', type: 'uint256' },
+    { name: 'withdrawExtra', type: 'uint256' },
   ],
 } as const;
 
@@ -131,5 +143,6 @@ export const RETARGET_TYPES = {
     { name: 'sellAmount', type: 'uint256' }, { name: 'repayAmount', type: 'uint256' }, { name: 'minBuy', type: 'uint256' },
     { name: 'flash', type: 'uint256' }, { name: 'orderValidTo', type: 'uint32' }, { name: 'minHealthFactor', type: 'uint256' },
     { name: 'receiver', type: 'address' }, { name: 'triggerHealthFactor', type: 'uint256' },
+    { name: 'withdrawExtra', type: 'uint256' },
   ],
 } as const;

@@ -96,4 +96,26 @@ contract LevSupplyHelper {
         IAaveSupply(pool).borrow(debtToken, borrowAmt, 2, 0, address(this));
         require(IERC20S(debtToken).transfer(flashwrap, repayAmt), "flash repay failed");
     }
+
+    /// ADAPTIVE open post: the user funds the Safe with EXACTLY their stated amount; settlement
+    /// fees make the delivered equity slightly smaller and unknowable at signing time. Instead of
+    /// pre-buying a buffer, read the ACTUAL debt-token balance at execution and borrow precisely
+    /// what's missing for the flash repayment. Fees shift the borrow (≈ bps of leverage), never
+    /// the user's outlay. Supply-all + eMode behaviour identical to openPostE.
+    function openPostA(
+        address collToken, address pool, address debtToken,
+        address flashwrap, uint256 repayAmt, uint8 eModeCategory
+    ) external {
+        uint256 amt = IERC20S(collToken).balanceOf(address(this));
+        require(amt > 0, "nothing to supply");
+        IERC20S(collToken).approve(pool, amt);
+        IAaveSupply(pool).supply(collToken, amt, address(this), 0);
+        if (eModeCategory != 0) {
+            IAaveSupply(pool).setUserEMode(eModeCategory);
+            IAaveSupply(pool).setUserUseReserveAsCollateral(collToken, true);
+        }
+        uint256 have = IERC20S(debtToken).balanceOf(address(this));
+        if (have < repayAmt) IAaveSupply(pool).borrow(debtToken, repayAmt - have, 2, 0, address(this));
+        require(IERC20S(debtToken).transfer(flashwrap, repayAmt), "flash repay failed");
+    }
 }
