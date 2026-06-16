@@ -52,6 +52,26 @@ one the live Safe/orders use: CoWSafeWrapper `0x27EBDB6Cefd590FEAF79B20F6e77BF79
 CoWSafeSigHandler `0x311A5e7B318e8f2f09B4f7C9b06f5BcF980e8F23`, CowFlashLoanWrapper (old proof-of-settle)
 `0x7c20a2ca046c08b9509035D84BeE79f7B28F781D`.
 
+## Source verification (Gnosis, chain 100) — 2026-06-16
+
+All live contracts verified on **Sourcify (exact_match)** and **Blockscout**; **Gnosisscan** too
+except the flash wrapper (CREATE2-factory deploy — Etherscan matches the creation tx, which for a
+factory is `salt ++ initcode`, so direct verify fails; it auto-imports from Sourcify, as its sibling
+CoWSafeWrapper already did).
+
+| contract | address | sourcify | blockscout | gnosisscan |
+|---|---|---|---|---|
+| LevManagerModule v5 | `0x239D413A6Ac5322D3ccAaaf43e34045bdAcD7E74` | ✅ | ✅ | ✅ |
+| LevSupplyHelper v8 | `0x29C3E5CC5bF31A749e91000F362Ea6C4195CEC5B` | ✅ | ✅ | ✅ |
+| IntentBootstrap15 | `0x325afB837204D46A3D4158deD26a8BE2681761B5` | ✅ | ✅ | ✅ |
+| LevManagerModule v4 (legacy) | `0xbd913B8626DD7ACe1810E1797C93f27dD7906A5C` | ✅ | ✅ | ✅ |
+| CoWSafeWrapper | `0x531636e6e18F3A52c283aCCda39D7185E4597A37` | ✅ | ✅ | ✅ |
+| CoWSafeSigHandlerSim2 | `0xf2044b74959F6bC291dc803C24bF0D7E6379fcC8` | ✅ | ✅ | ✅ |
+| CowFlashLoanWrapper | `0x2E3fdEe28D7224ED140B4ea08C57F47546679363` | ✅ | ✅ | ⏳ Sourcify-import |
+
+Verify command (no key needed for Sourcify/Blockscout; Gnosisscan uses an Etherscan V2 key):
+`forge verify-contract <addr> src/<C>.sol:<C> --chain 100 --verifier sourcify` (and `--verifier blockscout --verifier-url https://gnosis.blockscout.com/api/`).
+
 ## Leverage management stack (Gnosis staging/barn) — CURRENT (2026-06-12 night, v5 module + IB15)
 | contract | address | notes |
 |---|---|---|
