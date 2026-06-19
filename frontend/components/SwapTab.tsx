@@ -776,12 +776,12 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   return (
     <div className="lev-scope">
       <div className="lev-wrap">
-        <div className="lev-cardtop">
-          {tabs}
-          <button className="lev-gear" onClick={() => setSettingsOpen(true)} title="Settings">⚙</button>
-        </div>
-
         <div className="lev-card">
+          {/* tabs live inside the card (CoW layout) */}
+          <div className="lev-cardtop">
+            {tabs}
+            <button className="lev-gear" onClick={() => setSettingsOpen(true)} title="Settings">⚙</button>
+          </div>
           {/* SELL */}
           <div className="lev-panel">
             {sellIsPos && (
