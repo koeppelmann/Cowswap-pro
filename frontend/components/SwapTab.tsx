@@ -773,6 +773,28 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   const selBalances = useTokenBalances(selOpen ? listTokens : [], 100, selOpen ? address : undefined);
   const { token: customTok } = useToken(GNOSIS_CFG, isAddress(search) ? (search as Address) : undefined);
 
+  // Swap + leverage run on Gnosis (CoW barn + Aave). On any other connected chain show a notice
+  // and keep the tabs so the user can jump to TWAP (which works on Ethereum too).
+  if (isConnected && !onGnosis) {
+    return (
+      <div className="lev-scope">
+        <div className="lev-wrap">
+          <div className="lev-card">
+            <div className="lev-cardtop">{tabs}</div>
+            <div className="lev-panel" style={{ textAlign: 'center', padding: '34px 18px' }}>
+              <div style={{ fontSize: 30 }}>🐮</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--cow-navy)', marginTop: 10 }}>Leverage not yet supported on Ethereum</div>
+              <div className="lev-foot" style={{ marginTop: 8, maxWidth: 320, marginLeft: 'auto', marginRight: 'auto' }}>
+                Swap &amp; leverage run on Gnosis Chain. Switch network — or use the <b>TWAP</b> tab, which works on Ethereum.
+              </div>
+              <button className="lev-cta" style={{ marginTop: 16, maxWidth: 240, marginLeft: 'auto', marginRight: 'auto' }} onClick={() => switchChain({ chainId: gnosis.id })}>Switch to Gnosis</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="lev-scope">
       <div className="lev-wrap">
