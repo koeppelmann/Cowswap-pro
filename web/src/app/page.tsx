@@ -81,7 +81,11 @@ function Tabs({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
 
 export default function Page() {
   const { address, isConnected } = useAccount();
-  const chainId = useChainId();
+  const walletChainId = useChainId();
+  // Before a wallet connects, wagmi reports the first configured chain (mainnet),
+  // which makes the TWAP tab open on Ethereum and immediately error ("helper not
+  // deployed"). Default the disconnected view to Gnosis, where everything works.
+  const chainId = isConnected ? walletChainId : 100;
   const chain = getChainConfig(chainId);
   // Swap (with optional leverage) is the default; TWAP keeps the existing builder.
   const [tab, setTab] = useState<Tab>('swap');
@@ -101,7 +105,7 @@ export default function Page() {
       ) : isConnected && !chain ? (
         <div className="widget center"><p className="errors">Unsupported network — switch to Ethereum or Gnosis.</p></div>
       ) : (
-        <Builder key={chainId} chain={chain ?? getChainConfig(1)!} owner={address} connected={isConnected} tabs={<Tabs tab={tab} setTab={setTab} />} />
+        <Builder key={chainId} chain={chain ?? getChainConfig(100)!} owner={address} connected={isConnected} tabs={<Tabs tab={tab} setTab={setTab} />} />
       )}
 
       {tab === 'twap' && (
@@ -256,7 +260,9 @@ function Builder({ chain, owner, connected, tabs }: { chain: NonNullable<ReturnT
   const spotDiffBps = execRate !== null && spot.data != null && spot.data > 0 ? Math.round((execRate / spot.data - 1) * 10000) : null;
   const estTotalBuy = legBuy !== undefined ? legBuy * n : null;
 
-  const helper = useBytecode({ address: chain.twapSafeInitializer, query: { enabled: true } });
+  // read on the DISPLAYED chain's RPC, not the wallet's (which is mainnet before
+  // connecting) — otherwise a Gnosis address read on mainnet looks "not deployed".
+  const helper = useBytecode({ address: chain.twapSafeInitializer, chainId: chain.chainId as 1 | 100, query: { enabled: true } });
   const helperMissing = helper.data !== undefined && (helper.data === '0x' || !helper.data);
 
   const tooShort = partSeconds < 180n;
@@ -278,9 +284,12 @@ function Builder({ chain, owner, connected, tabs }: { chain: NonNullable<ReturnT
   else if (totalSell === null || totalSell <= 0n) { cta = 'Enter an amount'; ctaDisabled = true; }
   else if (tooShort) { cta = 'Interval too short'; ctaDisabled = true; }
   else if (!receiverValid) { cta = 'Invalid recipient'; ctaDisabled = true; }
-  else if (quotes.isLoading) { cta = 'Fetching price…'; ctaDisabled = true; }
+  // surface a routing failure even before connecting (so the user doesn't connect
+  // only to hit a dead pair), but prompt connect ahead of a perpetual
+  // "Fetching price…" (the disconnected quote uses a fallback address).
   else if (quotes.isError) { cta = 'No route for this pair'; ctaDisabled = true; }
-  else if (!connected) { cta = 'Connect wallet to continue'; ctaDisabled = true; }
+  else if (!connected) { cta = 'Connect wallet'; ctaDisabled = true; }
+  else if (quotes.isLoading) { cta = 'Fetching price…'; ctaDisabled = true; }
   else if (totalSell !== null && sellToken && sellBal < totalSell) { cta = `Insufficient ${sellToken.symbol}`; ctaDisabled = true; }
 
   const sym = (s?: string) => s ?? '';

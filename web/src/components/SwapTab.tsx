@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { encodeFunctionData, formatUnits, getAddress, hashTypedData, keccak256, parseUnits, toHex, type Address } from 'viem';
 import { gnosis } from 'wagmi/chains';
-import { useAccount, useChainId, usePublicClient, useSwitchChain, useWalletClient } from 'wagmi';
+import { useAccount, useChainId, useConnect, usePublicClient, useSwitchChain, useWalletClient } from 'wagmi';
 import { TokenIcon } from './TokenIcon';
 import { erc20Abi } from '../lib/abi';
 import { getChainConfig } from '../lib/chains';
@@ -11,10 +11,12 @@ import { isAddress } from '../lib/format';
 import { useToken } from '../lib/useToken';
 import { useTokenBalances } from '../lib/useTokenBalances';
 import { useTokenList } from '../lib/useTokenList';
-import { positionMetrics, type PositionMetrics } from '../lib/leverage';
 import {
-  ONBOARD, IB_ABI, ERC20_ABI, GPV2_ORDER_TYPES, RETARGET_TYPES, RETARGET_TYPES_V4, LEV_MODULE, LEV_MODULE_V4, MODULE_ABI, MODULE_ABI_V4, POOL_ADDR, type Intent,
+  ONBOARD, IB_ABI, ERC20_ABI, GPV2_ORDER_TYPES, RETARGET_TYPES, RETARGET_TYPES_V4, LEV_MODULE, LEV_MODULE_V4, MODULE_ABI, MODULE_ABI_V4, type Intent,
 } from '../lib/onboard';
+import { loadSavedSafes, readPositions, saveSafe, type AaveReserve, type LivePos, type Market } from '../lib/positions';
+import { cowApiBaseClient, LEV_CARRIER_APP_CODE, SWAP_APP_CODE } from '../lib/carrierHistory';
+import { fetchQuote } from '../lib/quote';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Token universe. The proven on-chain pair on barn is WXDAI (debt/stable, sell)
@@ -32,29 +34,6 @@ const WETH: UIToken = { address: O.weth as Address, symbol: 'WETH', decimals: 18
 // pair is WXDAI→WETH — every other pair is a plain barn swap.
 const tokenKind = (addr: string): UIToken['kind'] => (addr.toLowerCase() === (O.wxdai as string).toLowerCase() ? 'debt' : 'collateral');
 
-type PosTok = { address: Address; symbol: string; decimals: number };
-type LivePos = {
-  safe: Address; m: PositionMetrics; collQty: bigint; debtQty: bigint; availBase: bigint;
-  collTok: PosTok; debtTok: PosTok;
-  module: Address; // which LevManagerModule version this Safe has enabled (v4 Safes predate withdrawExtra)
-};
-
-// /api/aave-market shapes (which pairs can be levered + eMode categories)
-type AaveReserve = {
-  address: Address; symbol: string; decimals: number; ltvBps: number; liqThresholdBps: number;
-  collateralEnabled: boolean; borrowEnabled: boolean; active: boolean; frozen: boolean; paused: boolean; flashEnabled: boolean;
-  aToken: Address; vDebtToken: Address;
-};
-type AaveEMode = { id: number; label: string; ltvBps: number; liqThresholdBps: number; collateral: Address[]; borrowable: Address[] };
-type Market = { reserves: AaveReserve[]; emodes: AaveEMode[] };
-
-const poolAbi = [
-  { type: 'function', name: 'getUserAccountData', stateMutability: 'view', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }] },
-] as const;
-const safeAbi = [
-  { type: 'function', name: 'isOwner', stateMutability: 'view', inputs: [{ type: 'address' }], outputs: [{ type: 'bool' }] },
-  { type: 'function', name: 'isModuleEnabled', stateMutability: 'view', inputs: [{ type: 'address' }], outputs: [{ type: 'bool' }] },
-] as const;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // slippage in fractional percent (e.g. 0.5) → integer-safe min-out (bps math; BigInt(99.5) would throw)
@@ -82,24 +61,65 @@ async function quoteOut(sellToken: Address, buyToken: Address, sellAmount: bigin
   if (q.status !== 200) return null;
   try { return BigInt(q.body.quote.buyAmount); } catch { return null; }
 }
+
+// ── PRODUCTION orderbook (Gnosis) ──────────────────────────────────────────
+// Plain 1× swaps settle on the REAL CoW network with organic solvers — only the
+// leverage flow needs barn (its CoWSafeWrapper is whitelisted there). Mixing a
+// plain swap into barn just leaves it open until it expires (looks "broken").
+// The prod orderbook validates the EIP-712 signature against the REAL
+// GPv2Settlement and pulls funds via the REAL vault relayer, so the plain-swap
+// path must sign/approve with GNOSIS_CFG.cowSettlement / .vaultRelayer (NOT the
+// barn O.settlement / O.relayer the leverage flow uses).
+async function quoteOutProd(sellToken: Address, buyToken: Address, sellAmount: bigint, from: Address): Promise<bigint | null> {
+  // reuse the shared /api/quote wrapper so the request shape can't drift
+  try { return (await fetchQuote({ chainId: 100, sellToken, buyToken, from, sellAmount })).buyAmount; }
+  catch { return null; }
+}
+async function prodAppdata(hash: string, fullAppData: string) {
+  return postJson('/api/cow', { chainId: 100, kind: 'appData', appDataHash: hash, fullAppData });
+}
+async function prodOrder(order: unknown): Promise<{ ok?: boolean; uid?: string; raw?: string; status?: number }> {
+  return postJson('/api/cow', { chainId: 100, kind: 'order', order });
+}
+// Shared fill poller: ping getStatus() every 8s up to `tries` times. Returns as
+// soon as the order is 'fulfilled' or 'expired'/'cancelled'; if the window elapses
+// with the order still live it returns 'open'. Callers MUST treat 'open' as "still
+// pending — do not auto-retry": a late fill after a premature resubmit double-spends.
+type PollResult = 'fulfilled' | 'expired' | 'open';
+async function pollOrderStatus(getStatus: () => Promise<string | undefined>, onTick?: (s: string) => void, tries = 24): Promise<PollResult> {
+  for (let i = 0; i < tries; i++) {
+    let s: string | undefined;
+    try { s = await getStatus(); } catch { /* transient — keep polling */ }
+    if (s) {
+      onTick?.(s);
+      if (s === 'fulfilled') return 'fulfilled';
+      if (s === 'cancelled' || s === 'expired') return 'expired';
+    }
+    await sleep(8000);
+  }
+  return 'open';
+}
+// Plain swaps watch the PRODUCTION orderbook; a short in-UI window (~3min) keeps
+// the CTA from being stuck for the order's whole 30min life — the order stays live
+// and shows in /orders, so 'open' just means "check there", never "retry".
+async function pollFillProd(uid: string, onTick?: (s: string) => void, tries = 24): Promise<PollResult> {
+  const base = cowApiBaseClient(100);
+  return pollOrderStatus(async () => {
+    const r = await fetch(`${base}/api/v1/orders/${uid}`, { cache: 'no-store' });
+    return r.ok ? (await r.json()).status as string | undefined : undefined;
+  }, onTick, tries);
+}
 function carrierAppData(bootstrapCalldata: `0x${string}`): { json: string; hash: `0x${string}` } {
   const doc = {
-    appCode: 'koeppelmann/cowswap_wrapper', environment: 'barn',
+    appCode: LEV_CARRIER_APP_CODE, environment: 'barn',
     metadata: { hooks: { pre: [{ target: O.intentBootstrap, callData: bootstrapCalldata, gasLimit: '3000000' }], post: [] } },
     version: '1.6.0',
   };
   const json = JSON.stringify(doc);
   return { json, hash: keccak256(toHex(json)) };
 }
-async function pollFill(uid: string, onTick?: (s: string) => void, tries = 90): Promise<'fulfilled' | 'expired'> {
-  for (let i = 0; i < tries; i++) {
-    const st = await barn('status', { uid });
-    onTick?.(st.body?.status || 'open');
-    if (st.body?.status === 'fulfilled') return 'fulfilled';
-    if (['cancelled', 'expired'].includes(st.body?.status)) return 'expired';
-    await sleep(8000);
-  }
-  return 'expired';
+async function pollFill(uid: string, onTick?: (s: string) => void, tries = 90): Promise<PollResult> {
+  return pollOrderStatus(async () => (await barn('status', { uid })).body?.status, onTick, tries);
 }
 
 // external links (barn explorer knows staging orders; Safe app + Gnosisscan for the Safe)
@@ -120,30 +140,13 @@ type OpenPlan = {
   carrierOrder: { sellToken: string; buyToken: string; receiver: string; sellAmount: string; buyAmount: string; validTo: number; appData: string; feeAmount: string; kind: string; partiallyFillable: boolean; sellTokenBalance: string; buyTokenBalance: string };
 };
 
-// localStorage helpers (shared with /onboard + /manage via the `levSafes` key)
-function loadSavedSafes(): Address[] {
-  const set = new Set<string>();
-  for (const k of ['levSafes', 'lev_safe_positions']) {
-    try {
-      const raw = JSON.parse(localStorage.getItem(k) || '[]');
-      for (const e of raw) { const a = typeof e === 'string' ? e : e?.safe; if (a) set.add(a.toLowerCase()); }
-    } catch { /* */ }
-  }
-  return [...set] as Address[];
-}
-function saveSafe(safe: Address) {
-  try {
-    const a: string[] = JSON.parse(localStorage.getItem('levSafes') || '[]');
-    if (!a.some((x) => x.toLowerCase() === safe.toLowerCase())) { a.unshift(safe); localStorage.setItem('levSafes', JSON.stringify(a.slice(0, 30))); }
-  } catch { /* */ }
-}
-
 const GNOSIS_CFG = getChainConfig(100)!;
 
 export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
+  const { connect, connectors, isPending: connecting } = useConnect();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient({ chainId: gnosis.id });
   const onGnosis = chainId === gnosis.id;
@@ -236,54 +239,13 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   const [status, setStatus] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  // ── load positions (localStorage + live Aave reads) ──
+  // ── load positions (localStorage + live Aave reads, shared with /orders) ──
   const loadPositions = useCallback(async () => {
     if (!publicClient || !market) return;
     if (!address) { setPositions([]); return; } // no account → no positions to show
-    const safes = loadSavedSafes();
-    const live: LivePos[] = [];
-    for (const safe of safes) {
-      try {
-        // only show Safes the *connected* account owns — a saved Safe from another
-        // of the user's accounts must not appear under this one (it can't be managed here).
-        const owned = await publicClient.readContract({ address: safe, abi: safeAbi, functionName: 'isOwner', args: [address] }).catch(() => false) as boolean;
-        if (!owned) continue;
-        // a Safe without a known LevManagerModule enabled can't be managed here. Safes opened
-        // before v5 still run v4 (no withdrawExtra) — keep them manageable with degraded features.
-        let posModule: Address | null = null;
-        for (const m of [LEV_MODULE, LEV_MODULE_V4] as Address[]) {
-          const on = await publicClient.readContract({ address: safe, abi: safeAbi, functionName: 'isModuleEnabled', args: [m] }).catch(() => false) as boolean;
-          if (on) { posModule = m; break; }
-        }
-        if (!posModule) continue;
-        const acct = await publicClient.readContract({ address: POOL_ADDR as Address, abi: poolAbi, functionName: 'getUserAccountData', args: [safe] }) as readonly bigint[];
-        if (acct[0] === 0n && acct[1] === 0n) continue; // closed / empty
-        // ONE multicall over every reserve's aToken + vDebt balance: a position is one
-        // collateral + one debt by construction — take the largest of each.
-        const calls = market!.reserves.flatMap((r) => [
-          { address: r.aToken, abi: erc20Abi, functionName: 'balanceOf', args: [safe] } as const,
-          { address: r.vDebtToken, abi: erc20Abi, functionName: 'balanceOf', args: [safe] } as const,
-        ]);
-        const bals = await publicClient.multicall({ contracts: calls, allowFailure: true });
-        let collR: AaveReserve | null = null, collQty = 0n, debtR: AaveReserve | null = null, debtQty = 0n;
-        market!.reserves.forEach((r, i) => {
-          const a = bals[i * 2].status === 'success' ? (bals[i * 2].result as bigint) : 0n;
-          const v = bals[i * 2 + 1].status === 'success' ? (bals[i * 2 + 1].result as bigint) : 0n;
-          if (a > collQty) { collQty = a; collR = r; }
-          if (v > debtQty) { debtQty = v; debtR = r; }
-        });
-        if (!collR || collQty === 0n) continue;
-        const cR = collR as AaveReserve;
-        const dR = (debtR ?? market!.reserves.find((r) => r.address.toLowerCase() === (O.wxdai as string).toLowerCase())!) as AaveReserve;
-        const collQtyF = Number(formatUnits(collQty, cR.decimals));
-        // acct[3] = the account's CURRENT weighted liquidation threshold (bps) — eMode-aware
-        const m = positionMetrics({ collateralBase: acct[0], debtBase: acct[1], liqThresholdBps: Number(acct[3]), healthFactor1e18: acct[5], collateralQty: collQtyF, collateralPriceUsd: collQtyF > 0 ? (Number(acct[0]) / 1e8) / collQtyF : 0 });
-        live.push({ safe, m, collQty, debtQty, availBase: acct[2],
-          collTok: { address: cR.address, symbol: cR.symbol, decimals: cR.decimals },
-          debtTok: { address: dR.address, symbol: dR.symbol, decimals: dR.decimals },
-          module: posModule });
-      } catch { /* skip */ }
-    }
+    // localStorage Safes only here (instant) — the /orders page does the slower
+    // cross-device barn discovery; the Swap tab opens positions on THIS device.
+    const live = await readPositions(publicClient, address, loadSavedSafes(), market);
     setPositions(live);
     // keep a live selection fresh after an action (?? cur tolerates a transient RPC blip
     // without deselecting; account-switch deselection is handled by the effect below).
@@ -317,7 +279,9 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
     const amt = lev > 1 && openAmts ? openAmts.flash : equity;
     if (amt === 0n) return;
     let live = true;
-    quoteOut((sell as UIToken).address, buy.address, amt, (address ?? '0x25a9A92F3bD7Ce47cFD48a896C5590Cf8F5A03Fb') as Address).then((q) => { if (live) setPreviewBuy(q); });
+    // leverage prices on barn (where it settles); a plain swap prices on prod
+    const quote = lev > 1 ? quoteOut : quoteOutProd;
+    quote((sell as UIToken).address, buy.address, amt, (address ?? '0x25a9A92F3bD7Ce47cFD48a896C5590Cf8F5A03Fb') as Address).then((q) => { if (live) setPreviewBuy(q); });
     return () => { live = false; };
   }, [sellIsPos, lev, openAmts, equity, sell, buy, address]);
 
@@ -487,7 +451,11 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
     if (os.status !== 201) throw new Error('order: ' + JSON.stringify(os.body));
     if (!wait) return { uid: os.body as string };
     setStatus(label + ' — waiting for a solver…');
-    if (await pollFill(os.body as string, (s) => setStatus(label + ' (' + s + ')…')) !== 'fulfilled') throw new Error('order expired — no solver settled it. Try again.');
+    {
+      const r = await pollFill(os.body as string, (s) => setStatus(label + ' (' + s + ')…'));
+      if (r === 'open') throw new Error('still pending — the solver hasn’t settled yet. Check the position before retrying (retrying now may double up).');
+      if (r !== 'fulfilled') throw new Error('order expired — no solver settled it. Try again.');
+    }
     return { uid: os.body as string };
   }
 
@@ -556,14 +524,22 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
       await barn('appdata', { hash: carrierHash, fullAppData: carrierJson });
       const cs = await barn('order', { order: { ...carrierOrder, signingScheme: 'eip712', signature: sig, from: address } });
       if (cs.status !== 201) throw new Error('carrier rejected: ' + JSON.stringify(cs.body));
-      if (await pollFill(cs.body as string, (s) => setStatus('Deploying Safe (' + s + ')…'), 60) !== 'fulfilled') throw new Error('carrier did not settle — equity is safe in your wallet; try again.');
+      {
+        const r = await pollFill(cs.body as string, (s) => setStatus('Deploying Safe (' + s + ')…'), 60);
+        if (r === 'open') throw new Error('still settling — the funding order hasn’t filled yet. Check before retrying so you don’t fund twice.');
+        if (r !== 'fulfilled') throw new Error('carrier did not settle — equity is safe in your wallet; try again.');
+      }
 
       setStatus('Opening your position (waiting for a solver)…');
       await barn('appdata', { hash: levHash, fullAppData: levJson });
       const lo = { sellToken: intent.debt, buyToken: intent.collateral, receiver: safeAddr, sellAmount: intent.flash.toString(), buyAmount: intent.buyMin.toString(), validTo: intent.validTo, appData: levHash, feeAmount: '0', kind: 'sell', partiallyFillable: false, sellTokenBalance: 'erc20', buyTokenBalance: 'erc20', signingScheme: 'eip1271', signature: '0x', from: safeAddr };
       const ls = await barn('order', { order: lo });
       if (ls.status !== 201) throw new Error('leverage rejected: ' + JSON.stringify(ls.body));
-      if (await pollFill(levUid, (s) => setStatus('Opening position (' + s + ')…')) !== 'fulfilled') throw new Error('leverage order expired — your Safe holds the equity; retry from the position list.');
+      {
+        const r = await pollFill(levUid, (s) => setStatus('Opening position (' + s + ')…'));
+        if (r === 'open') throw new Error('still settling — the open order hasn’t filled yet. Check the position list before retrying (retrying now may open a second position).');
+        if (r !== 'fulfilled') throw new Error('leverage order expired — your Safe holds the equity; retry from the position list.');
+      }
 
       setStatus('✅ Position opened'); setAmount('1'); setLev(1); setShowLev(false);
       await loadPositions();
@@ -713,29 +689,35 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
     setBusy(true); setErr(null); setStatus('Quoting…');
     try {
       const validTo = Math.floor(Date.now() / 1000) + 1800;
-      const q = previewBuy ?? await quoteOut(sellTok.address, buy.address, equity, address);
+      // plain swaps settle on the PRODUCTION orderbook (real solvers), not barn —
+      // so quote/sign/approve must all use the production settlement + relayer.
+      const settlement = GNOSIS_CFG.cowSettlement;
+      const relayer = GNOSIS_CFG.vaultRelayer;
+      const q = previewBuy ?? await quoteOutProd(sellTok.address, buy.address, equity, address);
       if (!q) throw new Error('quote failed');
       const buyMin = minOut(q, slippagePct);
-      const allowance = await publicClient.readContract({ address: sellTok.address, abi: ERC20_ABI, functionName: 'allowance', args: [address, O.relayer as Address] }) as bigint;
+      const allowance = await publicClient.readContract({ address: sellTok.address, abi: ERC20_ABI, functionName: 'allowance', args: [address, relayer] }) as bigint;
       if (allowance < equity) {
         setStatus('One-time CoW approval (same as cowswap.exchange — never asked again)…');
-        const h = await walletClient.writeContract({ address: sellTok.address, abi: ERC20_ABI, functionName: 'approve', args: [O.relayer as Address, MAXU], chain: undefined, account: address });
+        const h = await walletClient.writeContract({ address: sellTok.address, abi: ERC20_ABI, functionName: 'approve', args: [relayer, MAXU], chain: undefined, account: address });
         await publicClient.waitForTransactionReceipt({ hash: h });
       }
-      const appDoc = JSON.stringify({ appCode: 'CoW Leverage', version: '1.6.0', metadata: {} });
+      const appDoc = JSON.stringify({ appCode: SWAP_APP_CODE, version: '1.6.0', metadata: {} });
       const appHash = keccak256(toHex(appDoc));
       const order = { sellToken: sellTok.address, buyToken: buy.address, receiver: address, sellAmount: equity.toString(), buyAmount: buyMin.toString(), validTo, appData: appHash, feeAmount: '0', kind: 'sell', partiallyFillable: false, sellTokenBalance: 'erc20', buyTokenBalance: 'erc20' };
       setStatus('Sign your swap (your only signature)…');
       const sig = await walletClient.signTypedData({
-        account: address, domain: { name: 'Gnosis Protocol', version: 'v2', chainId: 100, verifyingContract: O.settlement as Address },
+        account: address, domain: { name: 'Gnosis Protocol', version: 'v2', chainId: 100, verifyingContract: settlement },
         types: GPV2_ORDER_TYPES, primaryType: 'Order',
         message: { ...order, sellAmount: BigInt(order.sellAmount), buyAmount: BigInt(order.buyAmount), validTo: BigInt(order.validTo), feeAmount: 0n } as never,
       });
-      await barn('appdata', { hash: appHash, fullAppData: appDoc });
-      const os = await barn('order', { order: { ...order, signingScheme: 'eip712', signature: sig, from: address } });
-      if (os.status !== 201) throw new Error('swap rejected: ' + JSON.stringify(os.body));
+      await prodAppdata(appHash, appDoc);
+      const os = await prodOrder({ ...order, signingScheme: 'eip712', signature: sig, from: address });
+      if (!os.ok || !os.uid) throw new Error('swap rejected: ' + (os.raw || os.status));
       setStatus('Swap in the auction — waiting for a solver…');
-      if (await pollFill(os.body as string, (s) => setStatus('Swap (' + s + ')…')) !== 'fulfilled') throw new Error('swap expired — try again.');
+      const res = await pollFillProd(os.uid, (s) => setStatus('Swap (' + s + ')…'));
+      if (res === 'expired') throw new Error('swap expired — no solver filled it. Try again.');
+      if (res === 'open') { setStatus('Swap still pending in the auction — check My orders for the result.'); return; }
       setStatus('✅ Swap filled');
       if (address && publicClient) publicClient.readContract({ address: sellTok.address, abi: erc20Abi, functionName: 'balanceOf', args: [address] }).then((b) => setBal(b as bigint)).catch(() => {});
     } catch (e) { setErr((e as Error).message); setStatus(null); } finally { setBusy(false); }
@@ -745,7 +727,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   const samePair = !sellIsPos && (sell as UIToken).address.toLowerCase() === buy.address.toLowerCase();
   const supportedOpen = !sellIsPos && !!pairLev;
   function onCta() {
-    if (!isConnected) return;
+    if (!isConnected) { const inj = connectors[0]; if (inj) connect({ connector: inj }); return; } // actually open the wallet
     if (!onGnosis) { switchChain({ chainId: gnosis.id }); return; }
     if (sellIsPos) {
       if (posMode === 'leverage') { if (lev <= 1.01) doReduce(100); else doAdjust(lev); }
@@ -758,9 +740,13 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   else if (sellIsPos) ctaLabel = parseFloat(amount) >= 100 ? 'Close Position' : `Reduce ${parseFloat(amount) || 0}%`;
   else if (lev > 1 && equity > 0n) ctaLabel = supportedOpen ? (insufficient ? 'Insufficient balance' : `Open ${lev}× Long`) : 'Leverage not available for this pair';
   else if (equity > 0n) ctaLabel = samePair ? 'Select two different tokens' : insufficient ? 'Insufficient balance' : 'Swap';
-  const ctaDisabled = busy || !isConnected || !onGnosis
-    || (sellIsPos ? (posMode === 'leverage' ? Math.abs(lev - (sell as LivePos).m.leverage) < 0.05 && lev > 1.01 : false)
-                  : !(equity > 0n && !insufficient && !samePair && (lev <= 1 || (supportedOpen && !!openPlan))));
+  // a disconnected user needs to connect first — the CTA does it (onCta opens the wallet)
+  if (!isConnected) ctaLabel = connecting ? 'Connecting…' : 'Connect wallet';
+  const ctaDisabled = !isConnected
+    ? connecting
+    : busy || !onGnosis
+      || (sellIsPos ? (posMode === 'leverage' ? Math.abs(lev - (sell as LivePos).m.leverage) < 0.05 && lev > 1.01 : false)
+                    : !(equity > 0n && !insufficient && !samePair && (lev <= 1 || (supportedOpen && !!openPlan))));
 
   // ── render ──
   const posTokens: UIToken[] = sellIsPos
@@ -943,7 +929,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
         {status && <p className="lev-foot" style={{ color: status.startsWith('✅') ? '#46d39a' : 'var(--lev-muted)' }}>{status}</p>}
         {err && <p className="lev-foot" style={{ color: '#ff6b6b' }}>{err}</p>}
         {isConnected && !onGnosis && <p className="lev-foot">Switch to Gnosis to trade.</p>}
-        <div className="lev-foot">CoW Protocol protects you from MEV · each position is its own Safe you own · staging (barn) · <a href="/leverage/architecture">how it works ↗</a></div>
+        <div className="lev-foot">CoW Protocol protects you from MEV · swaps settle on mainnet CoW · leverage runs on staging (barn), each position is its own Safe you own · <a href="/leverage/architecture">how it works ↗</a></div>
       </div>
 
       {/* token / position selector */}

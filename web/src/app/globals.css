@@ -387,3 +387,14 @@ input[type=range].lev-range::-moz-range-thumb { border:3px solid #fff; }
 /* Swap-tab tabs now live inside the card — align padding with the inset panels */
 .lev-card > .lev-cardtop { margin:4px 4px 10px; }
 button.cta:disabled, .lev-cta:disabled { opacity:1; }
+
+/* ============================================================================
+   Unify the TWAP (.widget / .token-row) and Swap (.lev-card / .lev-panel) cards
+   so toggling tabs doesn't visually "jump" — one card radius, one inset radius,
+   one amount font, one flip control, one CTA height across both.
+   ============================================================================ */
+.widget, .lev-card { border-radius: 20px; }
+.token-row, .lev-panel { border-radius: 16px; }
+.amount-input, .lev-amt { font-size: 30px; font-weight: 600; }
+.swap-divider button, .lev-flip button { width: 34px; height: 34px; border-radius: 11px; }
+button.cta, .lev-cta { height: 52px; padding: 0; }

@@ -48,6 +48,19 @@ export async function POST(req: Request) {
         body: { status: j.status, executedBuyAmount: j.executedBuyAmount, executedSellAmount: j.executedSellAmount },
       });
     }
+    if (op === 'accountOrders') {
+      // the owner's barn orders — used to discover their leverage Safes (the
+      // in-kind carrier's receiver) without relying on browser localStorage.
+      const limit = Math.min(Number(b.limit) || 100, 500);
+      const r = await fetch(`${BARN}/account/${b.owner}/orders?limit=${limit}`, { cache: 'no-store' });
+      if (!r.ok) return NextResponse.json({ status: r.status, body: [] });
+      const j = await r.json() as Array<Record<string, unknown>>;
+      // slim payload: only what Safe-discovery needs
+      const body = (Array.isArray(j) ? j : []).map((o) => ({
+        sellToken: o.sellToken, buyToken: o.buyToken, receiver: o.receiver, fullAppData: o.fullAppData,
+      }));
+      return NextResponse.json({ status: r.status, body });
+    }
     return NextResponse.json({ error: 'unknown op' }, { status: 400 });
   } catch (e) {
     // HTTP 200 + error field: Cloudflare replaces origin 5xx bodies with its own HTML page,

@@ -9,7 +9,8 @@ import { ConnectButton } from '../../components/ConnectButton';
 import { ClaimButton } from '../../components/ClaimButton';
 import { getChainConfig, type ChainConfig } from '../../lib/chains';
 import { avgPrice, deriveState, fundedParts, isSettled, type OrderState } from '../../lib/orderState';
-import { enrichOrders, fetchOwnerCarriers, fetchSafeLegs, type HistoryOrder, type Leg } from '../../lib/carrierHistory';
+import { enrichOrders, fetchOwnerHistory, fetchSafeLegs, type HistoryOrder, type Leg, type SwapRow } from '../../lib/carrierHistory';
+import { discoverLeverageSafes, loadSavedSafes, readPositions, type LivePos, type Market } from '../../lib/positions';
 import { dispAmount, fmtRate, humanizeSeconds, rateParts, shortAddress } from '../../lib/format';
 import { useTokenList } from '../../lib/useTokenList';
 import { useTokenMeta } from '../../lib/useTokenMeta';
@@ -51,7 +52,8 @@ export default function OrdersPage() {
   // default. Clicking a price flips every order of that pair; "flip prices"
   // flips them all.
   const [flipped, setFlipped] = useState<Set<string>>(new Set());
-  const pairKey = (o: HistoryOrder) => [o.sellToken.toLowerCase(), o.buyToken.toLowerCase()].sort().join('/');
+  const pairKeyOf = (sellToken: string, buyToken: string) => [sellToken.toLowerCase(), buyToken.toLowerCase()].sort().join('/');
+  const pairKey = (o: HistoryOrder) => pairKeyOf(o.sellToken, o.buyToken);
   const togglePair = (key: string) => setFlipped((s) => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; });
 
   // Load instantly from the last-connected owner instead of waiting for the
@@ -66,29 +68,81 @@ export default function OrdersPage() {
   }, [address, chainId]);
 
   const owner = address ?? cached.owner;
-  const effChain = address ? chainId : (cached.chainId ?? chainId);
-  const chain = getChainConfig(effChain);
-  const publicClient = usePublicClient({ chainId: effChain as 1 | 100 });
+  // /orders is Gnosis-only: every activity this app creates (TWAP, swaps, leverage)
+  // settles on Gnosis, and mainnet TWAP can't be created (no helper there). So the
+  // whole page reads, resolves tokens, and links against Gnosis — no per-chain fork.
+  const chain = getChainConfig(100)!;
+  const gnosisClient = usePublicClient({ chainId: 100 });
 
-  // Frontend-only: the owner's TWAPs are derived entirely from the public CoW
-  // orderbook (their in-kind carrier orders) + one on-chain lens call. No server.
-  const { data, isLoading } = useQuery<HistoryOrder[]>({
-    queryKey: ['twaps', effChain, owner],
-    enabled: !!owner && !!chain,
-    refetchInterval: 8000,
+  // Frontend-only: one pass over the owner's Gnosis orderbook → TWAP carriers
+  // (enriched with one on-chain lens call) + this app's plain swaps.
+  const { data: history } = useQuery<{ carriers: HistoryOrder[]; swaps: SwapRow[] }>({
+    queryKey: ['history', owner],
+    enabled: !!owner,
+    refetchInterval: 12_000,
     queryFn: async () => {
-      if (!chain || !owner) return [];
-      const carriers = await fetchOwnerCarriers(chain, owner as Address);
-      if (!publicClient || carriers.length === 0) return carriers;
-      return enrichOrders(publicClient as unknown as PublicClient, carriers);
+      const { carriers, swaps } = await fetchOwnerHistory(chain, owner as Address);
+      if (!gnosisClient || carriers.length === 0) return { carriers, swaps };
+      return { carriers: await enrichOrders(gnosisClient as unknown as PublicClient, carriers), swaps };
     },
   });
 
+  // Aave market config rarely changes — cache it. On failure THROW (so it's an
+  // error state react-query retries) rather than a null 'success' that would
+  // silently disable the positions query for the whole staleTime. Bounded with a
+  // timeout so a hung proxy errors (→ marketError) instead of stalling forever.
+  const { data: market, isError: marketError } = useQuery<Market>({
+    queryKey: ['aave-market'],
+    enabled: !!owner,
+    staleTime: 5 * 60_000,
+    refetchInterval: (q) => (q.state.status === 'error' ? 15_000 : false),
+    queryFn: async () => {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const m = await fetch('/api/aave-market', { signal: ctrl.signal }).then((r) => r.json()) as Market;
+        if (!m?.reserves?.length) throw new Error('aave market unavailable');
+        return m;
+      } finally { clearTimeout(t); }
+    },
+  });
+
+  // Candidate leverage Safes: localStorage (this device) ∪ barn carrier discovery
+  // (any device). Slow-changing, so polled gently and separately from the Aave reads.
+  const { data: safes } = useQuery<string[]>({
+    queryKey: ['levSafes', owner],
+    enabled: !!owner,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const discovered = await discoverLeverageSafes(owner as Address);
+      return [...new Set([...loadSavedSafes(), ...discovered].map((s) => s.toLowerCase()))];
+    },
+  });
+
+  // Leverage positions: live Aave reads over the candidate Safes (Gnosis).
+  // placeholderData keeps the prior list while a discovery change (new Safe set →
+  // new queryKey) refetches, so the panel never flashes empty / drops out.
+  const { data: positions } = useQuery<LivePos[]>({
+    queryKey: ['positions', owner, safes],
+    enabled: !!owner && !!market && !!gnosisClient && safes !== undefined,
+    refetchInterval: 12000,
+    placeholderData: (prev) => prev,
+    queryFn: () => readPositions(gnosisClient as unknown as PublicClient, owner as Address, (safes ?? []) as Address[], market!),
+  });
+
   const now = Math.floor(Date.now() / 1000);
-  const orders = useMemo(() => data ?? [], [data]);
+  const orders = useMemo(() => history?.carriers ?? [], [history]);
+  const swaps = useMemo(() => history?.swaps ?? [], [history]);
+  const levPositions = useMemo(() => positions ?? [], [positions]);
+  // The positions pipeline is "settled" once the reads resolve, OR it can't run
+  // (no Gnosis client / the market API is down) — so a market outage no longer
+  // traps the whole page on "Loading". The page has loaded once history resolved
+  // and that pipeline settled. (Only matters when everything is empty.)
+  const positionsSettled = positions !== undefined || marketError || !gnosisClient;
+  const loaded = history !== undefined && positionsSettled;
 
   // Token resolution: curated/official list + one batched multicall for unknowns.
-  const list = useTokenList(chain ?? getChainConfig(100)!);
+  const list = useTokenList(chain);
   const listMap = useMemo(() => {
     const m = new Map<string, Resolved>();
     for (const t of list) m.set(t.address.toLowerCase(), { symbol: t.symbol, decimals: t.decimals });
@@ -96,35 +150,45 @@ export default function OrdersPage() {
   }, [list]);
   const unknown = useMemo(() => {
     const s = new Set<string>();
-    for (const o of orders) { for (const a of [o.sellToken, o.buyToken]) { const k = a.toLowerCase(); if (!listMap.has(k)) s.add(a); } }
+    const add = (a: string) => { if (!listMap.has(a.toLowerCase())) s.add(a); };
+    for (const o of orders) { add(o.sellToken); add(o.buyToken); }
+    for (const sw of swaps) { add(sw.sellToken); add(sw.buyToken); }
     return Array.from(s);
-  }, [orders, listMap]);
-  const meta = useTokenMeta(effChain, unknown);
+  }, [orders, swaps, listMap]);
+  const meta = useTokenMeta(chain.chainId, unknown);
   const resolve: ResolveFn = useMemo(() => (addr: string) => {
     const k = addr.toLowerCase();
     return listMap.get(k) ?? meta.get(k) ?? { symbol: shortAddress(addr), decimals: 18 };
   }, [listMap, meta]);
 
   const byState = (states: OrderState[]) => orders.filter((o) => states.includes(deriveState(o, now).state));
+  const nothing = orders.length === 0 && swaps.length === 0 && levPositions.length === 0;
 
   return (
     <div className="container">
       <div className="topbar">
-        <div className="brand"><h1>My Orders</h1><Link className="tag" href="/">← new TWAP</Link></div>
+        <div className="brand"><h1>My Orders</h1><Link className="tag" href="/">← trade</Link></div>
         <ConnectButton />
       </div>
 
-      {!owner && <div className="panel center"><p>Connect your wallet to see your TWAPs.</p></div>}
-      {owner && chain && (
+      {!owner && <div className="panel center"><p>Connect your wallet to see your orders.</p></div>}
+      {owner && (
         <>
-          {isLoading && orders.length === 0 && <div className="panel"><p className="hint">Loading…</p></div>}
-          {!isLoading && orders.length === 0 && <div className="panel"><p className="hint">No TWAPs on {chain.name} yet. <Link href="/">Create one →</Link></p></div>}
+          {!loaded && nothing && <div className="panel"><p className="hint">Loading…</p></div>}
+          {loaded && nothing && <div className="panel"><p className="hint">No activity on {chain.name} yet. <Link href="/">Trade →</Link></p></div>}
           {orders.length > 0 && (
             <div className="flipbar"><button className="linkbtn" onClick={() => setFlipped((s) => {
               const keys = Array.from(new Set(orders.map(pairKey)));
               const allFlipped = keys.length > 0 && keys.every((k) => s.has(k));
               return allFlipped ? new Set() : new Set(keys);
             })}>⇄ flip prices</button></div>
+          )}
+
+          {levPositions.length > 0 && (
+            <div className="panel olist">
+              <h2><span>Leverage positions ({levPositions.length})</span></h2>
+              {levPositions.map((p) => <PositionRow key={p.safe} p={p} />)}
+            </div>
           )}
 
           {GROUPS.map((g) => {
@@ -134,13 +198,20 @@ export default function OrdersPage() {
             return (
               <div className="panel olist" key={g.key}>
                 <h2 style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>{g.title} ({olist.length})</span>
+                  <span>TWAP · {g.title} ({olist.length})</span>
                   {isDraft && <button className="linkbtn" onClick={() => setShowDrafts((s) => !s)}>{showDrafts ? 'hide' : 'show'}</button>}
                 </h2>
                 {(!isDraft || showDrafts) && olist.map((o) => <OrderRow key={o.safe} chain={chain} o={o} now={now} resolve={resolve} flipPair={flipped.has(pairKey(o))} onFlipPair={() => togglePair(pairKey(o))} />)}
               </div>
             );
           })}
+
+          {swaps.length > 0 && (
+            <div className="panel olist">
+              <h2><span>Swaps ({swaps.length})</span></h2>
+              {swaps.map((s) => { const k = pairKeyOf(s.sellToken, s.buyToken); return <SwapRowItem key={s.uid} chain={chain} s={s} resolve={resolve} flip={flipped.has(k)} onFlip={() => togglePair(k)} />; })}
+            </div>
+          )}
         </>
       )}
     </div>
@@ -278,6 +349,67 @@ function OrderDetail({ chain, o, sell, buy, K, avg, remaining, received, settled
           {' · '}<a href={`${chain.cowExplorer}/address/${o.safe}`} target="_blank" rel="noreferrer">CoW</a>
           {' · '}<a href={`https://app.safe.global/home?safe=${chain.safeAppPrefix}:${o.safe}`} target="_blank" rel="noreferrer">Safe</a>
         </span>
+      </div>
+    </div>
+  );
+}
+
+const SWAP_TONE: Record<string, string> = { fulfilled: 'good', expired: 'warn', cancelled: 'bad' };
+const SWAP_LABEL: Record<string, string> = { fulfilled: 'Filled', open: 'Open', expired: 'Expired', cancelled: 'Cancelled', presignaturePending: 'Pending' };
+
+/** A single plain wallet swap (read-only row). */
+function SwapRowItem({ chain, s, resolve, flip, onFlip }: { chain: ChainConfig; s: SwapRow; resolve: ResolveFn; flip: boolean; onFlip: () => void }) {
+  const sell = resolve(s.sellToken);
+  const buy = resolve(s.buyToken);
+  const filled = s.status === 'fulfilled';
+  const big = (v: string) => { try { return BigInt(v); } catch { return 0n; } };
+  const signedSell = big(s.sellAmount), signedBuy = big(s.buyAmount), execSell = big(s.executedSell), execBuy = big(s.executedBuy);
+  const useExec = filled && execSell > 0n;
+  const outSell = useExec ? execSell : signedSell;
+  const outBuy = useExec ? execBuy : signedBuy;
+  const price = outSell > 0n ? Number(formatUnits(outBuy, buy.decimals)) / Number(formatUnits(outSell, sell.decimals)) : null;
+  const eff = baseFlip(sell.symbol, buy.symbol) !== flip;
+  const pr = price != null ? rateParts(price, eff, sell.symbol, buy.symbol) : null;
+  return (
+    <div className="orow">
+      <div className="orow-head" style={{ cursor: 'default' }}>
+        <div className="oleft">
+          <div className="osyms">{sell.symbol} → {buy.symbol}</div>
+          <div className="oamts">{dispAmount(outSell, sell.decimals)} → {filled ? dispAmount(outBuy, buy.decimals) : `≥ ${dispAmount(signedBuy, buy.decimals)}`}</div>
+        </div>
+        <div className="ocenter">
+          {pr && <button className="oprice" title="Flip this pair" onClick={onFlip}>{pr.num} <span className="ounit">{pr.unit}</span></button>}
+        </div>
+        <div className="oright">
+          <span className={`badge ${SWAP_TONE[s.status] ?? ''}`}>{SWAP_LABEL[s.status] ?? s.status}</span>
+          <div className="odate">{new Date(s.createdAt * 1000).toLocaleString('en-US', DATE_FMT)} · <a href={`${chain.cowExplorer}/orders/${s.uid}`} target="_blank" rel="noreferrer">CoW ↗</a></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A single open leverage position (read-only summary; manage from the trade tab). */
+function PositionRow({ p }: { p: LivePos }) {
+  const coll = Number(formatUnits(p.collQty, p.collTok.decimals));
+  const debt = Number(formatUnits(p.debtQty, p.debtTok.decimals));
+  const hf = p.m.healthFactor;
+  const hfTone = hf > 1.4 ? 'good' : hf > 1.15 ? 'warn' : 'bad';
+  return (
+    <div className="orow">
+      <div className="orow-head" style={{ cursor: 'default' }}>
+        <div className="oleft">
+          <div className="osyms">{p.collTok.symbol} {p.m.leverage.toFixed(1)}× <span className="ounit">long</span></div>
+          <div className="oamts">{coll.toFixed(4)} {p.collTok.symbol} collateral · {debt.toFixed(2)} {p.debtTok.symbol} debt</div>
+        </div>
+        <div className="ocenter">
+          <span className="oprice" title="Health factor">HF {hf > 100 ? '∞' : hf.toFixed(2)}</span>
+        </div>
+        <div className="oright">
+          <span className={`badge ${hfTone}`}>{p.m.liqPrice ? `Liq ${p.m.liqPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : 'Open'}</span>
+          {/* positions are always Gnosis, regardless of the page's viewed chain */}
+          <div className="odate"><Link href="/">Manage →</Link> · <a href={`https://app.safe.global/home?safe=gno:${p.safe}`} target="_blank" rel="noreferrer">Safe ↗</a></div>
+        </div>
       </div>
     </div>
   );

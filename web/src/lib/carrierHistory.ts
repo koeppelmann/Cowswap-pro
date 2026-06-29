@@ -62,10 +62,25 @@ type CowOrder = {
   creationDate: string;
   fullAppData?: string | null;
   kind: string;
+  executedSellAmount?: string;
   executedBuyAmount?: string; // for a fulfilled in-kind carrier: exactly what the Safe received
 };
 
 export type CarrierStatus = 'open' | 'fulfilled' | 'expired' | 'cancelled' | string;
+
+/** A plain (non-TWAP, non-leverage) wallet swap, for the history list. */
+export type SwapRow = {
+  uid: string;
+  chainId: number;
+  sellToken: string;
+  buyToken: string;
+  sellAmount: string;   // signed
+  buyAmount: string;    // signed min-receive
+  executedSell: string; // actually traded
+  executedBuy: string;  // actually received
+  status: CarrierStatus;
+  createdAt: number;
+};
 
 /** A history row = an enriched order plus its originating carrier's identity. */
 export type HistoryOrder = EnrichedOrder & {
@@ -218,13 +233,11 @@ function toRow(chain: ChainConfig, owner: Address, o: CowOrder, d: DecodedCarrie
   };
 }
 
-/** Page through the owner's CoW orders and keep the TWAP carriers, decoded. */
-export async function fetchOwnerCarriers(chain: ChainConfig, owner: Address): Promise<HistoryOrder[]> {
-  const base = cowApiBaseClient(chain.chainId);
-  if (!base || !chain.twapBootstrap) return [];
+/** Page through every CoW order the owner signed (newest first). */
+async function pageOwnerOrders(base: string, owner: Address): Promise<CowOrder[]> {
   const PAGE = 100;
   const MAX = 1000; // safety cap
-  const rows: HistoryOrder[] = [];
+  const all: CowOrder[] = [];
   for (let offset = 0; offset < MAX; offset += PAGE) {
     let batch: CowOrder[];
     try {
@@ -233,15 +246,23 @@ export async function fetchOwnerCarriers(chain: ChainConfig, owner: Address): Pr
       batch = (await r.json()) as CowOrder[];
     } catch { break; }
     if (!Array.isArray(batch) || batch.length === 0) break;
-    for (const o of batch) {
-      if (o.sellToken?.toLowerCase() !== o.buyToken?.toLowerCase()) continue; // (a) in-kind
-      if (!o.fullAppData) continue;
-      const d = decodeCarrier(o.fullAppData, chain.twapBootstrap); // (b) exact pre-hook
-      if (!d) continue;
-      const row = toRow(chain, owner, o, d);
-      if (row) rows.push(row);
-    }
+    all.push(...batch);
     if (batch.length < PAGE) break;
+  }
+  return all;
+}
+
+/** Keep the TWAP carriers from a batch of orders, decoded + de-duped by Safe. */
+function collectCarriers(chain: ChainConfig, owner: Address, orders: CowOrder[]): HistoryOrder[] {
+  if (!chain.twapBootstrap) return [];
+  const rows: HistoryOrder[] = [];
+  for (const o of orders) {
+    if (o.sellToken?.toLowerCase() !== o.buyToken?.toLowerCase()) continue; // (a) in-kind
+    if (!o.fullAppData) continue;
+    const d = decodeCarrier(o.fullAppData, chain.twapBootstrap); // (b) exact pre-hook
+    if (!d) continue;
+    const row = toRow(chain, owner, o, d);
+    if (row) rows.push(row);
   }
   // De-dupe by Safe (re-signed/re-submitted carriers for the same TWAP), newest first.
   const bySafe = new Map<string, HistoryOrder>();
@@ -253,6 +274,51 @@ export async function fetchOwnerCarriers(chain: ChainConfig, owner: Address): Pr
     if (prev.carrierStatus !== 'fulfilled' && row.carrierStatus === 'fulfilled') bySafe.set(k, row);
   }
   return Array.from(bySafe.values()).sort((a, b) => b.createdAt - a.createdAt);
+}
+
+// doSwap stamps this appCode on every plain swap it submits (see SwapTab.doSwap).
+// Filtering on it keeps /orders to THIS app's swaps — not the user's unrelated
+// cowswap.exchange (or other-frontend) history under the same wallet. Exported so
+// the producer (doSwap) and the filter here can never drift.
+export const SWAP_APP_CODE = 'CoW Leverage';
+// The leverage funding carrier (in-kind order the EOA signs on barn) stamps this
+// appCode; its receiver is the position Safe. Shared so the producer
+// (SwapTab.carrierAppData) and the discovery filter (positions.ts) can't drift.
+export const LEV_CARRIER_APP_CODE = 'koeppelmann/cowswap_wrapper';
+/** Read the appCode out of a CoW order's fullAppData document (null if absent/invalid). */
+export function appCodeOf(fullAppData?: string | null): string | null {
+  if (!fullAppData) return null;
+  try { return (JSON.parse(fullAppData) as { appCode?: unknown }).appCode as string ?? null; } catch { return null; }
+}
+
+/** Keep this app's plain wallet swaps (non-in-kind, stamped with our appCode). */
+function collectSwaps(chainId: number, orders: CowOrder[]): SwapRow[] {
+  const out: SwapRow[] = [];
+  for (const o of orders) {
+    if (o.sellToken?.toLowerCase() === o.buyToken?.toLowerCase()) continue; // skip in-kind carriers
+    if (appCodeOf(o.fullAppData) !== SWAP_APP_CODE) continue;               // only this app's swaps
+    out.push({
+      uid: o.uid,
+      chainId,
+      sellToken: o.sellToken,
+      buyToken: o.buyToken,
+      sellAmount: o.sellAmount,
+      buyAmount: o.buyAmount,
+      executedSell: o.executedSellAmount ?? '0',
+      executedBuy: o.executedBuyAmount ?? '0',
+      status: o.status,
+      createdAt: Math.floor(new Date(o.creationDate).getTime() / 1000) || 0,
+    });
+  }
+  return out.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+/** One pass over the owner's orderbook → both TWAP carriers and app swaps. */
+export async function fetchOwnerHistory(chain: ChainConfig, owner: Address): Promise<{ carriers: HistoryOrder[]; swaps: SwapRow[] }> {
+  const base = cowApiBaseClient(chain.chainId);
+  if (!base) return { carriers: [], swaps: [] };
+  const orders = await pageOwnerOrders(base, owner);
+  return { carriers: collectCarriers(chain, owner, orders), swaps: collectSwaps(chain.chainId, orders) };
 }
 
 /** Real per-Safe fills from CoW (the watchtower posts part orders under the Safe). */
