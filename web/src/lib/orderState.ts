@@ -9,17 +9,20 @@ export type EnrichedOrder = OrderRow & {
   executedBuy: string;
   remainingSell: string;
   startTime: number; // cabinet start (0 if not set)
-  allowance?: string; // sellToken.allowance(owner, safe)
+  allowance?: string; // sellToken.allowance(owner, safe) — legacy approve flow
   statusAt?: number; // when on-chain status was last refreshed (0 = never)
+  carrierStatus?: string; // CoW status of the funding carrier order (carrier flow)
 };
 
-export type OrderState = 'awaiting' | 'approved' | 'active' | 'partial' | 'settled' | 'filled' | 'cancelled' | 'expired';
+export type OrderState = 'awaiting' | 'funding' | 'approved' | 'active' | 'partial' | 'settled' | 'filled' | 'cancelled' | 'expired';
 
-/** Funded parts K = totalSell / partSell (≤ n when a skip buffer adds extra windows). */
+/** Funded parts K = totalSell / partSell, capped at n. (Old flow: K ≤ n via the
+ *  skip buffer. Balance flow: integer-division rounding can nudge the quotient
+ *  above n, so the cap keeps "K/K" reachable and the order can read "Fully executed".) */
 export function fundedParts(o: EnrichedOrder): number {
   try {
     const ps = BigInt(o.partSell);
-    if (ps > 0n) return Number(BigInt(o.totalSell) / ps);
+    if (ps > 0n) return Math.min(o.n, Number(BigInt(o.totalSell) / ps));
   } catch { /* ignore */ }
   return o.n;
 }
@@ -30,7 +33,13 @@ export function deriveState(o: EnrichedOrder, nowSec: number): { state: OrderSta
   const start = o.startTime > 0 ? o.startTime : o.createdAt;
   const end = start > 0 ? start + o.n * o.t : 0;
   if (!o.deployed) {
-    // Allowance ≥ total sell means the user approved but the safe was never deployed.
+    // Carrier flow: the funding order's CoW status drives the pre-deploy phase.
+    const cs = o.carrierStatus;
+    if (cs === 'expired') return { state: 'expired', label: 'Expired · unfilled', tone: 'bad' };
+    if (cs === 'cancelled') return { state: 'cancelled', label: 'Cancelled', tone: 'bad' };
+    if (cs === 'fulfilled') return { state: 'funding', label: 'Funded · deploying', tone: 'warn' };
+    if (cs === 'open' || cs === 'presignaturePending') return { state: 'funding', label: 'Funding…', tone: '' };
+    // Legacy approve flow: allowance ≥ total sell = approved but never deployed.
     try {
       if (o.allowance && BigInt(o.allowance) >= BigInt(o.totalSell) && BigInt(o.totalSell) > 0n) {
         return { state: 'approved', label: 'Approved · awaiting deploy', tone: 'warn' };

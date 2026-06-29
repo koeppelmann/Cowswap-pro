@@ -2,7 +2,7 @@ import type { Address, Hex } from 'viem';
 import type { ChainConfig } from './chains';
 import { SAFE_1_3_0_PROXY_CREATION_CODE } from './__fixtures__/proxyCreationCode';
 import { predictSafeAddress } from './predict';
-import { buildDeployment, type Deployment, type TwapData } from './twap';
+import { buildBalanceDeployment, buildDeployment, type Deployment, type TwapData } from './twap';
 import { APP_DATA_HASH } from './appData';
 
 const MAX_UINT32 = 0xffffffffn;
@@ -25,6 +25,9 @@ export type PlanInput = {
   skipBufferBps?: number; // extra WINDOWS beyond funded parts, in bps (2000 = +20%)
   alignStart?: boolean; // snap t0 to the interval grid → canonical valid-froms
   nowSec?: bigint; // current unix time, used to floor t0 when alignStart
+  // --- carrier-order flow ---
+  salt?: Hex; // random bytes32 → unique conditional order + unique Safe address per TWAP
+  carrierBufferBps?: number; // worst-case in-kind carrier shortfall reserved so every part funds (default 10)
 };
 
 export type Plan = {
@@ -39,6 +42,9 @@ export type Plan = {
   deployment: Deployment;
   safeAddress: Address;
   totalDuration: bigint; // windows × t (the full schedule, incl. buffer tail)
+  carrierSellAmount: bigint; // the user's full input — what the carrier order sells (in-kind)
+  carrierBuyMin: bigint; // guaranteed min delivered to the Safe (parts are sized to this)
+  saltNonce: bigint; // proxy-factory saltNonce (0; uniqueness comes from the order salt)
   errors: string[];
 };
 
@@ -68,7 +74,11 @@ export function buildPlan(input: PlanInput): Plan {
   const windows = bigMax(safeK, (safeK * (10000n + bufferBps) + 9999n) / 10000n);
   if (windows > MAX_UINT32) errors.push('Too many parts.');
 
-  const partSellAmount = input.totalSell / safeK; // per-part size keyed to FUNDED parts
+  // The in-kind carrier delivers >= buyMin to the Safe; sizing parts to buyMin (not the
+  // signed totalSell) guarantees every part is funded — no stuck last part from the hop fee.
+  const carrierBufferBps = BigInt(Math.max(0, Math.round(input.carrierBufferBps ?? 10)));
+  const carrierBuyMin = (input.totalSell * (10000n - carrierBufferBps)) / 10000n;
+  const partSellAmount = carrierBuyMin / safeK; // per-part size keyed to FUNDED parts
   const minPartLimit = input.minPartLimit;
   const effectiveTotalSell = partSellAmount * safeK; // funded amount (= K parts)
 
@@ -79,36 +89,68 @@ export function buildPlan(input: PlanInput): Plan {
   // the Unix epoch), so every part's start lands on a wall-clock boundary in UTC.
   // 0 ⇒ "start now" (cabinet) at deploy time, as before.
   const aligned = !!input.alignStart && input.nowSec !== undefined && input.nowSec > 0n && t > 0n;
-  const t0 = aligned ? (input.nowSec! - (input.nowSec! % t)) : 0n;
+  // Balance-sizing arms with t0 == 0 ("start now" at deploy); grid-alignment is
+  // not used (the start is the carrier-fill moment, unknown at sign time).
+  const t0 = 0n;
+  void aligned;
+
+  // Zero-dust (balance-sizing) flow: the Safe is funded by the carrier fill and
+  // deployed as a CoW post-interaction; the initializer splits the funded balance
+  // into `windows` exact parts. The per-part amount is resolved on-chain, so only
+  // the limit *rate* (minPartLimit per estimated part) is committed here.
+  const receiver = input.receiver ?? input.owner;
+  const salt = input.salt;
+  if (!salt) errors.push('Missing salt (unique per TWAP).');
+  if (!input.chain.twapBalanceInitializer) errors.push('Zero-dust TWAP not available on this chain.');
 
   const twap: TwapData = {
     sellToken: input.sellToken,
     buyToken: input.buyToken,
-    // MUST be non-zero: CoW's autopilot deny-lists receiver == address(0)
-    // (`banned_user`), filtering the order before it reaches solvers. We can't
-    // use the Safe's own (yet-undeployed) address without a CREATE2 circular
-    // dependency, so proceeds go to the owner's wallet — which is also nicer UX.
-    receiver: input.receiver ?? input.owner,
-    partSellAmount,
+    receiver,
+    partSellAmount, // estimate (bal/n); the on-chain value is resolved at deploy
     minPartLimit,
     t0,
     n: windows,
     t,
     span,
-    appData: input.appData ?? APP_DATA_HASH, // proper CoW appData (appCode + orderClass=twap)
+    appData: input.appData ?? APP_DATA_HASH,
   };
 
+  // Provisional params/orderHash from the estimated part size (display only — the
+  // real on-chain order hash is resolved post-fill from the delivered balance).
   const approveAmount = effectiveTotalSell;
-  const deployment = buildDeployment({
+  const provisional = buildDeployment({
     owner: input.owner,
     twap,
     approveAmount,
-    // allowance model: pull only the FUNDED amount from the user's wallet at deploy
     from: input.owner,
-    pullAmount: approveAmount,
+    pullAmount: 0n,
     twapSafeInitializer: input.chain.twapSafeInitializer,
     extensibleFallbackHandler: input.chain.extensibleFallbackHandler,
+    salt,
   });
+
+  // The REAL initializer: balance-sizing setup. partSellAmount is NOT in it, so
+  // it's not in the CREATE2 salt — the Safe address still commits to everything
+  // known at sign time (tokens, n, t, span, limit rate, salt, appData).
+  const balanceDep = buildBalanceDeployment({
+    owner: input.owner,
+    config: {
+      sellToken: input.sellToken,
+      buyToken: input.buyToken,
+      receiver,
+      n: windows,
+      t,
+      span,
+      limitNum: minPartLimit, // minPartLimit per estimated part ...
+      limitDen: partSellAmount > 0n ? partSellAmount : 1n, // ... / the estimated part size
+      salt: salt ?? ('0x' + '0'.repeat(64)) as Hex,
+      appData: input.appData ?? APP_DATA_HASH,
+    },
+    twapBalanceInitializer: input.chain.twapBalanceInitializer ?? input.chain.twapSafeInitializer,
+    extensibleFallbackHandler: input.chain.extensibleFallbackHandler,
+  });
+  const deployment: Deployment = { ...provisional, initializer: balanceDep.initializer };
 
   const safeAddress = predictSafeAddress({
     factory: input.chain.safeProxyFactory,
@@ -130,6 +172,9 @@ export function buildPlan(input: PlanInput): Plan {
     deployment,
     safeAddress,
     totalDuration: t * windows,
+    carrierSellAmount: input.totalSell,
+    carrierBuyMin,
+    saltNonce: 0n,
     errors,
   };
 }

@@ -22,6 +22,14 @@ export type ChainConfig = {
   vaultRelayer: Address;
   // Our helper, deterministically deployed to the same address on every chain.
   twapSafeInitializer: Address;
+  // Balance-sizing initializer: reads the Safe's funded balance at deploy and
+  // splits it into n exact parts (zero dust). Used by the carrier post-hook flow.
+  twapBalanceInitializer?: Address;
+  // Carrier-order hook that CREATE2-deploys + arms the TWAP Safe as part of one
+  // signed order (per-chain; absent until deployed -> carrier TWAP unavailable).
+  twapBootstrap?: Address;
+  // GPv2 settlement (prod) — the EIP-712 verifyingContract for carrier orders.
+  cowSettlement: Address;
   // On-chain recovery registry (deterministic, same address every chain).
   twapDeploymentRegistry: Address;
   // UX
@@ -38,6 +46,7 @@ const TS_FACTORY = '0x52eD56Da04309Aca4c3FECC595298d80C2f16BAc' as const;
 const VAULT_RELAYER = '0xC92E8bdf79f0507f65a392b0ab4667716BFE0110' as const;
 const SAFE_PROXY_FACTORY = '0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2' as const;
 const EXT_FALLBACK_HANDLER = '0x2f55e8b20D0B9FEFA187AA7d00B6Cbe563605bF5' as const;
+const COW_SETTLEMENT = '0x9008D19f58AAbD9eD0D60971565AA8510560ab41' as const; // GPv2Settlement, same on every chain
 
 // Deterministic address from contracts/script/DeployInitializer.s.sol (SALT v1,
 // solc 0.8.34, optimizer 200, cancun). Same on every chain once deployed.
@@ -57,6 +66,7 @@ export const CHAINS: Record<number, ChainConfig> = {
     vaultRelayer: VAULT_RELAYER,
     twapSafeInitializer: TWAP_SAFE_INITIALIZER,
     twapDeploymentRegistry: TWAP_DEPLOYMENT_REGISTRY,
+    cowSettlement: COW_SETTLEMENT,
     explorer: 'https://etherscan.io',
     cowExplorer: 'https://explorer.cow.fi',
     safeAppPrefix: 'eth',
@@ -83,6 +93,9 @@ export const CHAINS: Record<number, ChainConfig> = {
     vaultRelayer: VAULT_RELAYER,
     twapSafeInitializer: TWAP_SAFE_INITIALIZER,
     twapDeploymentRegistry: TWAP_DEPLOYMENT_REGISTRY,
+    cowSettlement: COW_SETTLEMENT,
+    twapBootstrap: '0x2C1aB2AF546f9157628dA8F8b50b6f5Ec9f21422',
+    twapBalanceInitializer: '0x415667181180052B3fad7Bdf65185Ac730Dce0EC',
     explorer: 'https://gnosisscan.io',
     cowExplorer: 'https://explorer.cow.fi/gc',
     safeAppPrefix: 'gno',

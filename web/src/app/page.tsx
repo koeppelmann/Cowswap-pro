@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { formatUnits, type Address } from 'viem';
+import { formatUnits, type Address, type Hex } from 'viem';
 import { useAccount, useBytecode, useChainId, useReadContract } from 'wagmi';
 import { ConnectButton } from '../components/ConnectButton';
 import { ConfirmModal } from '../components/ConfirmModal';
@@ -19,6 +19,12 @@ import { useSpot } from '../lib/useSpot';
 import { useDebounced } from '../lib/useDebounced';
 import { twapAdvantageBps } from '../lib/quote';
 import { minPartFromPrice, minPartFromReceiveTotal, minPartFromSlippage, minPriceStr, minReceiveTotalStr, slippageBpsFromMinPart } from '../lib/limit';
+
+/** A random bytes32, used as a per-TWAP salt for a unique order + Safe address. */
+function randomBytes32(): Hex {
+  const b = crypto.getRandomValues(new Uint8Array(32));
+  return ('0x' + Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('')) as Hex;
+}
 
 const IVOPTS: { s: bigint; label: string }[] = [
   { s: 60n, label: '1m' }, { s: 300n, label: '5m' }, { s: 900n, label: '15m' },
@@ -125,6 +131,9 @@ function Builder({ chain, owner, connected, tabs }: { chain: NonNullable<ReturnT
   const [showSchedule, setShowSchedule] = useState(false);
   const [editRecipient, setEditRecipient] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  // Unique per-TWAP salt → unique conditional order + Safe address. Regenerated
+  // after each submit so two identical-config TWAPs never collide on one Safe.
+  const [salt, setSalt] = useState<Hex>(() => randomBytes32());
 
   // canonical scheduling
   const [alignStart, setAlignStart] = useState(true);
@@ -259,7 +268,7 @@ function Builder({ chain, owner, connected, tabs }: { chain: NonNullable<ReturnT
   const plan = configOk && owner && receiver ? buildPlan({
     owner, chain, sellToken: sellToken!.address, sellDecimals: sellToken!.decimals, buyToken: buyToken!.address,
     receiver, totalSell: totalSell!, minPartLimit: minPartLimit!, n, partSeconds,
-    span: effSpan, skipBufferBps: bufferBps, alignStart, nowSec: planNow,
+    span: effSpan, skipBufferBps: bufferBps, alignStart, nowSec: planNow, salt,
   }) : null;
 
   const switchTokens = () => { const s = sellAddr; setSellAddr(buyAddr); setBuyAddr(s); };
@@ -416,7 +425,7 @@ function Builder({ chain, owner, connected, tabs }: { chain: NonNullable<ReturnT
       </div>
 
       {showConfirm && frozenPlan && sellToken && buyToken && owner && (
-        <ConfirmModal chain={chain} plan={frozenPlan} sellToken={sellToken} buyToken={buyToken} owner={owner} onClose={() => { setShowConfirm(false); setConfirmNow(null); setFrozenPlan(null); }} />
+        <ConfirmModal chain={chain} plan={frozenPlan} sellToken={sellToken} buyToken={buyToken} owner={owner} onClose={() => { setShowConfirm(false); setConfirmNow(null); setFrozenPlan(null); setSalt(randomBytes32()); }} />
       )}
     </>
   );

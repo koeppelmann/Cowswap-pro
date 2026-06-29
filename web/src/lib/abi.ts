@@ -129,6 +129,35 @@ export const twapSafeInitializerAbi = [
   },
 ] as const;
 
+// Balance-sizing initializer: one struct arg; partSell is derived on-chain from
+// the Safe's funded balance (balance/n), so it's NOT part of this calldata.
+export const twapBalanceInitializerAbi = [
+  {
+    type: 'function',
+    name: 'initialize',
+    stateMutability: 'nonpayable',
+    inputs: [
+      {
+        name: 'c',
+        type: 'tuple',
+        components: [
+          { name: 'sellToken', type: 'address' },
+          { name: 'buyToken', type: 'address' },
+          { name: 'receiver', type: 'address' },
+          { name: 'n', type: 'uint256' },
+          { name: 't', type: 'uint256' },
+          { name: 'span', type: 'uint256' },
+          { name: 'limitNum', type: 'uint256' },
+          { name: 'limitDen', type: 'uint256' },
+          { name: 'salt', type: 'bytes32' },
+          { name: 'appData', type: 'bytes32' },
+        ],
+      },
+    ],
+    outputs: [],
+  },
+] as const;
+
 export const composableCowAbi = [
   { type: 'function', name: 'domainSeparator', stateMutability: 'view', inputs: [], outputs: [{ type: 'bytes32' }] },
   {

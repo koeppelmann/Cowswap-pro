@@ -7,7 +7,7 @@ import {
   zeroAddress,
   zeroHash,
 } from 'viem';
-import { safeAbi, twapDataAbi, twapSafeInitializerAbi } from './abi';
+import { safeAbi, twapDataAbi, twapBalanceInitializerAbi, twapSafeInitializerAbi } from './abi';
 
 export const TWAP_HANDLER = '0x6cF1e9cA41f7611dEf408122793c358a3d11E5a5' as const;
 
@@ -90,6 +90,52 @@ export function encodeSafeSetup(opts: {
       zeroAddress,
     ],
   });
+}
+
+// --- Balance-sizing flow (zero dust) ---------------------------------------
+// The Safe is funded by the carrier fill, then deployed as a CoW post-interaction;
+// the initializer reads its own balance and splits it into n exact parts. The
+// per-part amount is therefore NOT in the setup calldata (so it doesn't enter the
+// CREATE2 salt) — the Safe address commits only to these always-known fields.
+
+export type TwapBalanceConfig = {
+  sellToken: Address;
+  buyToken: Address;
+  receiver: Address; // zeroAddress -> the Safe itself
+  n: bigint;
+  t: bigint;
+  span: bigint;
+  limitNum: bigint; // minPartLimit = partSell * limitNum / limitDen
+  limitDen: bigint;
+  salt: Hex;
+  appData: Hex;
+};
+
+/** Calldata for TwapBalanceInitializer.initialize((...)) — the Safe setup delegatecall. */
+export function encodeBalanceInitializeData(c: TwapBalanceConfig): Hex {
+  return encodeFunctionData({ abi: twapBalanceInitializerAbi, functionName: 'initialize', args: [c] });
+}
+
+export type BalanceDeployment = {
+  initializer: Hex; // full Safe setup(...) calldata (the proxy initializer)
+  config: TwapBalanceConfig;
+};
+
+/** Build the Safe setup() calldata for the balance-sizing initializer. */
+export function buildBalanceDeployment(input: {
+  owner: Address;
+  config: TwapBalanceConfig;
+  twapBalanceInitializer: Address;
+  extensibleFallbackHandler: Address;
+}): BalanceDeployment {
+  const initData = encodeBalanceInitializeData(input.config);
+  const initializer = encodeSafeSetup({
+    owner: input.owner,
+    to: input.twapBalanceInitializer,
+    data: initData,
+    fallbackHandler: input.extensibleFallbackHandler,
+  });
+  return { initializer, config: input.config };
 }
 
 export type BuildDeploymentInput = {

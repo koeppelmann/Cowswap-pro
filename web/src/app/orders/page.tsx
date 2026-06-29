@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { formatUnits } from 'viem';
-import { useAccount, useChainId } from 'wagmi';
+import { formatUnits, type Address, type PublicClient } from 'viem';
+import { useAccount, useChainId, usePublicClient } from 'wagmi';
 import { ConnectButton } from '../../components/ConnectButton';
 import { ClaimButton } from '../../components/ClaimButton';
 import { getChainConfig, type ChainConfig } from '../../lib/chains';
-import { avgPrice, deriveState, fundedParts, isSettled, type EnrichedOrder, type OrderState } from '../../lib/orderState';
+import { avgPrice, deriveState, fundedParts, isSettled, type OrderState } from '../../lib/orderState';
+import { enrichOrders, fetchOwnerCarriers, fetchSafeLegs, type HistoryOrder, type Leg } from '../../lib/carrierHistory';
 import { dispAmount, fmtRate, humanizeSeconds, rateParts, shortAddress } from '../../lib/format';
 import { useTokenList } from '../../lib/useTokenList';
 import { useTokenMeta } from '../../lib/useTokenMeta';
@@ -35,7 +36,7 @@ function baseFlip(sellSym: string, buySym: string): boolean {
 }
 
 const GROUPS: { key: string; title: string; states: OrderState[]; collapsed?: boolean }[] = [
-  { key: 'active', title: 'In progress', states: ['active', 'partial'] },
+  { key: 'active', title: 'In progress', states: ['active', 'partial', 'funding'] },
   { key: 'approved', title: 'Approved · awaiting deploy', states: ['approved'] },
   { key: 'done', title: 'Completed', states: ['filled', 'settled'] },
   { key: 'ended', title: 'Ended', states: ['cancelled', 'expired'] },
@@ -50,7 +51,7 @@ export default function OrdersPage() {
   // default. Clicking a price flips every order of that pair; "flip prices"
   // flips them all.
   const [flipped, setFlipped] = useState<Set<string>>(new Set());
-  const pairKey = (o: EnrichedOrder) => [o.sellToken.toLowerCase(), o.buyToken.toLowerCase()].sort().join('/');
+  const pairKey = (o: HistoryOrder) => [o.sellToken.toLowerCase(), o.buyToken.toLowerCase()].sort().join('/');
   const togglePair = (key: string) => setFlipped((s) => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; });
 
   // Load instantly from the last-connected owner instead of waiting for the
@@ -67,20 +68,24 @@ export default function OrdersPage() {
   const owner = address ?? cached.owner;
   const effChain = address ? chainId : (cached.chainId ?? chainId);
   const chain = getChainConfig(effChain);
+  const publicClient = usePublicClient({ chainId: effChain as 1 | 100 });
 
-  const { data, isLoading } = useQuery<{ orders: EnrichedOrder[]; total: number; shown: number }>({
-    queryKey: ['enriched', effChain, owner],
+  // Frontend-only: the owner's TWAPs are derived entirely from the public CoW
+  // orderbook (their in-kind carrier orders) + one on-chain lens call. No server.
+  const { data, isLoading } = useQuery<HistoryOrder[]>({
+    queryKey: ['twaps', effChain, owner],
     enabled: !!owner && !!chain,
     refetchInterval: 8000,
     queryFn: async () => {
-      const r = await fetch(`/api/orders/enriched?chainId=${effChain}&owner=${owner}`);
-      if (!r.ok) return { orders: [], total: 0, shown: 0 };
-      return r.json();
+      if (!chain || !owner) return [];
+      const carriers = await fetchOwnerCarriers(chain, owner as Address);
+      if (!publicClient || carriers.length === 0) return carriers;
+      return enrichOrders(publicClient as unknown as PublicClient, carriers);
     },
   });
 
   const now = Math.floor(Date.now() / 1000);
-  const orders = useMemo(() => data?.orders ?? [], [data]);
+  const orders = useMemo(() => data ?? [], [data]);
 
   // Token resolution: curated/official list + one batched multicall for unknowns.
   const list = useTokenList(chain ?? getChainConfig(100)!);
@@ -144,7 +149,7 @@ export default function OrdersPage() {
 
 const DATE_FMT: Intl.DateTimeFormatOptions = { month: 'numeric', day: 'numeric', year: '2-digit', hour: 'numeric', minute: '2-digit' };
 
-function OrderRow({ chain, o, now, resolve, flipPair, onFlipPair }: { chain: ChainConfig; o: EnrichedOrder; now: number; resolve: ResolveFn; flipPair: boolean; onFlipPair: () => void }) {
+function OrderRow({ chain, o, now, resolve, flipPair, onFlipPair }: { chain: ChainConfig; o: HistoryOrder; now: number; resolve: ResolveFn; flipPair: boolean; onFlipPair: () => void }) {
   const [open, setOpen] = useState(false);
   const sell = resolve(o.sellToken);
   const buy = resolve(o.buyToken);
@@ -194,22 +199,16 @@ function OrderRow({ chain, o, now, resolve, flipPair, onFlipPair }: { chain: Cha
   );
 }
 
-type Leg = { sellAmount: string; buyAmount: string; orderUid: string; txHash?: string };
-
 function OrderDetail({ chain, o, sell, buy, K, avg, remaining, received, settled, inProgress, flip, onFlip }: {
-  chain: ChainConfig; o: EnrichedOrder; sell: Resolved; buy: Resolved; K: number; avg: number | null; remaining: bigint; received: bigint; settled: boolean; inProgress: boolean; flip: boolean; onFlip: () => void;
+  chain: ChainConfig; o: HistoryOrder; sell: Resolved; buy: Resolved; K: number; avg: number | null; remaining: bigint; received: bigint; settled: boolean; inProgress: boolean; flip: boolean; onFlip: () => void;
 }) {
-  const { data, isLoading } = useQuery<{ legs: Leg[] }>({
+  const { data, isLoading } = useQuery<Leg[]>({
     queryKey: ['legs', chain.chainId, o.safe],
     enabled: o.deployed,
     staleTime: 15_000,
-    queryFn: async () => {
-      const r = await fetch(`/api/trades?chainId=${chain.chainId}&safe=${o.safe}`);
-      if (!r.ok) return { legs: [] };
-      return r.json();
-    },
+    queryFn: () => fetchSafeLegs(chain.chainId, o.safe),
   });
-  const legs = data?.legs ?? [];
+  const legs = data ?? [];
 
   // Per-part limit price (buy per sell) = minPartLimit / partSell. Each fill's
   // surplus over this floor is what we color: lots of margin = green, barely
@@ -260,6 +259,16 @@ function OrderDetail({ chain, o, sell, buy, K, avg, remaining, received, settled
 
       {(settled || inProgress) && remaining > 0n && (
         <ClaimButton mode={inProgress ? 'cancel' : 'claim'} safe={o.safe as `0x${string}`} sellToken={o.sellToken as `0x${string}`} owner={o.owner as `0x${string}`} remaining={remaining} symbol={sell.symbol} decimals={sell.decimals} />
+      )}
+
+      {o.carrierUid && (
+        <div className="kv">
+          <span className="k hint">Funding order</span>
+          <span className="v hint">
+            <a href={`${chain.cowExplorer}/orders/${o.carrierUid}`} target="_blank" rel="noreferrer">Carrier on CoW ↗</a>
+            {!o.deployed && <span> · {o.carrierStatus}</span>}
+          </span>
+        </div>
       )}
 
       <div className="kv">
