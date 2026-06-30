@@ -17,6 +17,7 @@ import {
 import { discoverLeverageCarriers, loadSavedSafes, positionPnl, readPositions, saveSafe, type AaveReserve, type LevCarrier, type LivePos, type Market } from '../lib/positions';
 import { cowApiBaseClient, LEV_CARRIER_APP_CODE, SWAP_APP_CODE } from '../lib/carrierHistory';
 import { fetchQuote } from '../lib/quote';
+import type { SharedSel } from '../lib/sharedSel';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Token universe. The proven on-chain pair on barn is WXDAI (debt/stable, sell)
@@ -142,7 +143,7 @@ type OpenPlan = {
 
 const GNOSIS_CFG = getChainConfig(100)!;
 
-export function SwapTab({ tabs, viewOwner, initialPosition }: { tabs?: React.ReactNode; viewOwner?: Address; initialPosition?: Address }) {
+export function SwapTab({ tabs, viewOwner, initialPosition, shared, onShared }: { tabs?: React.ReactNode; viewOwner?: Address; initialPosition?: Address; shared?: SharedSel; onShared?: (s: SharedSel) => void }) {
   const { address: wallet, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
@@ -161,10 +162,13 @@ export function SwapTab({ tabs, viewOwner, initialPosition }: { tabs?: React.Rea
     [listTokens],
   );
 
-  // sell side is a token or a position; buy side is always a token
-  const [sell, setSell] = useState<UIToken | LivePos>(WXDAI);
-  const [buy, setBuy] = useState<UIToken>(WETH);
-  const [amount, setAmount] = useState('1');   // equity (open) OR percent (reduce)
+  // sell side is a token or a position; buy side is always a token. Seed from the
+  // cross-tab shared selection so switching from TWAP keeps the same tokens + amount.
+  const liteToTok = (t: SharedSel['sell']): UIToken | undefined =>
+    t ? { address: t.address as Address, symbol: t.symbol, decimals: t.decimals, name: t.symbol, kind: tokenKind(t.address) } : undefined;
+  const [sell, setSell] = useState<UIToken | LivePos>(() => liteToTok(shared?.sell) ?? WXDAI);
+  const [buy, setBuy] = useState<UIToken>(() => liteToTok(shared?.buy) ?? WETH);
+  const [amount, setAmount] = useState(shared?.amount ?? '1');   // equity (open) OR percent (reduce)
   const [lev, setLev] = useState(1);
   const [showLev, setShowLev] = useState(false);
   const [slippagePct, setSlippagePct] = useState(1);
@@ -174,6 +178,20 @@ export function SwapTab({ tabs, viewOwner, initialPosition }: { tabs?: React.Rea
   const [stopPct, setStopPct] = useState('50');   // stop protection: % of position to deleverage
   const isPos = (x: UIToken | LivePos): x is LivePos => 'safe' in x;
   const sellIsPos = isPos(sell);
+
+  // mirror the plain-token selection up so the TWAP tab keeps it on switch. A
+  // selected leverage position is never written (TWAP can't sell one) — the last
+  // plain selection is preserved instead.
+  useEffect(() => {
+    if (sellIsPos) return;
+    const s = sell as UIToken;
+    onShared?.({
+      sell: { address: s.address, symbol: s.symbol, decimals: s.decimals },
+      buy: { address: buy.address, symbol: buy.symbol, decimals: buy.decimals },
+      amount,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sell, buy, amount, sellIsPos]);
 
   // Aave market snapshot: decides for WHICH pairs the 'Add Leverage' option exists
   const [market, setMarket] = useState<Market | null>(null);

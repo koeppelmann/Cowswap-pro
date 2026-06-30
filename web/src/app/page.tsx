@@ -15,6 +15,7 @@ import { buildPlan, type Plan } from '../lib/plan';
 import { type Duration, dispAmount, durationToSeconds, fmtAmount, fmtRate, humanizeSeconds, isAddress, shortAddress, tryParseUnits } from '../lib/format';
 import { useToken } from '../lib/useToken';
 import { usePosParam, useViewParam } from '../lib/useViewMode';
+import type { SharedSel } from '../lib/sharedSel';
 import { useQuotes } from '../lib/useQuotes';
 import { useSpot } from '../lib/useSpot';
 import { useDebounced } from '../lib/useDebounced';
@@ -95,6 +96,9 @@ export default function Page() {
   const chain = getChainConfig(chainId);
   // Swap (with optional leverage) is the default; TWAP keeps the existing builder.
   const [tab, setTab] = useState<Tab>('swap');
+  // sell/buy/amount shared across tabs so switching Swap↔TWAP keeps the selection
+  // (a leverage position is never written here — TWAP can't sell one).
+  const [shared, setShared] = useState<SharedSel>({});
   const ordersHref = view ? `/orders?view=${view}` : '/orders';
 
   return (
@@ -108,11 +112,11 @@ export default function Page() {
       </div>
 
       {tab === 'swap' ? (
-        <SwapTab tabs={<Tabs tab={tab} setTab={setTab} />} viewOwner={view ?? undefined} initialPosition={pos ?? undefined} />
+        <SwapTab tabs={<Tabs tab={tab} setTab={setTab} />} viewOwner={view ?? undefined} initialPosition={pos ?? undefined} shared={shared} onShared={setShared} />
       ) : isConnected && !chain ? (
         <div className="widget center"><p className="errors">Unsupported network — switch to Ethereum or Gnosis.</p></div>
       ) : (
-        <Builder key={chainId} chain={chain ?? getChainConfig(100)!} owner={address} connected={isConnected} tabs={<Tabs tab={tab} setTab={setTab} />} />
+        <Builder key={chainId} chain={chain ?? getChainConfig(100)!} owner={address} connected={isConnected} tabs={<Tabs tab={tab} setTab={setTab} />} shared={shared} onShared={setShared} />
       )}
 
       {tab === 'twap' && (
@@ -125,12 +129,13 @@ export default function Page() {
   );
 }
 
-function Builder({ chain, owner, connected, tabs }: { chain: NonNullable<ReturnType<typeof getChainConfig>>; owner?: Address; connected: boolean; tabs: React.ReactNode }) {
-  // sensible defaults so the widget shows a live quote immediately (Builder is
-  // keyed by chainId, so these re-init per chain). Gnosis → WXDAI→GNO, mainnet → WETH→USDT.
-  const [sellAddr, setSellAddr] = useState<string>(chain.tokens[0]?.address ?? '');
-  const [buyAddr, setBuyAddr] = useState<string>(chain.tokens[2]?.address ?? chain.tokens[1]?.address ?? '');
-  const [totalSellStr, setTotalSellStr] = useState('100');
+function Builder({ chain, owner, connected, tabs, shared, onShared }: { chain: NonNullable<ReturnType<typeof getChainConfig>>; owner?: Address; connected: boolean; tabs: React.ReactNode; shared?: SharedSel; onShared?: (s: SharedSel) => void }) {
+  // Seed from the shared cross-tab selection (so switching from Swap keeps tokens +
+  // amount); otherwise sensible per-chain defaults. Builder is keyed by chainId, so
+  // these re-init per chain. Gnosis → WXDAI→GNO, mainnet → WETH→USDT.
+  const [sellAddr, setSellAddr] = useState<string>(shared?.sell?.address ?? chain.tokens[0]?.address ?? '');
+  const [buyAddr, setBuyAddr] = useState<string>(shared?.buy?.address ?? chain.tokens[2]?.address ?? chain.tokens[1]?.address ?? '');
+  const [totalSellStr, setTotalSellStr] = useState(shared?.amount ?? '100');
   // Source of truth for timing is parts (n) + interval (t). Total = n × t is
   // DERIVED, so the three always add up. Defaults: 12 × 5m = 1h.
   const [nParts, setNParts] = useState(12);
@@ -169,6 +174,16 @@ function Builder({ chain, owner, connected, tabs }: { chain: NonNullable<ReturnT
   const { token: buyToken } = useToken(chain, buyAddr);
   const sd = sellToken?.decimals ?? 18;
   const bd = buyToken?.decimals ?? 18;
+
+  // mirror the selection up so switching back to Swap keeps the same tokens + amount
+  useEffect(() => {
+    onShared?.({
+      sell: sellToken ? { address: sellToken.address, symbol: sellToken.symbol, decimals: sellToken.decimals } : shared?.sell,
+      buy: buyToken ? { address: buyToken.address, symbol: buyToken.symbol, decimals: buyToken.decimals } : shared?.buy,
+      amount: totalSellStr,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sellToken, buyToken, totalSellStr]);
 
   const { data: sellBalRaw } = useReadContract({
     address: sellToken?.address, abi: erc20Abi, functionName: 'balanceOf', args: owner ? [owner] : undefined,
