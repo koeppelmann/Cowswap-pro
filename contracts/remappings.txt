@@ -1,0 +1,2 @@
+safe-contracts/=lib/safe-contracts/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
