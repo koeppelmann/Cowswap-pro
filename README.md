@@ -1,175 +1,112 @@
-# TWAP Safe — approve-to-deploy CoW Protocol TWAPs
+# CoW Swap Pro (experimental)
 
-Create a CoW Protocol **TWAP** order, get a **deterministic Safe address**, and just
-**approve that address** to spend your sell token. The Safe is deployed only when
-someone triggers it, and the **moment it's deployed the TWAP order is already live**
-— the deploy tx pulls your tokens via `transferFrom`, registers the order, and
-starts it, all atomically. No second signature, no backend required, and your
-tokens never sit in an undeployed address.
+An **experimental "pro" interface for [CoW Protocol](https://cow.fi)** with advanced
+order types beyond a plain swap:
 
-The trick: the Safe's CREATE2 address is derived from its entire `setup()`
-initializer, so the address *commits* to (a) your wallet as the only owner, (b)
-the CoW `ExtensibleFallbackHandler`, and (c) an initial transaction that pulls the
-sell token from you and registers your exact TWAP. Because the Safe runs that
-initializer *as itself*, it is the approved spender — so a deployment can only
-ever reproduce precisely your configuration; a malicious deployer can't substitute
-different params (the address would change) and can't redirect your funds (you
-approved that specific address, and proceeds go to your wallet).
+- **Swap** — ordinary MEV-protected swaps, settled on CoW.
+- **TWAP** — time-weighted average price orders via a *deterministic single-use Safe*:
+  you only **approve an address**, and the order goes live the instant that Safe is
+  deployed — no second signature, no backend custody.
+- **Leverage** — one-signature leveraged longs (powered by Aave V3, settled atomically
+  by CoW), each position living in its own Safe you fully own. Open, adjust, close,
+  and arm trustless on-chain stop-loss protection.
 
-**Allowance model (why no tokens are ever stranded):** you grant an ERC-20
-allowance to the counterfactual Safe address instead of transferring tokens to it.
-If the order is never deployed, just revoke the approval — nothing was ever moved.
+Live (experimental, use at your own risk): **https://cowswap.koeppelmann.dev**
 
-Works on **Ethereum** and **Gnosis Chain** (more chains are a config entry away).
+> ⚠️ **Experimental.** This is a research/demo interface. Plain swaps and TWAPs settle on
+> CoW production; **leverage runs on CoW's staging (barn) environment**. Contracts are
+> verified on-chain (Sourcify) but **unaudited**. Don't risk funds you can't lose.
 
-```
-┌── you ──────────┐     ┌── this app ─────────────┐     ┌── chain ─────────────┐
-│ pick sell/buy,  │ ──▶ │ build setup() initializer│ ──▶ │ predicted Safe addr  │
-│ amount, parts,  │     │ predict CREATE2 address  │     │ (not deployed yet)   │
-│ interval        │     └──────────────────────────┘     └──────────┬───────────┘
-└─────────────────┘                                                  │ approve addr
-                                                                     ▼
-                              anyone calls createProxyWithNonce ─▶ Safe deployed:
-                              • owner = you   • transferFrom pulls your tokens
-                              • relayer approved   • TWAP registered & started
-                                                                     ▼
-                                          CoW watch-tower cuts each part → solvers settle
-```
+---
+
+## Why it's interesting
+
+**TWAP — approve-to-deploy.** Create a CoW TWAP, get a **deterministic Safe address**, and
+just **approve that address** to spend your sell token. The Safe is deployed only when
+someone triggers it, and **the moment it's deployed the order is already live** — the deploy
+tx pulls your tokens via `transferFrom`, registers the order, and starts it, atomically. The
+Safe's CREATE2 address commits to its entire `setup()` initializer (your wallet as sole owner,
+the CoW fallback handler, and the exact TWAP), so a deployer can't substitute params (the
+address would change) or redirect funds (you approved that specific address; proceeds go to
+your wallet). If you never deploy, just revoke the approval — nothing ever moved.
+
+**Leverage — one signature, self-custodied.** A leveraged long is opened with a single signed
+"carrier" order. CoW solvers atomically flash-swap into the collateral asset, supply it to
+Aave V3, borrow the debt token, and repay the flash — all in one settlement. The position
+lives in its own deterministic Safe you own; you manage (increase / decrease / close) and can
+arm a trustless on-chain **stop-loss** that only becomes fillable while health factor is below
+your trigger. See `contracts/DEPLOYMENTS.md` and `contracts/WRAPPER_SPEC.md` for the on-chain stack.
+
+Works on **Gnosis Chain** (full feature set) and **Ethereum** (swaps + TWAP).
+
+---
 
 ## Layout
 
 | Path | What |
 |------|------|
-| `contracts/` | Foundry project. `TwapSafeInitializer` (the delegatecall helper), interfaces, the deterministic-deploy script, and a **Gnosis fork test** proving the whole flow on real chain state. |
-| `web/` | Next.js dapp (wagmi + viem). Configure → predict → approve → auto-deploy. Includes a TS SDK (`web/src/lib`) that is **cross-checked byte-for-byte** against the on-chain-proven Solidity encoding. |
+| `web/` | Next.js dapp (wagmi + viem). Swap / TWAP / Leverage UI, order history with live P&L, `?view=0xADDR` read-only account viewing. Includes a TS SDK (`web/src/lib`) cross-checked byte-for-byte against the on-chain Solidity encoding. |
+| `contracts/` | Foundry project. `TwapSafeInitializer` (TWAP delegatecall helper) + the CoW wrapper / Aave-leverage stack (`CoWSafeWrapper`, `CoWSafeSigHandler`, `CowFlashLoanWrapper`, …), with Gnosis fork tests proving the flows on real chain state. |
+| `relayer/` | Node service that auto-deploys funded TWAP Safes (permissionless; ownership fixed by the address). |
 
-## How it works (the three moving parts)
-
-1. **`Safe.setup()` runs an initial transaction.** Its `to`/`data` args are a
-   `delegatecall` executed after owners and the fallback handler are set. We point
-   it at `TwapSafeInitializer`, which (running in the Safe's context) does:
-   - `transferFrom(you, Safe, n × partSellAmount)` — pulls your sell token using
-     the allowance you granted to this CREATE2 address (msg.sender == the Safe ==
-     the approved spender);
-   - `setDomainVerifier(GPv2 domain, ComposableCoW)` — a **self-call**, the only
-     way to satisfy the handler's `onlySelf` guard (this is why a plain MultiSend
-     can't do it: it would need the Safe's own address, which is circular);
-   - `approve(VaultRelayer, n × partSellAmount)`;
-   - `ComposableCoW.createWithContext(params, CurrentBlockTimestampFactory, …)` —
-     registers the TWAP and stamps "start now" into the cabinet (so `t0 = 0`).
-2. **`SafeProxyFactory.createProxyWithNonce` is CREATE2.**
-   `salt = keccak256(keccak256(initializer) ++ saltNonce)`, and the address hashes
-   in the singleton + the full initializer above. → address = commitment.
-3. **The CoW watch-tower** indexes the `ConditionalOrderCreated` event and cuts a
-   signed discrete order for each part; solvers settle them with MEV protection.
-
-## Contracts
+## Run it
 
 ```bash
-cd contracts
-forge build
-forge test                                              # offline: fork test skips
-GNOSIS_RPC_URL=https://rpc.gnosischain.com forge test -vv   # full end-to-end fork test
+# web app
+cd web && npm install && npm test && npm run dev   # http://localhost:3000
+
+# contracts
+cd contracts && forge build
+GNOSIS_RPC_URL=https://rpc.gnosischain.com forge test -vv   # full fork tests
 ```
 
-The fork test (`test/TwapSafeInitializer.fork.t.sol`) predicts the address, has the
-user **approve** it (tokens stay in the user's wallet), deploys via the real
-`SafeProxyFactory`, then asserts: predicted == deployed, the sell token was pulled
-from the user into the Safe at deploy (`transferFrom`), owner/threshold set, domain
-verifier wired, order registered, start-time stamped, relayer approved, and that
-`getTradeableOrderWithSignature` returns a valid first part with a real ERC-1271
-signature.
+---
 
-### Deploy the helper (one-time per chain, deterministic address)
+## How TWAP works (the three moving parts)
 
-```bash
-forge script script/DeployInitializer.s.sol --sig "predict()"          # show address
-forge script script/DeployInitializer.s.sol --sig "run()" \
-    --rpc-url <RPC> --broadcast --private-key $PK
-```
+1. **`Safe.setup()` runs an initial transaction** (`delegatecall` after owners + handler are
+   set), pointed at `TwapSafeInitializer`, which — running as the Safe — pulls your sell token
+   (`transferFrom`, using the allowance you granted this CREATE2 address), sets the GPv2 domain
+   verifier (a self-call, the only way past the handler's `onlySelf` guard), approves the CoW
+   vault relayer, and registers the TWAP with "start now".
+2. **`SafeProxyFactory.createProxyWithNonce` is CREATE2** — `salt` hashes in the full
+   initializer above, so the address *is* the commitment.
+3. **CoW's watch-tower** indexes `ConditionalOrderCreated` and cuts a signed order per part;
+   solvers settle each with MEV protection.
 
-It deploys through the canonical CREATE2 deployer so the helper lands at the **same
-address on every chain**: `0x3afA7DB0BEC365b4CF169A3556acDDe6653d0E18` (with the
-pinned solc 0.8.34 / optimizer 200 / cancun settings in `foundry.toml`). After
-deploying, that address is already wired into `web/src/lib/chains.ts`.
+The fork test (`contracts/test/TwapSafeInitializer.fork.t.sol`) predicts the address, approves
+it, deploys via the real `SafeProxyFactory`, then asserts predicted == deployed, tokens pulled
+at deploy, owner/handler/verifier wired, order registered and started, and a valid first part
+with a real ERC-1271 signature.
 
-## Web app
+## How leverage works
 
-```bash
-cd web
-npm install
-npm test          # SDK cross-check vs the Solidity vector
-npm run dev       # http://localhost:3000
-```
+A signed in-kind **carrier** order deposits your equity into a deterministic position Safe.
+The Safe's pre-signed leverage order then settles atomically through the CoW wrapper stack:
+flash-loan the leveraged size → swap to collateral → supply to Aave V3 → borrow the debt token
+→ repay the flash. A signed post-settlement **minimum health-factor** floor bounds how much a
+solver may under-deliver. Manage/close go through `LevManagerModule` (a signed Retarget intent,
+relayed). Realized P&L on closed positions is computed oracle-free from your own opening-swap
+rate. Details: `contracts/DEPLOYMENTS.md`, `contracts/WRAPPER_SPEC.md`, `contracts/FLASHLOAN_WRAPPER_SPEC.md`.
 
-Connect a browser wallet (MetaMask etc.), pick Ethereum or Gnosis, configure the
-order, then **Approve** the predicted Safe address. The relayer auto-deploys the
-instant the approval lands (a manual **Deploy** button is the fallback). Your
-tokens stay in your wallet until that single deploy tx pulls them and starts the
-TWAP; if you never deploy, just revoke the approval.
+## Recovery & persistence
+
+With the allowance model nothing is ever stranded (revoke if you don't deploy). To *deploy* a
+pending TWAP you need its exact initializer — kept recoverable via an on-chain
+`TwapDeploymentRegistry` (`Registered(safe, initializer)` event, permissionless), a server DB,
+and a downloadable self-custody JSON. Leverage positions are discovered from the CoW orderbook
+(carrier orders), so they show on any device, not just the one that opened them.
 
 ## Adding a chain
 
-Add an entry to `CHAINS` in `web/src/lib/chains.ts` (CoW/Safe addresses are
-identical across chains; only the Safe singleton and token list differ), make sure
-`TwapSafeInitializer` is deployed there, and add the chain to `web/src/lib/wagmi.ts`.
-
-## v2 features
-
-- **Quotes & pricing** (`/api/quote` proxy → CoW): auto-fills the limit from a live
-  market quote, **slippage tolerance** (price protection), and shows the
-  **TWAP-vs-sell-all-at-once** price difference. Form matches CoW's model
-  (sell + parts + interval, sell/buy-per-part). Interval presets **1m / 5m / 15m / 1h**.
-- **Redeem / cancel** (`RedeemPanel`): sweep remaining sell/buy tokens back to the owner
-  and cancel future parts (`ComposableCoW.remove`) — via Safe `execTransaction` with the
-  owner's pre-validated signature (no separate signing step).
-- **Persistence**: SQLite (`better-sqlite3`, `web/.data/orders.db`) via API routes
-  `POST/GET /api/orders` and `GET /api/orders/{safe}`. Every order is saved the moment its
-  address is known (before you approve).
-- **Order recovery** (see `PLAN.md` §D): with the allowance model nothing is ever stranded
-  (revoke the approval if you don't deploy), but to *deploy* a pending order you still need its
-  exact `initializer`. Three independent backups keep it recoverable:
-  1. **On-chain `TwapDeploymentRegistry`** — `register()` computes the predicted address on-chain
-     and emits `Registered(safe, initializer)`. Recover by reading the log for your address and
-     calling `createProxyWithNonce`. Permanent & permissionless. Deployed on Gnosis at
-     `0xaCa53FB27DDc026A27f039CE98a500C3D6B9091a`.
-  2. **Server DB** — primary record.
-  3. **Downloadable recovery file** — self-custody JSON with everything needed to redeploy.
-
-## Relayer (auto-deploy)
-
-`relayer/` is a Node service that removes the manual deploy step: it polls the app DB and,
-the instant the owner has approved the predicted Safe (allowance ≥ required) and holds the
-funds — both decoded straight from the initializer — submits `createProxyWithNonce`. The
-Safe's setup then pulls the tokens via `transferFrom` in that same tx. Deployment is
-permissionless and ownership is fixed by the initializer, so the relayer deploys safely on
-the user's behalf; the public CoW watch-tower then posts each part.
-
-```bash
-cd relayer
-RELAYER_PK=0x... node index.mjs          # continuous (polls every POLL_MS, default 15s)
-RELAYER_PK=0x... node index.mjs --once   # single sweep (for testing)
-WATCHTOWER=1 ...                         # optional: also post parts (off by default)
-```
-
-Proven end-to-end on Gnosis: after the user approved the predicted Safe, the relayer
-auto-deployed it (pulling the tokens via `transferFrom` at deploy) and both TWAP parts then
-filled with no user transaction beyond the initial approval.
-
-## Order history
-
-The app lists the connected owner's TWAPs (`HistoryPanel` ← `/api/orders`), with pair, size,
-schedule and explorer/Safe links. Orders are recorded in the DB the moment their address is
-generated. (Note: only orders created via the app are recorded; on-chain backfill of older
-safes is a TODO.) Intervals under ~3 minutes are flagged — CoW rejects parts whose `validTo`
-is too soon, so 1-minute parts never fill; use 5m+.
+Add an entry to `CHAINS` in `web/src/lib/chains.ts` (CoW/Safe addresses are identical across
+chains; only the Safe singleton + token list differ), deploy the helper there, and add the
+chain to `web/src/lib/wagmi.ts`.
 
 ## Notes & limitations
 
-- TWAP sells **ERC-20s only** (native ETH must be wrapped to WETH first).
-- Number of parts must be ≥ 2; interval ≤ 365 days (enforced by the TWAP handler).
-- Approved allowance (and wallet balance) must reach `n × partSellAmount`; the app checks exactly that before deploying.
-- Cancel remaining parts post-deploy with `ComposableCoW.remove(orderHash)` from
-  the owner wallet (a future UI addition).
-- A relayer/back-end that auto-deploys on funding can be layered on top — deployment
-  is permissionless and ownership is fixed by the address regardless of who sends it.
+- TWAP sells **ERC-20s only** (wrap native ETH first); parts ≥ 2; interval ≤ 365 days; use
+  ≥ 5m parts (CoW rejects parts whose `validTo` is too soon).
+- Leverage is **Gnosis-only** and runs on CoW **staging (barn)**.
+- Contracts are verified on-chain but **unaudited**. See `PRODUCTION.md` for the
+  productionization checklist.
