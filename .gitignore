@@ -24,8 +24,6 @@ web/_*.mts
 # node deps anywhere
 node_modules/
 **/node_modules/
-relayer/node_modules/
-relayer/node_modules
 
 # build artifacts / deploy logs (regenerated; not source)
 web/tsconfig.tsbuildinfo
@@ -33,3 +31,6 @@ web/*.tsbuildinfo
 contracts/broadcast/
 # agent worktrees / local tooling
 .claude/
+
+# runtime data
+web/.data/

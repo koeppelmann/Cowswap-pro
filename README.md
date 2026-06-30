@@ -21,21 +21,12 @@ Live (experimental, use at your own risk): **https://cowswap.koeppelmann.dev**
 
 ## Why it's interesting
 
-**TWAP — approve-to-deploy.** Create a CoW TWAP, get a **deterministic Safe address**, and
-just **approve that address** to spend your sell token. The Safe is deployed only when
-someone triggers it, and **the moment it's deployed the order is already live** — the deploy
-tx pulls your tokens via `transferFrom`, registers the order, and starts it, atomically. The
-Safe's CREATE2 address commits to its entire `setup()` initializer (your wallet as sole owner,
-the CoW fallback handler, and the exact TWAP), so a deployer can't substitute params (the
-address would change) or redirect funds (you approved that specific address; proceeds go to
-your wallet). If you never deploy, just revoke the approval — nothing ever moved.
-
-**Leverage — one signature, self-custodied.** A leveraged long is opened with a single signed
-"carrier" order. CoW solvers atomically flash-swap into the collateral asset, supply it to
-Aave V3, borrow the debt token, and repay the flash — all in one settlement. The position
-lives in its own deterministic Safe you own; you manage (increase / decrease / close) and can
-arm a trustless on-chain **stop-loss** that only becomes fillable while health factor is below
-your trigger. See `contracts/DEPLOYMENTS.md` and `contracts/WRAPPER_SPEC.md` for the on-chain stack.
+Both TWAPs and leverage trades are initiated the same elegant way: with a **single ordinary
+CoW Swap order** — a "funding order" — that sends your funds to a **deterministic Safe address**
+computed in advance. That Safe (which you alone own) is created on the fly and immediately runs
+the strategy: a TWAP registers and starts its time-sliced order; a leverage position flash-swaps
+into the asset and opens the Aave loan. One signature, self-custodied, with nothing stranded — if
+you never fund the address, nothing ever happens.
 
 Works on **Gnosis Chain** (full feature set) and **Ethereum** (swaps + TWAP).
 
@@ -47,7 +38,6 @@ Works on **Gnosis Chain** (full feature set) and **Ethereum** (swaps + TWAP).
 |------|------|
 | `web/` | Next.js dapp (wagmi + viem). Swap / TWAP / Leverage UI, order history with live P&L, `?view=0xADDR` read-only account viewing. Includes a TS SDK (`web/src/lib`) cross-checked byte-for-byte against the on-chain Solidity encoding. |
 | `contracts/` | Foundry project. `TwapSafeInitializer` (TWAP delegatecall helper) + the CoW wrapper / Aave-leverage stack (`CoWSafeWrapper`, `CoWSafeSigHandler`, `CowFlashLoanWrapper`, …), with Gnosis fork tests proving the flows on real chain state. |
-| `relayer/` | Node service that auto-deploys funded TWAP Safes (permissionless; ownership fixed by the address). |
 
 ## Run it
 
@@ -108,5 +98,4 @@ chain to `web/src/lib/wagmi.ts`.
 - TWAP sells **ERC-20s only** (wrap native ETH first); parts ≥ 2; interval ≤ 365 days; use
   ≥ 5m parts (CoW rejects parts whose `validTo` is too soon).
 - Leverage is **Gnosis-only** and runs on CoW **staging (barn)**.
-- Contracts are verified on-chain but **unaudited**. See `PRODUCTION.md` for the
-  productionization checklist.
+- Contracts are verified on-chain (Sourcify) but **unaudited** — research/demo only.
