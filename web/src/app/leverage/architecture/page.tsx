@@ -21,7 +21,10 @@ export default function ArchitecturePage() {
     <div className="lev-root">
       <div className="lev-hd">
         <div className="brand">🐮 CoW Leverage — Architecture</div>
-        <div style={{ display: 'flex', gap: 16 }}><Link href="/leverage" className="nav"><span>← app</span></Link></div>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <Link href="/leverage/wrappers" className="nav"><span>wrapper architectures</span></Link>
+          <Link href="/leverage" className="nav"><span>← app</span></Link>
+        </div>
       </div>
 
       <div className="lev-wrap" style={{ maxWidth: 820 }}>
