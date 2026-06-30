@@ -10,10 +10,12 @@ import { ClaimButton } from '../../components/ClaimButton';
 import { getChainConfig, type ChainConfig } from '../../lib/chains';
 import { avgPrice, deriveState, fundedParts, isSettled, type OrderState } from '../../lib/orderState';
 import { enrichOrders, fetchOwnerHistory, fetchSafeLegs, type HistoryOrder, type Leg, type SwapRow } from '../../lib/carrierHistory';
-import { discoverLeverageSafes, loadSavedSafes, readPositions, type LivePos, type Market } from '../../lib/positions';
+import { discoverLeverageCarriers, loadSavedSafes, positionPnl, readPositions, realizedReturn, type LevCarrier, type LivePos, type Market } from '../../lib/positions';
+import { ONBOARD } from '../../lib/onboard';
 import { dispAmount, fmtRate, humanizeSeconds, rateParts, shortAddress } from '../../lib/format';
 import { useTokenList } from '../../lib/useTokenList';
 import { useTokenMeta } from '../../lib/useTokenMeta';
+import { useViewParam } from '../../lib/useViewMode';
 
 type Resolved = { symbol: string; decimals: number };
 type ResolveFn = (addr: string) => Resolved;
@@ -46,6 +48,7 @@ const GROUPS: { key: string; title: string; states: OrderState[]; collapsed?: bo
 
 export default function OrdersPage() {
   const { address } = useAccount();
+  const view = useViewParam();
   const chainId = useChainId();
   const [showDrafts, setShowDrafts] = useState(false);
   // Per-PAIR price orientation: a set of pair-keys flipped from their moneyness
@@ -67,7 +70,7 @@ export default function OrdersPage() {
     try { localStorage.setItem('twap:lastOwner', address); localStorage.setItem('twap:lastChain', String(chainId)); } catch { /* ignore */ }
   }, [address, chainId]);
 
-  const owner = address ?? cached.owner;
+  const owner = view ?? address ?? cached.owner;
   // /orders is Gnosis-only: every activity this app creates (TWAP, swaps, leverage)
   // settles on Gnosis, and mainnet TWAP can't be created (no helper there). So the
   // whole page reads, resolves tokens, and links against Gnosis — no per-chain fork.
@@ -107,33 +110,79 @@ export default function OrdersPage() {
     },
   });
 
-  // Candidate leverage Safes: localStorage (this device) ∪ barn carrier discovery
-  // (any device). Slow-changing, so polled gently and separately from the Aave reads.
-  const { data: safes } = useQuery<string[]>({
-    queryKey: ['levSafes', owner],
+  // Leverage carriers: localStorage (this device) ∪ barn discovery (any device).
+  // Each carries the position's initial equity (for P&L). Slow-changing → 60s.
+  const { data: carriers } = useQuery<LevCarrier[]>({
+    queryKey: ['levCarriers', owner],
     enabled: !!owner,
     refetchInterval: 60_000,
     queryFn: async () => {
-      const discovered = await discoverLeverageSafes(owner as Address);
-      return [...new Set([...loadSavedSafes(), ...discovered].map((s) => s.toLowerCase()))];
+      const discovered = await discoverLeverageCarriers(owner as Address);
+      const known = new Set(discovered.map((c) => c.safe.toLowerCase()));
+      const extra = loadSavedSafes()
+        .filter((s) => !known.has(s.toLowerCase()))
+        // debtToken defaults to WXDAI (the dominant debt token); these 'unknown'
+        // entries never reach realizedReturn, but a real token avoids a Safe-as-ERC20 landmine.
+        .map((safe): LevCarrier => ({ safe, initialEquity: 0n, debtToken: ONBOARD.wxdai as Address, createdAt: 0, status: 'unknown' }));
+      return [...discovered, ...extra];
     },
   });
+  const safesKey = useMemo(() => (carriers ?? []).map((c) => c.safe.toLowerCase()).sort().join(','), [carriers]);
+  const equityOf = useMemo(() => {
+    const m = new Map<string, bigint>();
+    for (const c of carriers ?? []) m.set(c.safe.toLowerCase(), c.initialEquity);
+    return m;
+  }, [carriers]);
 
-  // Leverage positions: live Aave reads over the candidate Safes (Gnosis).
-  // placeholderData keeps the prior list while a discovery change (new Safe set →
-  // new queryKey) refetches, so the panel never flashes empty / drops out.
+  // Open leverage positions: live Aave reads over the candidate Safes (Gnosis).
+  // placeholderData keeps the prior list while a discovery change refetches.
   const { data: positions } = useQuery<LivePos[]>({
-    queryKey: ['positions', owner, safes],
-    enabled: !!owner && !!market && !!gnosisClient && safes !== undefined,
+    queryKey: ['positions', owner, safesKey],
+    enabled: !!owner && !!market && !!gnosisClient && carriers !== undefined,
     refetchInterval: 12000,
     placeholderData: (prev) => prev,
-    queryFn: () => readPositions(gnosisClient as unknown as PublicClient, owner as Address, (safes ?? []) as Address[], market!),
+    queryFn: () => readPositions(gnosisClient as unknown as PublicClient, owner as Address, (carriers ?? []).map((c) => c.safe), market!),
   });
 
   const now = Math.floor(Date.now() / 1000);
   const orders = useMemo(() => history?.carriers ?? [], [history]);
   const swaps = useMemo(() => history?.swaps ?? [], [history]);
   const levPositions = useMemo(() => positions ?? [], [positions]);
+  // portfolio totals across open positions (equity + unrealized P&L)
+  const openSummary = useMemo(() => {
+    let equity = 0, pnl = 0, havePnl = false;
+    for (const p of levPositions) {
+      const eq = equityOf.get(p.safe.toLowerCase());
+      const r = eq && eq > 0n ? positionPnl(p, eq) : null;
+      if (r) { equity += r.equityUsd; pnl += r.pnlUsd; havePnl = true; } else { equity += Math.max(p.m.equityUsd, 0); }
+    }
+    return { equity, pnl, havePnl };
+  }, [levPositions, equityOf]);
+  // Closed leverage = fulfilled carriers whose Safe is NOT currently an open position.
+  // Gate on a TRUSTWORTHY open set: until `positions` resolves (readPositions now
+  // propagates RPC failures rather than returning []), classify nothing as closed —
+  // otherwise a read blip would move every open position into the closed list.
+  const closed = useMemo(() => {
+    if (positions === undefined) return [];
+    const open = new Set(positions.map((p) => p.safe.toLowerCase()));
+    // drop dust/test closes (deposit < ~0.01 of an 18-dec token) to cut noise.
+    return (carriers ?? []).filter((c) => c.status === 'fulfilled' && c.initialEquity >= 10n ** 16n && !open.has(c.safe.toLowerCase()));
+  }, [carriers, positions]);
+  // Realized return (debt-token paid back to owner) for closed positions; closed
+  // state never changes, so cache hard. Map safe→returned (null = indeterminate).
+  const { data: realized } = useQuery<Record<string, string | null>>({
+    queryKey: ['realized', owner, closed.map((c) => c.safe).join(',')],
+    enabled: !!owner && !!gnosisClient && closed.length > 0,
+    staleTime: 10 * 60_000,
+    queryFn: async () => {
+      // each realizedReturn is an independent 5M-block getLogs — run them concurrently.
+      const entries = await Promise.all(closed.map(async (c) => {
+        const r = await realizedReturn(gnosisClient as unknown as PublicClient, c.safe, owner as Address, c.debtToken);
+        return [c.safe.toLowerCase(), r === null ? null : r.toString()] as const;
+      }));
+      return Object.fromEntries(entries);
+    },
+  });
   // The positions pipeline is "settled" once the reads resolve, OR it can't run
   // (no Gnosis client / the market API is down) — so a market outage no longer
   // traps the whole page on "Loading". The page has loaded once history resolved
@@ -167,10 +216,11 @@ export default function OrdersPage() {
   return (
     <div className="container">
       <div className="topbar">
-        <div className="brand"><h1>My Orders</h1><Link className="tag" href="/">← trade</Link></div>
+        <div className="brand"><h1>My Orders</h1><Link className="tag" href={view ? `/?view=${view}` : '/'}>← trade</Link></div>
         <ConnectButton />
       </div>
 
+      {view && <div className="panel" style={{ padding: '10px 16px', fontSize: 13 }}>👁 Read-only — viewing <span className="mono">{shortAddress(view, 6)}</span></div>}
       {!owner && <div className="panel center"><p>Connect your wallet to see your orders.</p></div>}
       {owner && (
         <>
@@ -186,8 +236,20 @@ export default function OrdersPage() {
 
           {levPositions.length > 0 && (
             <div className="panel olist">
-              <h2><span>Leverage positions ({levPositions.length})</span></h2>
-              {levPositions.map((p) => <PositionRow key={p.safe} p={p} />)}
+              <h2 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span>Leverage positions ({levPositions.length})</span>
+                <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>
+                  ${openSummary.equity.toFixed(2)} equity{openSummary.havePnl && <> · <b style={{ color: openSummary.pnl >= 0 ? 'var(--good)' : 'var(--bad)' }}>{openSummary.pnl >= 0 ? '+' : ''}${openSummary.pnl.toFixed(2)}</b></>}
+                </span>
+              </h2>
+              {levPositions.map((p) => <PositionRow key={p.safe} p={p} initialEquity={equityOf.get(p.safe.toLowerCase())} />)}
+            </div>
+          )}
+
+          {closed.length > 0 && (
+            <div className="panel olist">
+              <h2><span>Leverage · Closed ({closed.length})</span></h2>
+              {closed.map((c) => <ClosedRow key={c.safe} c={c} resolve={resolve} realized={realized?.[c.safe.toLowerCase()]} />)}
             </div>
           )}
 
@@ -390,17 +452,22 @@ function SwapRowItem({ chain, s, resolve, flip, onFlip }: { chain: ChainConfig; 
 }
 
 /** A single open leverage position (read-only summary; manage from the trade tab). */
-function PositionRow({ p }: { p: LivePos }) {
+function PositionRow({ p, initialEquity }: { p: LivePos; initialEquity?: bigint }) {
   const coll = Number(formatUnits(p.collQty, p.collTok.decimals));
   const debt = Number(formatUnits(p.debtQty, p.debtTok.decimals));
   const hf = p.m.healthFactor;
   const hfTone = hf > 1.4 ? 'good' : hf > 1.15 ? 'warn' : 'bad';
+  const pnl = initialEquity != null && initialEquity > 0n ? positionPnl(p, initialEquity) : null;
   return (
     <div className="orow">
       <div className="orow-head" style={{ cursor: 'default' }}>
         <div className="oleft">
           <div className="osyms">{p.collTok.symbol} {p.m.leverage.toFixed(1)}× <span className="ounit">long</span></div>
-          <div className="oamts">{coll.toFixed(4)} {p.collTok.symbol} collateral · {debt.toFixed(2)} {p.debtTok.symbol} debt</div>
+          <div className="oamts" style={{ whiteSpace: 'normal' }}>
+            {pnl
+              ? <>Equity ${pnl.equityUsd.toFixed(2)} · <b style={{ color: pnl.pnlUsd >= 0 ? 'var(--good)' : 'var(--bad)' }}>{pnl.pnlUsd >= 0 ? '+' : ''}${pnl.pnlUsd.toFixed(2)} ({pnl.pnlPct >= 0 ? '+' : ''}{pnl.pnlPct.toFixed(1)}%)</b></>
+              : <>{coll.toFixed(4)} {p.collTok.symbol} collateral · {debt.toFixed(2)} {p.debtTok.symbol} debt</>}
+          </div>
         </div>
         <div className="ocenter">
           <span className="oprice" title="Health factor">HF {hf > 100 ? '∞' : hf.toFixed(2)}</span>
@@ -409,6 +476,36 @@ function PositionRow({ p }: { p: LivePos }) {
           <span className={`badge ${hfTone}`}>{p.m.liqPrice ? `Liq ${p.m.liqPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : 'Open'}</span>
           {/* positions are always Gnosis, regardless of the page's viewed chain */}
           <div className="odate"><Link href="/">Manage →</Link> · <a href={`https://app.safe.global/home?safe=gno:${p.safe}`} target="_blank" rel="noreferrer">Safe ↗</a></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A closed leverage position: initial deposit + best-effort realized return. */
+function ClosedRow({ c, resolve, realized }: { c: LevCarrier; resolve: ResolveFn; realized?: string | null }) {
+  const debt = resolve(c.debtToken);
+  const deposit = Number(formatUnits(c.initialEquity, debt.decimals));
+  // realized: debt-token returned to owner on close (undefined = still loading,
+  // null = indeterminate). P&L = returned − deposit, in debt-token terms (≈ USD for WXDAI).
+  let pnlNode: React.ReactNode = realized === undefined ? '· P&L …' : '· P&L —';
+  if (realized != null) {
+    try {
+      const ret = Number(formatUnits(BigInt(realized), debt.decimals));
+      const d = ret - deposit; const pct = deposit > 0 ? (d / deposit) * 100 : 0;
+      pnlNode = <>· returned {ret.toFixed(2)} · <b style={{ color: d >= 0 ? 'var(--good)' : 'var(--bad)' }}>{d >= 0 ? '+' : ''}{d.toFixed(2)} {debt.symbol} ({pct >= 0 ? '+' : ''}{pct.toFixed(1)}%)</b></>;
+    } catch { /* keep — */ }
+  }
+  return (
+    <div className="orow">
+      <div className="orow-head" style={{ cursor: 'default' }}>
+        <div className="oleft">
+          <div className="osyms">{debt.symbol} leverage <span className="ounit">closed</span></div>
+          <div className="oamts" style={{ whiteSpace: 'normal' }}>Deposited {deposit.toFixed(2)} {debt.symbol} {pnlNode}</div>
+        </div>
+        <div className="oright">
+          <span className="badge">Closed</span>
+          <div className="odate">{c.createdAt ? new Date(c.createdAt * 1000).toLocaleString('en-US', DATE_FMT) : ''} · <a href={`https://app.safe.global/home?safe=gno:${c.safe}`} target="_blank" rel="noreferrer">Safe ↗</a></div>
         </div>
       </div>
     </div>

@@ -55,9 +55,10 @@ export async function POST(req: Request) {
       const r = await fetch(`${BARN}/account/${b.owner}/orders?limit=${limit}`, { cache: 'no-store' });
       if (!r.ok) return NextResponse.json({ status: r.status, body: [] });
       const j = await r.json() as Array<Record<string, unknown>>;
-      // slim payload: only what Safe-discovery needs
+      // slim payload: what Safe-discovery + position P&L need
       const body = (Array.isArray(j) ? j : []).map((o) => ({
         sellToken: o.sellToken, buyToken: o.buyToken, receiver: o.receiver, fullAppData: o.fullAppData,
+        sellAmount: o.sellAmount, creationDate: o.creationDate, status: o.status,
       }));
       return NextResponse.json({ status: r.status, body });
     }

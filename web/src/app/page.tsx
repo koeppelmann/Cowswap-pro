@@ -14,6 +14,7 @@ import { getChainConfig } from '../lib/chains';
 import { buildPlan, type Plan } from '../lib/plan';
 import { type Duration, dispAmount, durationToSeconds, fmtAmount, fmtRate, humanizeSeconds, isAddress, shortAddress, tryParseUnits } from '../lib/format';
 import { useToken } from '../lib/useToken';
+import { useViewParam } from '../lib/useViewMode';
 import { useQuotes } from '../lib/useQuotes';
 import { useSpot } from '../lib/useSpot';
 import { useDebounced } from '../lib/useDebounced';
@@ -80,28 +81,33 @@ function Tabs({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
 }
 
 export default function Page() {
-  const { address, isConnected } = useAccount();
+  const { address: wallet, isConnected: walletConnected } = useAccount();
+  const view = useViewParam();
+  // read-only "view account" mode (?view=0x…) renders an account without its key.
+  const address = view ?? wallet;
+  const isConnected = view ? false : walletConnected; // viewing ≠ able to trade
   const walletChainId = useChainId();
   // Before a wallet connects, wagmi reports the first configured chain (mainnet),
   // which makes the TWAP tab open on Ethereum and immediately error ("helper not
   // deployed"). Default the disconnected view to Gnosis, where everything works.
-  const chainId = isConnected ? walletChainId : 100;
+  const chainId = view ? 100 : (walletConnected ? walletChainId : 100);
   const chain = getChainConfig(chainId);
   // Swap (with optional leverage) is the default; TWAP keeps the existing builder.
   const [tab, setTab] = useState<Tab>('swap');
+  const ordersHref = view ? `/orders?view=${view}` : '/orders';
 
   return (
     <div className="container">
       <div className="topbar">
         <div className="brand"><h1>🐮 TWAP Safe</h1></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          {isConnected && <Link href="/orders" className="tag">My orders →</Link>}
+          {address && <Link href={ordersHref} className="tag">My orders →</Link>}
           <ConnectButton />
         </div>
       </div>
 
       {tab === 'swap' ? (
-        <SwapTab tabs={<Tabs tab={tab} setTab={setTab} />} />
+        <SwapTab tabs={<Tabs tab={tab} setTab={setTab} />} viewOwner={view ?? undefined} />
       ) : isConnected && !chain ? (
         <div className="widget center"><p className="errors">Unsupported network — switch to Ethereum or Gnosis.</p></div>
       ) : (

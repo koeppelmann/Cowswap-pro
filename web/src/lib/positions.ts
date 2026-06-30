@@ -1,4 +1,4 @@
-import { formatUnits, type Address, type PublicClient } from 'viem';
+import { formatUnits, getAddress, parseAbiItem, type Address, type PublicClient } from 'viem';
 import { erc20Abi } from './abi';
 import { appCodeOf, LEV_CARRIER_APP_CODE } from './carrierHistory';
 import { positionMetrics, type PositionMetrics } from './leverage';
@@ -53,19 +53,24 @@ export function saveSafe(safe: Address) {
   } catch { /* */ }
 }
 
+// A leverage funding carrier the owner signed: it deposited `initialEquity` of the
+// debt token into the position Safe (receiver). One per open attempt.
+export type LevCarrier = { safe: Address; initialEquity: bigint; debtToken: Address; createdAt: number; status: string };
+
 // Discovering Safes from the barn leverage carriers (appCode LEV_CARRIER_APP_CODE,
 // receiver = the Safe) means positions show up on ANY device, not just the browser
 // that opened them — same frontend-only approach as TWAP history.
 /**
- * Discover the account's leverage Safes from its barn carrier orders (server-proxied).
- * Time-bounded so a slow/hung staging barn can never block position rendering — on
- * timeout we return [] and callers fall back to localStorage Safes.
+ * Discover the account's leverage carriers from its barn orders (server-proxied).
+ * Time-bounded so a slow/hung staging barn can never block rendering — on timeout
+ * returns [] and callers fall back to localStorage Safes. De-duped per Safe (a
+ * fulfilled carrier wins over an open/failed one for the same Safe).
  */
-export async function discoverLeverageSafes(owner: Address, timeoutMs = 6000): Promise<Address[]> {
+export async function discoverLeverageCarriers(owner: Address, timeoutMs = 6000): Promise<LevCarrier[]> {
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), timeoutMs);
-    let j: { body?: Array<{ sellToken?: string; buyToken?: string; receiver?: string; fullAppData?: string | null }> };
+    let j: { body?: Array<{ sellToken?: string; buyToken?: string; receiver?: string; fullAppData?: string | null; sellAmount?: string; creationDate?: string; status?: string }> };
     try {
       const r = await fetch('/api/barn', {
         method: 'POST', headers: { 'content-type': 'application/json' },
@@ -73,13 +78,30 @@ export async function discoverLeverageSafes(owner: Address, timeoutMs = 6000): P
       });
       j = await r.json();
     } finally { clearTimeout(t); }
-    const safes = new Set<string>();
+    const bySafe = new Map<string, LevCarrier>();
     for (const o of j.body ?? []) {
-      if (!o.receiver || o.sellToken?.toLowerCase() !== o.buyToken?.toLowerCase()) continue; // in-kind carriers only
-      if (appCodeOf(o.fullAppData) === LEV_CARRIER_APP_CODE) safes.add(o.receiver.toLowerCase());
+      // one malformed order (missing/invalid tokens, bad checksum) must never nuke
+      // the whole discovered set — skip it, keep the rest.
+      try {
+        if (!o.receiver || !o.sellToken || !o.buyToken || o.sellToken.toLowerCase() !== o.buyToken.toLowerCase()) continue; // in-kind carriers only
+        if (appCodeOf(o.fullAppData) !== LEV_CARRIER_APP_CODE) continue;
+        let eq = 0n; try { eq = BigInt(o.sellAmount ?? '0'); } catch { /* */ }
+        const c: LevCarrier = {
+          safe: getAddress(o.receiver), initialEquity: eq, debtToken: getAddress(o.sellToken),
+          createdAt: Math.floor(new Date(o.creationDate ?? 0).getTime() / 1000) || 0, status: o.status ?? 'open',
+        };
+        const k = c.safe.toLowerCase();
+        const prev = bySafe.get(k);
+        if (!prev || (prev.status !== 'fulfilled' && c.status === 'fulfilled')) bySafe.set(k, c);
+      } catch { /* skip this order */ }
     }
-    return [...safes] as Address[];
+    return [...bySafe.values()].sort((a, b) => b.createdAt - a.createdAt);
   } catch { return []; }
+}
+
+/** Just the Safe addresses (localStorage callers / readPositions input). */
+export async function discoverLeverageSafes(owner: Address, timeoutMs = 6000): Promise<Address[]> {
+  return (await discoverLeverageCarriers(owner, timeoutMs)).map((c) => c.safe);
 }
 
 /**
@@ -88,11 +110,15 @@ export async function discoverLeverageSafes(owner: Address, timeoutMs = 6000): P
  * account) for every candidate, then (2) reserve balances ONLY for the Safes that
  * survive the gate. The candidate set can be large (barn discovery returns one
  * Safe per past leverage carrier, mostly closed), so we never issue the heavy
- * per-reserve balance reads for Safes that aren't owned/open. Never throws.
+ * per-reserve balance reads for Safes that aren't owned/open.
+ *
+ * Returns [] only for a GENUINE empty result (no owned/open Safes). A transport
+ * failure (RPC down) PROPAGATES — callers must distinguish "no positions" from
+ * "couldn't read", otherwise a blip would reclassify open positions as closed.
  */
 export async function readPositions(publicClient: PublicClient, address: Address | undefined, safes: Address[], market: Market | null): Promise<LivePos[]> {
   if (!publicClient || !market || !address || safes.length === 0) return [];
-  try {
+  {
     // ── Phase 1: gate every candidate Safe (4 calls each, one multicall) ──
     const gate = await publicClient.multicall({
       allowFailure: true,
@@ -153,5 +179,49 @@ export async function readPositions(publicClient: PublicClient, address: Address
         module: s.module });
     });
     return live;
-  } catch { return []; }
+  }
+}
+
+// ── Profit & loss ───────────────────────────────────────────────────────────
+export type PnL = { equityUsd: number; initialEquityUsd: number; pnlUsd: number; pnlPct: number };
+
+/**
+ * Unrealized P&L of an OPEN position vs the equity originally deposited (carrier).
+ * Assumes the carrier's deposited token IS the position's debt token (true for every
+ * pair here — you deposit and borrow the same stable, e.g. WXDAI/sDAI), so `p.debtTok`
+ * gives both the decimals and the USD price of `initialEquity`. When the position has
+ * no live debt (1x) we fall back to $1 — correct for the USD-pegged debt tokens in use.
+ */
+export function positionPnl(p: LivePos, initialEquity: bigint): PnL | null {
+  // price the deposited debt token from the position's own balances (handles EURe ≠ $1)
+  const debtPrice = p.debtQty > 0n ? p.m.debtUsd / Number(formatUnits(p.debtQty, p.debtTok.decimals)) : 1;
+  const initialEquityUsd = Number(formatUnits(initialEquity, p.debtTok.decimals)) * debtPrice;
+  if (!(initialEquityUsd > 0)) return null;
+  const equityUsd = Math.max(p.m.equityUsd, 0);
+  const pnlUsd = equityUsd - initialEquityUsd;
+  return { equityUsd, initialEquityUsd, pnlUsd, pnlPct: (pnlUsd / initialEquityUsd) * 100 };
+}
+
+const TRANSFER_EVENT = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)');
+
+/**
+ * Realized return of a CLOSED position: the debt token a Safe paid back to its
+ * owner on close (one or more Transfer(safe → owner)). bounded getLogs; returns
+ * null if the RPC can't serve the range (caller shows "—"). Realized P&L =
+ * returned − initialEquity, in debt-token units.
+ */
+export async function realizedReturn(publicClient: PublicClient, safe: Address, owner: Address, debtToken: Address): Promise<bigint | null> {
+  try {
+    const latest = await publicClient.getBlockNumber();
+    const span = 5_000_000n; // ~9 months of Gnosis blocks — covers the leverage era
+    const fromBlock = latest > span ? latest - span : 0n;
+    const logs = await publicClient.getLogs({
+      address: debtToken, event: TRANSFER_EVENT, args: { from: safe, to: owner }, fromBlock, toBlock: latest,
+    });
+    // No debt-token payout found → realized return is indeterminate (the close may
+    // have paid collateral, or pre-v5 left funds in the Safe). Return null so the
+    // UI shows "—" instead of a misleading total loss.
+    if (logs.length === 0) return null;
+    return logs.reduce((sum, l) => sum + ((l.args as { value?: bigint }).value ?? 0n), 0n);
+  } catch { return null; }
 }

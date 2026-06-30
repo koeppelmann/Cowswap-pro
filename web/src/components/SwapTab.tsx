@@ -14,7 +14,7 @@ import { useTokenList } from '../lib/useTokenList';
 import {
   ONBOARD, IB_ABI, ERC20_ABI, GPV2_ORDER_TYPES, RETARGET_TYPES, RETARGET_TYPES_V4, LEV_MODULE, LEV_MODULE_V4, MODULE_ABI, MODULE_ABI_V4, type Intent,
 } from '../lib/onboard';
-import { loadSavedSafes, readPositions, saveSafe, type AaveReserve, type LivePos, type Market } from '../lib/positions';
+import { discoverLeverageCarriers, loadSavedSafes, positionPnl, readPositions, saveSafe, type AaveReserve, type LevCarrier, type LivePos, type Market } from '../lib/positions';
 import { cowApiBaseClient, LEV_CARRIER_APP_CODE, SWAP_APP_CODE } from '../lib/carrierHistory';
 import { fetchQuote } from '../lib/quote';
 
@@ -142,14 +142,17 @@ type OpenPlan = {
 
 const GNOSIS_CFG = getChainConfig(100)!;
 
-export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
-  const { address, isConnected } = useAccount();
+export function SwapTab({ tabs, viewOwner }: { tabs?: React.ReactNode; viewOwner?: Address }) {
+  const { address: wallet, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
   const { connect, connectors, isPending: connecting } = useConnect();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient({ chainId: gnosis.id });
   const onGnosis = chainId === gnosis.id;
+  // read-only "view account" mode: reads use the viewed account; writes are off.
+  const readOnly = !!viewOwner;
+  const address: Address | undefined = viewOwner ?? wallet;
 
   // full token list (curated Gnosis defaults first, then the official CoW list)
   const listTokens = useTokenList(GNOSIS_CFG);
@@ -230,6 +233,10 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
 
   // data
   const [positions, setPositions] = useState<LivePos[]>([]);
+  // discovered leverage carriers (localStorage ∪ barn) — gives the candidate Safe
+  // list AND each position's initial equity for P&L. Discovered once per account.
+  const [carriers, setCarriers] = useState<LevCarrier[]>([]);
+  const initialEquityOf = useCallback((safe: string) => carriers.find((c) => c.safe.toLowerCase() === safe.toLowerCase())?.initialEquity, [carriers]);
   const [bal, setBal] = useState<bigint | null>(null);
   const [previewBuy, setPreviewBuy] = useState<bigint | null>(null);
   const [previewReduce, setPreviewReduce] = useState<bigint | null>(null); // est. WXDAI freed by a close/reduce
@@ -239,18 +246,40 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   const [status, setStatus] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  // ── load positions (localStorage + live Aave reads, shared with /orders) ──
+  // discover the account's leverage carriers once per account (barn ∪ localStorage)
+  // so OPEN positions appear in the selector by default — not only on the device
+  // that opened them. Cheap to keep separate from the 12s-ish position reads.
+  useEffect(() => {
+    let live = true;
+    if (!address) { setCarriers([]); return; }
+    // Seed instantly from THIS device's saved Safes so an own position renders in
+    // the selector without waiting on the (up to ~6s) barn discovery. Skipped when
+    // viewing another account — those Safes aren't ours (and readPositions gates on isOwner).
+    const saved = readOnly ? [] : loadSavedSafes();
+    setCarriers(saved.map((safe) => ({ safe, initialEquity: 0n, debtToken: WXDAI.address, createdAt: 0, status: 'unknown' })));
+    discoverLeverageCarriers(address).then((cs) => {
+      if (!live) return;
+      const known = new Set(cs.map((c) => c.safe.toLowerCase()));
+      const extra = saved.filter((s) => !known.has(s.toLowerCase())).map((safe) => ({ safe, initialEquity: 0n, debtToken: WXDAI.address, createdAt: 0, status: 'unknown' }));
+      setCarriers([...cs, ...extra]);
+    });
+    return () => { live = false; };
+  }, [address, readOnly]);
+
+  // ── load positions (live Aave reads over discovered Safes, shared with /orders) ──
   const loadPositions = useCallback(async () => {
     if (!publicClient || !market) return;
     if (!address) { setPositions([]); return; } // no account → no positions to show
-    // localStorage Safes only here (instant) — the /orders page does the slower
-    // cross-device barn discovery; the Swap tab opens positions on THIS device.
-    const live = await readPositions(publicClient, address, loadSavedSafes(), market);
+    const safes = carriers.map((c) => c.safe);
+    let live: LivePos[];
+    try {
+      live = await readPositions(publicClient, address, safes, market);
+    } catch { return; } // RPC blip: keep the prior list rather than wiping the selector
     setPositions(live);
     // keep a live selection fresh after an action (?? cur tolerates a transient RPC blip
     // without deselecting; account-switch deselection is handled by the effect below).
     setSell((cur) => (isPos(cur) ? live.find((p) => p.safe.toLowerCase() === cur.safe.toLowerCase()) ?? cur : cur));
-  }, [publicClient, address, market]);
+  }, [publicClient, address, market, carriers]);
   useEffect(() => { loadPositions(); }, [loadPositions]);
   // on account switch, drop any position selection (it belongs to the previous account)
   useEffect(() => { setSell((cur) => (isPos(cur) ? WXDAI : cur)); }, [address]);
@@ -461,6 +490,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
 
   // ── STOP PROTECTION: park a REDUCE order that only becomes fillable while HF < trigger ──
   async function doArmStop() {
+    if (readOnly) return; // viewing someone else's account — no signature/writes
     if (!walletClient || !publicClient || !address || !sellIsPos) return;
     const p = sell as LivePos;
     const trigger = parseFloat(stopHF);
@@ -727,6 +757,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   const samePair = !sellIsPos && (sell as UIToken).address.toLowerCase() === buy.address.toLowerCase();
   const supportedOpen = !sellIsPos && !!pairLev;
   function onCta() {
+    if (readOnly) return; // viewing someone else's account — no actions
     if (!isConnected) { const inj = connectors[0]; if (inj) connect({ connector: inj }); return; } // actually open the wallet
     if (!onGnosis) { switchChain({ chainId: gnosis.id }); return; }
     if (sellIsPos) {
@@ -741,12 +772,15 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
   else if (lev > 1 && equity > 0n) ctaLabel = supportedOpen ? (insufficient ? 'Insufficient balance' : `Open ${lev}× Long`) : 'Leverage not available for this pair';
   else if (equity > 0n) ctaLabel = samePair ? 'Select two different tokens' : insufficient ? 'Insufficient balance' : 'Swap';
   // a disconnected user needs to connect first — the CTA does it (onCta opens the wallet)
-  if (!isConnected) ctaLabel = connecting ? 'Connecting…' : 'Connect wallet';
-  const ctaDisabled = !isConnected
-    ? connecting
-    : busy || !onGnosis
-      || (sellIsPos ? (posMode === 'leverage' ? Math.abs(lev - (sell as LivePos).m.leverage) < 0.05 && lev > 1.01 : false)
-                    : !(equity > 0n && !insufficient && !samePair && (lev <= 1 || (supportedOpen && !!openPlan))));
+  if (!isConnected && !readOnly) ctaLabel = connecting ? 'Connecting…' : 'Connect wallet';
+  if (readOnly) ctaLabel = 'Read-only — viewing account';
+  const ctaDisabled = readOnly
+    ? true
+    : !isConnected
+      ? connecting
+      : busy || !onGnosis
+        || (sellIsPos ? (posMode === 'leverage' ? Math.abs(lev - (sell as LivePos).m.leverage) < 0.05 && lev > 1.01 : false)
+                      : !(equity > 0n && !insufficient && !samePair && (lev <= 1 || (supportedOpen && !!openPlan))));
 
   // ── render ──
   const posTokens: UIToken[] = sellIsPos
@@ -761,7 +795,8 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
 
   // Swap + leverage run on Gnosis (CoW barn + Aave). On any other connected chain show a notice
   // and keep the tabs so the user can jump to TWAP (which works on Ethereum too).
-  if (isConnected && !onGnosis) {
+  // (Skip in read-only view mode — the viewer's own chain is irrelevant there.)
+  if (isConnected && !onGnosis && !readOnly) {
     return (
       <div className="lev-scope">
         <div className="lev-wrap">
@@ -790,6 +825,11 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
             {tabs}
             <button className="lev-gear" onClick={() => setSettingsOpen(true)} title="Settings">⚙</button>
           </div>
+          {readOnly && (
+            <div className="lev-panel" style={{ marginBottom: 4, padding: '10px 14px', fontSize: 13 }}>
+              👁 Read-only — viewing <span className="mono">{short(viewOwner!)}</span>. Connect that wallet to trade.
+            </div>
+          )}
           {/* SELL */}
           <div className="lev-panel">
             {sellIsPos && (
@@ -886,7 +926,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
                 <div className="lev-stat"><span className="k">Open order UID (signed by the Safe)</span><span className="v"><ExtLink href={explorerUrl(openPlan.levUid)}>{short(openPlan.levUid)}</ExtLink></span></div>
               </div>
             )}
-            {!sellIsPos && lev > 1 && openAmts && !openPlan && (
+            {!sellIsPos && lev > 1 && openAmts && !openPlan && isConnected && (
               <div className="lev-stat" style={{ marginTop: 10 }}><span className="k">Deriving your Safe + order UIDs…</span></div>
             )}
           </div>
@@ -911,7 +951,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
                   <span className="k" style={{ fontSize: 12 }}>sell</span>
                   <input className="lev-amt" style={{ fontSize: 14, width: 48 }} value={stopPct} onChange={(e) => setStopPct(e.target.value)} />
                   <span className="k" style={{ fontSize: 12 }}>% of collateral</span>
-                  <button className="lev-tok" disabled={busy} onClick={doArmStop} style={{ marginLeft: 'auto' }}>Arm</button>
+                  <button className="lev-tok" disabled={busy || readOnly} onClick={doArmStop} style={{ marginLeft: 'auto' }}>Arm</button>
                 </div>
                 <div className="lev-stat"><span className="k" style={{ fontSize: 11 }}>Parks in the auction; fillable only while HF is below the trigger — enforced on-chain</span></div>
               </div>
@@ -941,15 +981,22 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
             {selSide === 'sell' && positions.length > 0 && (
               <>
                 <div className="lev-secttl">Your positions</div>
-                {positions.map((p) => (
+                {positions.map((p) => {
+                  const eq = initialEquityOf(p.safe);
+                  const pnl = eq != null && eq > 0n ? positionPnl(p, eq) : null;
+                  return (
                   <button key={p.safe} className="lev-trow pos" onClick={() => pickPosition(p)}>
                     <span className="l"><span className="ph"><TokenIcon chainId={100} address={p.collTok.address} symbol={p.collTok.symbol} /></span>
                       <span><span className="sym">{p.collTok.symbol} <span className="lev-tag">{p.m.leverage.toFixed(1)}x</span></span>
-                        <span style={{ fontSize: 12, color: 'var(--lev-muted)', display: 'block' }}>Collat {Number(formatUnits(p.collQty, p.collTok.decimals)).toFixed(4)} · Debt {Number(formatUnits(p.debtQty, p.debtTok.decimals)).toFixed(2)} {p.debtTok.symbol}</span></span></span>
+                        <span style={{ fontSize: 12, color: 'var(--lev-muted)', display: 'block' }}>
+                          {pnl ? <>Equity ${pnl.equityUsd.toFixed(2)} · <b style={{ color: pnl.pnlUsd >= 0 ? '#46d39a' : '#ff6b6b' }}>{pnl.pnlUsd >= 0 ? '+' : ''}${pnl.pnlUsd.toFixed(2)} ({pnl.pnlPct >= 0 ? '+' : ''}{pnl.pnlPct.toFixed(1)}%)</b></>
+                            : <>Collat {Number(formatUnits(p.collQty, p.collTok.decimals)).toFixed(4)} · Debt {Number(formatUnits(p.debtQty, p.debtTok.decimals)).toFixed(2)} {p.debtTok.symbol}</>}
+                        </span></span></span>
                     <span className="r"><span style={{ fontSize: 12, color: 'var(--lev-muted)' }}>Liq {p.m.liqPrice ? p.m.liqPrice.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}</span>
                       <span style={{ fontSize: 11, display: 'block', color: (p.m.dropToLiqPct ?? 99) < 8 ? '#ff6b6b' : (p.m.dropToLiqPct ?? 99) < 15 ? '#ffa53b' : 'var(--lev-muted)' }}>{p.m.dropToLiqPct != null ? `-${p.m.dropToLiqPct.toFixed(1)}% to liq` : ''}</span></span>
                   </button>
-                ))}
+                  );
+                })}
                 <div className="lev-divider" />
               </>
             )}
@@ -977,7 +1024,7 @@ export function SwapTab({ tabs }: { tabs?: React.ReactNode }) {
         <div className="lev-ov" onClick={() => setSettingsOpen(false)}>
           <div className="lev-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 360 }}>
             <h3>Settings</h3>
-            <div className="lbl" style={{ marginBottom: 6 }}><span>Slippage tolerance</span><span>{slippagePct}%</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--lev-muted)', marginBottom: 8 }}><span>Slippage tolerance</span><b style={{ color: 'var(--cow-navy)' }}>{slippagePct}%</b></div>
             <div className="lev-chips">{[0.5, 1, 2, 5].map((s) => <button key={s} className={slippagePct === s ? 'on' : ''} onClick={() => setSlippagePct(s)}>{s}%</button>)}</div>
             <p className="lev-foot" style={{ textAlign: 'left', marginTop: 12 }}>Minimum-received protection on every leg. Higher tolerance fills more reliably in volatile markets.</p>
           </div>
