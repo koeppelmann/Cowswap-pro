@@ -205,23 +205,91 @@ export function positionPnl(p: LivePos, initialEquity: bigint): PnL | null {
 const TRANSFER_EVENT = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)');
 
 /**
- * Realized return of a CLOSED position: the debt token a Safe paid back to its
- * owner on close (one or more Transfer(safe → owner)). bounded getLogs; returns
- * null if the RPC can't serve the range (caller shows "—"). Realized P&L =
- * returned − initialEquity, in debt-token units.
+ * Realized P&L of a CLOSED position, denominated in whatever token actually came
+ * back to the owner — so it works whether you closed into the debt token OR kept
+ * the collateral asset. `token` says which; `returned` is what you got; `basis`
+ * is the apples-to-apples benchmark in the SAME token. P&L = returned − basis.
+ *   • debt close:       basis = your initial equity (debt deposited).
+ *   • collateral close: basis = what your equity ALONE would have bought at the
+ *     opening swap's own rate (no leverage) — i.e. "did leverage get me more of
+ *     the asset than just buying it outright?". Oracle-free: the benchmark price
+ *     is the realized open-swap rate, not any external feed.
+ * null = indeterminate (RPC couldn't serve the range, or no payout to the owner —
+ * e.g. a pre-v5 close that left funds in the Safe). Caller shows "—".
  */
-export async function realizedReturn(publicClient: PublicClient, safe: Address, owner: Address, debtToken: Address): Promise<bigint | null> {
+export type RealizedPnL = { token: Address; returned: bigint; basis: bigint; parked?: boolean };
+
+/** The position's opening swap from the Safe's barn orders: debt spent → collateral bought. */
+async function fetchOpenSwap(safe: Address, debtToken: Address): Promise<{ collateral: Address; collBought: bigint; debtSpent: bigint } | null> {
+  try {
+    const r = await fetch('/api/barn', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ op: 'accountOrders', owner: safe, limit: 200 }),
+    });
+    const j = await r.json() as { body?: Array<{ sellToken?: string; buyToken?: string; status?: string; executedSellAmount?: string; executedBuyAmount?: string }> };
+    const debt = debtToken.toLowerCase();
+    // opening/increase legs = the Safe selling debt → buying collateral, filled.
+    // Sum same-collateral legs to get a blended open rate robust to increases.
+    let collateral: Address | null = null, collBought = 0n, debtSpent = 0n;
+    for (const o of j.body ?? []) {
+      if (!o.sellToken || !o.buyToken) continue;
+      if (o.sellToken.toLowerCase() !== debt || o.buyToken.toLowerCase() === debt) continue;
+      let sold = 0n, bought = 0n;
+      try { sold = BigInt(o.executedSellAmount ?? '0'); bought = BigInt(o.executedBuyAmount ?? '0'); } catch { continue; }
+      if (sold === 0n || bought === 0n) continue;
+      const coll = getAddress(o.buyToken);
+      if (!collateral) collateral = coll;
+      if (coll.toLowerCase() !== collateral.toLowerCase()) continue; // ignore a stray different-collateral leg
+      collBought += bought; debtSpent += sold;
+    }
+    return collateral && debtSpent > 0n ? { collateral, collBought, debtSpent } : null;
+  } catch { return null; }
+}
+
+/** Sum of Transfer(token, safe → owner) over a bounded window. null = RPC couldn't serve it. */
+async function paidToOwner(publicClient: PublicClient, token: Address, safe: Address, owner: Address, fromBlock: bigint, toBlock: bigint): Promise<bigint | null> {
+  try {
+    const logs = await publicClient.getLogs({ address: token, event: TRANSFER_EVENT, args: { from: safe, to: owner }, fromBlock, toBlock });
+    return logs.reduce((sum, l) => sum + ((l.args as { value?: bigint }).value ?? 0n), 0n);
+  } catch { return null; }
+}
+
+export async function realizedReturn(publicClient: PublicClient, safe: Address, owner: Address, debtToken: Address, initialEquity: bigint): Promise<RealizedPnL | null> {
   try {
     const latest = await publicClient.getBlockNumber();
     const span = 5_000_000n; // ~9 months of Gnosis blocks — covers the leverage era
     const fromBlock = latest > span ? latest - span : 0n;
-    const logs = await publicClient.getLogs({
-      address: debtToken, event: TRANSFER_EVENT, args: { from: safe, to: owner }, fromBlock, toBlock: latest,
-    });
-    // No debt-token payout found → realized return is indeterminate (the close may
-    // have paid collateral, or pre-v5 left funds in the Safe). Return null so the
-    // UI shows "—" instead of a misleading total loss.
-    if (logs.length === 0) return null;
-    return logs.reduce((sum, l) => sum + ((l.args as { value?: bigint }).value ?? 0n), 0n);
+    const open = await fetchOpenSwap(safe, debtToken);
+    // payouts to the owner: debt token always; collateral token when we know it.
+    const [debtBack, collBack] = await Promise.all([
+      paidToOwner(publicClient, debtToken, safe, owner, fromBlock, latest),
+      open ? paidToOwner(publicClient, open.collateral, safe, owner, fromBlock, latest) : Promise.resolve(0n),
+    ]);
+    if (debtBack === null && collBack === null) return null; // RPC failure on both
+    const debtReturned = debtBack ?? 0n;
+    const collReturned = collBack ?? 0n;
+    // Closed into DEBT if the debt payout is a meaningful fraction (≥1%) of the
+    // deposit; otherwise, if collateral came back, it's a collateral close.
+    const debtIsPayout = debtReturned > 0n && (initialEquity === 0n || debtReturned * 100n >= initialEquity);
+    if (!debtIsPayout && open && collReturned > 0n) {
+      // unleveraged-equivalent the equity would have bought at the open rate
+      const basis = (open.collBought * initialEquity) / open.debtSpent;
+      return { token: open.collateral, returned: collReturned, basis };
+    }
+    if (debtReturned > 0n) return { token: debtToken, returned: debtReturned, basis: initialEquity };
+    if (open && collReturned > 0n) {
+      const basis = (open.collBought * initialEquity) / open.debtSpent;
+      return { token: open.collateral, returned: collReturned, basis };
+    }
+    // No payout to the owner. If the equity is still sitting in the Safe — a
+    // funding that filled but whose open swap expired, or a pre-v5 close that left
+    // funds behind — surface it as RECOVERABLE rather than an indeterminate "—".
+    try {
+      const debtBal = await publicClient.readContract({ address: debtToken, abi: erc20Abi, functionName: 'balanceOf', args: [safe] }) as bigint;
+      if (debtBal > 0n && (initialEquity === 0n || debtBal * 100n >= initialEquity)) {
+        return { token: debtToken, returned: debtBal, basis: initialEquity, parked: true };
+      }
+    } catch { /* fall through to indeterminate */ }
+    return null; // no payout, nothing recoverable found → indeterminate
   } catch { return null; }
 }

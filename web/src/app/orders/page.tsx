@@ -19,6 +19,9 @@ import { useViewParam } from '../../lib/useViewMode';
 
 type Resolved = { symbol: string; decimals: number };
 type ResolveFn = (addr: string) => Resolved;
+// realized closed-position P&L (serialized bigints): the token that came back,
+// how much, and the same-token benchmark to compare against. P&L = returned − basis.
+type RealizedRow = { token: Address; returned: string; basis: string; parked?: boolean };
 
 // "Moneyness" rank: $ > € > BTC > ETH > other tokens. Prices are quoted as
 // more-money per less-money (e.g. EURe/COW, USDC/GNO, ETH/GNO) so that opposite
@@ -168,17 +171,17 @@ export default function OrdersPage() {
     // drop dust/test closes (deposit < ~0.01 of an 18-dec token) to cut noise.
     return (carriers ?? []).filter((c) => c.status === 'fulfilled' && c.initialEquity >= 10n ** 16n && !open.has(c.safe.toLowerCase()));
   }, [carriers, positions]);
-  // Realized return (debt-token paid back to owner) for closed positions; closed
-  // state never changes, so cache hard. Map safe→returned (null = indeterminate).
-  const { data: realized } = useQuery<Record<string, string | null>>({
+  // Realized P&L for closed positions (in whatever token came back); closed state
+  // never changes, so cache hard. null = indeterminate. bigints → strings to store.
+  const { data: realized } = useQuery<Record<string, RealizedRow | null>>({
     queryKey: ['realized', owner, closed.map((c) => c.safe).join(',')],
     enabled: !!owner && !!gnosisClient && closed.length > 0,
     staleTime: 10 * 60_000,
     queryFn: async () => {
-      // each realizedReturn is an independent 5M-block getLogs — run them concurrently.
+      // each realizedReturn is independent (a barn fetch + getLogs) — run concurrently.
       const entries = await Promise.all(closed.map(async (c) => {
-        const r = await realizedReturn(gnosisClient as unknown as PublicClient, c.safe, owner as Address, c.debtToken);
-        return [c.safe.toLowerCase(), r === null ? null : r.toString()] as const;
+        const r = await realizedReturn(gnosisClient as unknown as PublicClient, c.safe, owner as Address, c.debtToken, c.initialEquity);
+        return [c.safe.toLowerCase(), r === null ? null : { token: r.token, returned: r.returned.toString(), basis: r.basis.toString(), parked: r.parked }] as const;
       }));
       return Object.fromEntries(entries);
     },
@@ -482,29 +485,53 @@ function PositionRow({ p, initialEquity }: { p: LivePos; initialEquity?: bigint 
   );
 }
 
-/** A closed leverage position: initial deposit + best-effort realized return. */
-function ClosedRow({ c, resolve, realized }: { c: LevCarrier; resolve: ResolveFn; realized?: string | null }) {
+/** Format a token amount with enough precision to be meaningful (more for sub-1 assets like WETH). */
+function amt(n: number): string {
+  if (n === 0) return '0';
+  const abs = Math.abs(n);
+  const dp = abs >= 1000 ? 0 : abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
+  return n.toFixed(dp);
+}
+
+/** A closed leverage position: initial deposit + best-effort realized P&L (debt- or asset-denominated). */
+function ClosedRow({ c, resolve, realized }: { c: LevCarrier; resolve: ResolveFn; realized?: RealizedRow | null }) {
   const debt = resolve(c.debtToken);
   const deposit = Number(formatUnits(c.initialEquity, debt.decimals));
-  // realized: debt-token returned to owner on close (undefined = still loading,
-  // null = indeterminate). P&L = returned − deposit, in debt-token terms (≈ USD for WXDAI).
+  // realized (undefined = loading, null = indeterminate, else { token, returned, basis }).
+  // P&L = returned − basis, in the token that actually came back: the debt token
+  // (vs your deposit) for a debt close, or the collateral asset (vs the amount your
+  // equity alone would have bought at the open rate) when you kept the asset.
   let pnlNode: React.ReactNode = realized === undefined ? '· P&L …' : '· P&L —';
+  let neverOpened = false;
   if (realized != null) {
     try {
-      const ret = Number(formatUnits(BigInt(realized), debt.decimals));
-      const d = ret - deposit; const pct = deposit > 0 ? (d / deposit) * 100 : 0;
-      pnlNode = <>· returned {ret.toFixed(2)} · <b style={{ color: d >= 0 ? 'var(--good)' : 'var(--bad)' }}>{d >= 0 ? '+' : ''}{d.toFixed(2)} {debt.symbol} ({pct >= 0 ? '+' : ''}{pct.toFixed(1)}%)</b></>;
+      const tok = resolve(realized.token);
+      const ret = Number(formatUnits(BigInt(realized.returned), tok.decimals));
+      if (realized.parked) {
+        // funding filled but the position never opened (or pre-v5 close) — equity
+        // is still in the Safe and withdrawable. Not a P&L; surface as recoverable.
+        neverOpened = true;
+        pnlNode = <>· <b style={{ color: 'var(--warn)' }}>{amt(ret)} {tok.symbol} recoverable in Safe</b></>;
+      } else {
+        const basis = Number(formatUnits(BigInt(realized.basis), tok.decimals));
+        const d = ret - basis; const pct = basis > 0 ? (d / basis) * 100 : 0;
+        const pnl = <b style={{ color: d >= 0 ? 'var(--good)' : 'var(--bad)' }}>{d >= 0 ? '+' : ''}{amt(d)} {tok.symbol} ({pct >= 0 ? '+' : ''}{pct.toFixed(1)}%)</b>;
+        const sameTok = realized.token.toLowerCase() === c.debtToken.toLowerCase();
+        pnlNode = sameTok
+          ? <>· returned {amt(ret)} · {pnl}</>
+          : <>· kept {amt(ret)} {tok.symbol} vs {amt(basis)} unleveraged · {pnl}</>;
+      }
     } catch { /* keep — */ }
   }
   return (
     <div className="orow">
       <div className="orow-head" style={{ cursor: 'default' }}>
         <div className="oleft">
-          <div className="osyms">{debt.symbol} leverage <span className="ounit">closed</span></div>
+          <div className="osyms">{debt.symbol} leverage <span className="ounit">{neverOpened ? 'never opened' : 'closed'}</span></div>
           <div className="oamts" style={{ whiteSpace: 'normal' }}>Deposited {deposit.toFixed(2)} {debt.symbol} {pnlNode}</div>
         </div>
         <div className="oright">
-          <span className="badge">Closed</span>
+          <span className={`badge ${neverOpened ? 'warn' : ''}`}>{neverOpened ? 'Recover' : 'Closed'}</span>
           <div className="odate">{c.createdAt ? new Date(c.createdAt * 1000).toLocaleString('en-US', DATE_FMT) : ''} · <a href={`https://app.safe.global/home?safe=gno:${c.safe}`} target="_blank" rel="noreferrer">Safe ↗</a></div>
         </div>
       </div>
