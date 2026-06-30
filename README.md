@@ -37,7 +37,7 @@ Works on **Gnosis Chain** (full feature set) and **Ethereum** (swaps + TWAP).
 | Path | What |
 |------|------|
 | `web/` | Next.js dapp (wagmi + viem). Swap / TWAP / Leverage UI, order history with live P&L, `?view=0xADDR` read-only account viewing. Includes a TS SDK (`web/src/lib`) cross-checked byte-for-byte against the on-chain Solidity encoding. |
-| `contracts/` | Foundry project. `TwapSafeInitializer` (TWAP delegatecall helper) + the CoW wrapper / Aave-leverage stack (`CoWSafeWrapper`, `CoWSafeSigHandler`, `CowFlashLoanWrapper`, …), with Gnosis fork tests proving the flows on real chain state. |
+| `contracts/` | Foundry project — the contracts this app adds *on top of* the CoW wrapper stack: the TWAP `approve-to-deploy` initializers + the leverage onboarding/management contracts (`IntentBootstrap15`, `LevManagerModule`, `CloseHelper`, …), with Gnosis fork tests. The generic CoW wrapper layer is pulled in as a dependency from [`koeppelmann/cowswap_wrapper`](https://github.com/koeppelmann/cowswap_wrapper). See `contracts/DEPLOYMENTS.md`. |
 
 ## Run it
 
@@ -77,7 +77,7 @@ flash-loan the leveraged size → swap to collateral → supply to Aave V3 → b
 → repay the flash. A signed post-settlement **minimum health-factor** floor bounds how much a
 solver may under-deliver. Manage/close go through `LevManagerModule` (a signed Retarget intent,
 relayed). Realized P&L on closed positions is computed oracle-free from your own opening-swap
-rate. Details: `contracts/DEPLOYMENTS.md`, `contracts/WRAPPER_SPEC.md`, `contracts/FLASHLOAN_WRAPPER_SPEC.md`.
+rate. Details: `contracts/DEPLOYMENTS.md` + the wrapper repo [`koeppelmann/cowswap_wrapper`](https://github.com/koeppelmann/cowswap_wrapper).
 
 ## Recovery & persistence
 

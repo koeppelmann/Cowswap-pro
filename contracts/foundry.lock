@@ -10,5 +10,11 @@
       "name": "v5.1.0",
       "rev": "69c8def5f222ff96f2b5beff05dfba996368aa79"
     }
+  },
+  "lib/safe-contracts": {
+    "tag": {
+      "name": "v1.3.0",
+      "rev": "186a21a74b327f17fc41217a927dea7064f74604"
+    }
   }
 }

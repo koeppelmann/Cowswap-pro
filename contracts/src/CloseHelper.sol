@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.34;
 
-import {CoWSafeWrapper} from "./CoWSafeWrapper.sol";
+import {CoWSafeWrapper} from "cowswap-wrapper/src/CoWSafeWrapper.sol";
 
 /*
  * CloseHelper — pure/view derivation of a leverage-CLOSE meta-order for an existing Safe.
