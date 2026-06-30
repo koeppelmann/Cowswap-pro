@@ -14,7 +14,7 @@ import { getChainConfig } from '../lib/chains';
 import { buildPlan, type Plan } from '../lib/plan';
 import { type Duration, dispAmount, durationToSeconds, fmtAmount, fmtRate, humanizeSeconds, isAddress, shortAddress, tryParseUnits } from '../lib/format';
 import { useToken } from '../lib/useToken';
-import { useViewParam } from '../lib/useViewMode';
+import { usePosParam, useViewParam } from '../lib/useViewMode';
 import { useQuotes } from '../lib/useQuotes';
 import { useSpot } from '../lib/useSpot';
 import { useDebounced } from '../lib/useDebounced';
@@ -83,6 +83,7 @@ function Tabs({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
 export default function Page() {
   const { address: wallet, isConnected: walletConnected } = useAccount();
   const view = useViewParam();
+  const pos = usePosParam(); // ?pos=0xSAFE → pre-select that leverage position
   // read-only "view account" mode (?view=0x…) renders an account without its key.
   const address = view ?? wallet;
   const isConnected = view ? false : walletConnected; // viewing ≠ able to trade
@@ -107,7 +108,7 @@ export default function Page() {
       </div>
 
       {tab === 'swap' ? (
-        <SwapTab tabs={<Tabs tab={tab} setTab={setTab} />} viewOwner={view ?? undefined} />
+        <SwapTab tabs={<Tabs tab={tab} setTab={setTab} />} viewOwner={view ?? undefined} initialPosition={pos ?? undefined} />
       ) : isConnected && !chain ? (
         <div className="widget center"><p className="errors">Unsupported network — switch to Ethereum or Gnosis.</p></div>
       ) : (

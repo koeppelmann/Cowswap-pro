@@ -1,8 +1,20 @@
-import { formatUnits, getAddress, parseAbiItem, type Address, type PublicClient } from 'viem';
+import { createPublicClient, formatUnits, getAddress, http, parseAbiItem, type Address, type PublicClient } from 'viem';
+import { gnosis } from 'viem/chains';
 import { erc20Abi } from './abi';
 import { appCodeOf, LEV_CARRIER_APP_CODE } from './carrierHistory';
 import { positionMetrics, type PositionMetrics } from './leverage';
 import { ONBOARD, LEV_MODULE, LEV_MODULE_V4, POOL_ADDR } from './onboard';
+
+// eth_getLogs on Gnosis is only reliably served by rpc.gnosischain.com — the other
+// public RPCs in the wagmi fallback reject it (publicnode wants an archive token,
+// drpc caps ranges at 10k blocks). So a getLogs routed through the rotating fallback
+// fails intermittently. Pin closed-position reads to the one RPC that serves them.
+const LOG_RPC = process.env.NEXT_PUBLIC_GNOSIS_RPC || 'https://rpc.gnosischain.com';
+let _logClient: PublicClient | null = null;
+function logClient(): PublicClient {
+  if (!_logClient) _logClient = createPublicClient({ chain: gnosis, transport: http(LOG_RPC, { timeout: 20_000 }) }) as PublicClient;
+  return _logClient;
+}
 
 // ---------------------------------------------------------------------------
 // Shared leverage-position loading. The same live Aave read powers BOTH the Swap
@@ -246,24 +258,28 @@ async function fetchOpenSwap(safe: Address, debtToken: Address): Promise<{ colla
   } catch { return null; }
 }
 
-/** Sum of Transfer(token, safe → owner) over a bounded window. null = RPC couldn't serve it. */
-async function paidToOwner(publicClient: PublicClient, token: Address, safe: Address, owner: Address, fromBlock: bigint, toBlock: bigint): Promise<bigint | null> {
-  try {
-    const logs = await publicClient.getLogs({ address: token, event: TRANSFER_EVENT, args: { from: safe, to: owner }, fromBlock, toBlock });
-    return logs.reduce((sum, l) => sum + ((l.args as { value?: bigint }).value ?? 0n), 0n);
-  } catch { return null; }
+/** Sum of Transfer(token, safe → owner) over a bounded window. null = RPC couldn't serve it (after one retry). */
+async function paidToOwner(token: Address, safe: Address, owner: Address, fromBlock: bigint, toBlock: bigint): Promise<bigint | null> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const logs = await logClient().getLogs({ address: token, event: TRANSFER_EVENT, args: { from: safe, to: owner }, fromBlock, toBlock });
+      return logs.reduce((sum, l) => sum + ((l.args as { value?: bigint }).value ?? 0n), 0n);
+    } catch { /* transient rate-limit → retry once */ }
+  }
+  return null;
 }
 
-export async function realizedReturn(publicClient: PublicClient, safe: Address, owner: Address, debtToken: Address, initialEquity: bigint): Promise<RealizedPnL | null> {
+export async function realizedReturn(_publicClient: PublicClient, safe: Address, owner: Address, debtToken: Address, initialEquity: bigint): Promise<RealizedPnL | null> {
   try {
-    const latest = await publicClient.getBlockNumber();
+    const rpc = logClient();
+    const latest = await rpc.getBlockNumber();
     const span = 5_000_000n; // ~9 months of Gnosis blocks — covers the leverage era
     const fromBlock = latest > span ? latest - span : 0n;
     const open = await fetchOpenSwap(safe, debtToken);
     // payouts to the owner: debt token always; collateral token when we know it.
     const [debtBack, collBack] = await Promise.all([
-      paidToOwner(publicClient, debtToken, safe, owner, fromBlock, latest),
-      open ? paidToOwner(publicClient, open.collateral, safe, owner, fromBlock, latest) : Promise.resolve(0n),
+      paidToOwner(debtToken, safe, owner, fromBlock, latest),
+      open ? paidToOwner(open.collateral, safe, owner, fromBlock, latest) : Promise.resolve(0n),
     ]);
     if (debtBack === null && collBack === null) return null; // RPC failure on both
     const debtReturned = debtBack ?? 0n;
@@ -285,7 +301,7 @@ export async function realizedReturn(publicClient: PublicClient, safe: Address, 
     // funding that filled but whose open swap expired, or a pre-v5 close that left
     // funds behind — surface it as RECOVERABLE rather than an indeterminate "—".
     try {
-      const debtBal = await publicClient.readContract({ address: debtToken, abi: erc20Abi, functionName: 'balanceOf', args: [safe] }) as bigint;
+      const debtBal = await rpc.readContract({ address: debtToken, abi: erc20Abi, functionName: 'balanceOf', args: [safe] }) as bigint;
       if (debtBal > 0n && (initialEquity === 0n || debtBal * 100n >= initialEquity)) {
         return { token: debtToken, returned: debtBal, basis: initialEquity, parked: true };
       }

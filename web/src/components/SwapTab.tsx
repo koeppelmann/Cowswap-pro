@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { encodeFunctionData, formatUnits, getAddress, hashTypedData, keccak256, parseUnits, toHex, type Address } from 'viem';
 import { gnosis } from 'wagmi/chains';
 import { useAccount, useChainId, useConnect, usePublicClient, useSwitchChain, useWalletClient } from 'wagmi';
@@ -142,7 +142,7 @@ type OpenPlan = {
 
 const GNOSIS_CFG = getChainConfig(100)!;
 
-export function SwapTab({ tabs, viewOwner }: { tabs?: React.ReactNode; viewOwner?: Address }) {
+export function SwapTab({ tabs, viewOwner, initialPosition }: { tabs?: React.ReactNode; viewOwner?: Address; initialPosition?: Address }) {
   const { address: wallet, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
@@ -449,6 +449,16 @@ export function SwapTab({ tabs, viewOwner }: { tabs?: React.ReactNode; viewOwner
     setSelOpen(false);
   }
   function pickPosition(p: LivePos) { setSell(p); setPosMode('close'); setAmount('100'); setBuy({ address: p.debtTok.address, symbol: p.debtTok.symbol, decimals: p.debtTok.decimals, kind: tokenKind(p.debtTok.address), name: p.debtTok.symbol }); setSelOpen(false); }
+
+  // Deep link (?pos=0xSAFE from /orders "Manage →"): once the matching position
+  // has loaded, select it — once, so a manual change afterwards isn't snapped back.
+  const autoPicked = useRef(false);
+  useEffect(() => {
+    if (autoPicked.current || !initialPosition) return;
+    const p = positions.find((x) => x.safe.toLowerCase() === initialPosition.toLowerCase());
+    if (p) { autoPicked.current = true; pickPosition(p); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [positions, initialPosition]);
 
   // ── sign a Retarget intent over the LevManagerModule domain & relay it ──
   // wait=false: submit and return immediately (stop orders PARK in the auction until triggered)

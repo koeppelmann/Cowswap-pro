@@ -245,14 +245,14 @@ export default function OrdersPage() {
                   ${openSummary.equity.toFixed(2)} equity{openSummary.havePnl && <> · <b style={{ color: openSummary.pnl >= 0 ? 'var(--good)' : 'var(--bad)' }}>{openSummary.pnl >= 0 ? '+' : ''}${openSummary.pnl.toFixed(2)}</b></>}
                 </span>
               </h2>
-              {levPositions.map((p) => <PositionRow key={p.safe} p={p} initialEquity={equityOf.get(p.safe.toLowerCase())} />)}
+              {levPositions.map((p) => <PositionRow key={p.safe} p={p} initialEquity={equityOf.get(p.safe.toLowerCase())} view={view} chain={chain} />)}
             </div>
           )}
 
           {closed.length > 0 && (
             <div className="panel olist">
               <h2><span>Leverage · Closed ({closed.length})</span></h2>
-              {closed.map((c) => <ClosedRow key={c.safe} c={c} resolve={resolve} realized={realized?.[c.safe.toLowerCase()]} />)}
+              {closed.map((c) => <ClosedRow key={c.safe} c={c} resolve={resolve} realized={realized?.[c.safe.toLowerCase()]} chain={chain} />)}
             </div>
           )}
 
@@ -455,7 +455,10 @@ function SwapRowItem({ chain, s, resolve, flip, onFlip }: { chain: ChainConfig; 
 }
 
 /** A single open leverage position (read-only summary; manage from the trade tab). */
-function PositionRow({ p, initialEquity }: { p: LivePos; initialEquity?: bigint }) {
+function PositionRow({ p, initialEquity, view, chain }: { p: LivePos; initialEquity?: bigint; view: Address | null; chain: ChainConfig }) {
+  // "Manage →" deep-links to the trade page with THIS position pre-selected
+  // (?pos=safe), carrying the view context so read-only stays read-only.
+  const manageHref = `/?${view ? `view=${view}&` : ''}pos=${p.safe}`;
   const coll = Number(formatUnits(p.collQty, p.collTok.decimals));
   const debt = Number(formatUnits(p.debtQty, p.debtTok.decimals));
   const hf = p.m.healthFactor;
@@ -478,7 +481,7 @@ function PositionRow({ p, initialEquity }: { p: LivePos; initialEquity?: bigint 
         <div className="oright">
           <span className={`badge ${hfTone}`}>{p.m.liqPrice ? `Liq ${p.m.liqPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : 'Open'}</span>
           {/* positions are always Gnosis, regardless of the page's viewed chain */}
-          <div className="odate"><Link href="/">Manage →</Link> · <a href={`https://app.safe.global/home?safe=gno:${p.safe}`} target="_blank" rel="noreferrer">Safe ↗</a></div>
+          <div className="odate"><Link href={manageHref}>Manage →</Link> · <a href={`${chain.cowExplorer}/address/${p.safe}`} target="_blank" rel="noreferrer">CoW ↗</a> · <a href={`https://app.safe.global/home?safe=gno:${p.safe}`} target="_blank" rel="noreferrer">Safe ↗</a></div>
         </div>
       </div>
     </div>
@@ -494,7 +497,7 @@ function amt(n: number): string {
 }
 
 /** A closed leverage position: initial deposit + best-effort realized P&L (debt- or asset-denominated). */
-function ClosedRow({ c, resolve, realized }: { c: LevCarrier; resolve: ResolveFn; realized?: RealizedRow | null }) {
+function ClosedRow({ c, resolve, realized, chain }: { c: LevCarrier; resolve: ResolveFn; realized?: RealizedRow | null; chain: ChainConfig }) {
   const debt = resolve(c.debtToken);
   const deposit = Number(formatUnits(c.initialEquity, debt.decimals));
   // realized (undefined = loading, null = indeterminate, else { token, returned, basis }).
@@ -532,7 +535,7 @@ function ClosedRow({ c, resolve, realized }: { c: LevCarrier; resolve: ResolveFn
         </div>
         <div className="oright">
           <span className={`badge ${neverOpened ? 'warn' : ''}`}>{neverOpened ? 'Recover' : 'Closed'}</span>
-          <div className="odate">{c.createdAt ? new Date(c.createdAt * 1000).toLocaleString('en-US', DATE_FMT) : ''} · <a href={`https://app.safe.global/home?safe=gno:${c.safe}`} target="_blank" rel="noreferrer">Safe ↗</a></div>
+          <div className="odate">{c.createdAt ? new Date(c.createdAt * 1000).toLocaleString('en-US', DATE_FMT) : ''} · <a href={`${chain.cowExplorer}/address/${c.safe}`} target="_blank" rel="noreferrer">CoW ↗</a> · <a href={`https://app.safe.global/home?safe=gno:${c.safe}`} target="_blank" rel="noreferrer">Safe ↗</a></div>
         </div>
       </div>
     </div>
