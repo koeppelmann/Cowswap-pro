@@ -50,6 +50,8 @@ export const BRIDGE_INITIALIZER = '0xb6d3B979bEba11df263f993269E3694a39873918' a
 export const CONVERT_MODULE = '0x7cE6e4fe5c6658FF3f98C417Da09E6C31c9aAae3' as const; // gnosis
 export const SDAI_SAFE_INITIALIZER = '0x763F685cF83FA18EFeB87c79b50ca733B373C701' as const; // gnosis
 export const RETURN_ROUTER = '0xAb99F0C38194766ee435306Fc36bc6c4f6ce2D02' as const; // gnosis
+export const FINALIZE_HELPER = '0xBA6F734194255dF301064F3b1eBA3E428733ECeB' as const; // gnosis
+export const FINALIZE_TIP = 10n ** 16n; // 0.01 xDAI
 
 // Home xDAI bridge minimum per transfer (verified on-chain): 10 xDAI.
 export const REVERSE_MIN_XDAI = 10n * 10n ** 18n;
@@ -204,6 +206,25 @@ export const SDAI_PERMIT_TYPES = {
 export const SDAI_PERMIT_DOMAIN = {
   name: 'Savings xDAI', version: '1', chainId: 100, verifyingContract: SDAI,
 } as const;
+
+// ---- self-serve forward finalize (deploy Gnosis Safe + convert xDAI→sDAI) ----
+
+const finalizeHelperAbi = [
+  { type: 'function', name: 'finalize', stateMutability: 'nonpayable',
+    inputs: [{ name: 'singleton', type: 'address' }, { name: 'setup', type: 'bytes' }, { name: 'saltNonce', type: 'uint256' }], outputs: [{ type: 'address' }] },
+] as const;
+const convertModuleAbi = [
+  { type: 'function', name: 'convert', stateMutability: 'nonpayable', inputs: [{ name: 'safe', type: 'address' }], outputs: [] },
+] as const;
+
+/** Calldata to atomically deploy the Gnosis Safe + convert its xDAI to sDAI. */
+export function finalizeCalldata(gnosisSetup: Hex, saltNonce: bigint): Hex {
+  return encodeFunctionData({ abi: finalizeHelperAbi, functionName: 'finalize', args: [GNOSIS_SINGLETON, gnosisSetup, saltNonce] });
+}
+/** Calldata to convert an already-deployed Safe's xDAI to sDAI. */
+export function convertCalldata(safe: Address): Hex {
+  return encodeFunctionData({ abi: convertModuleAbi, functionName: 'convert', args: [safe] });
+}
 
 /** Calldata for ReturnRouter.returnToMainnet(...) from a signed sDAI permit. */
 export function returnToMainnetCalldata(opts: {

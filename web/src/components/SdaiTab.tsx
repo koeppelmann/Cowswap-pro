@@ -14,7 +14,8 @@ import { useToken } from '../lib/useToken';
 import { SdaiClaim, saveWithdrawal } from './SdaiClaim';
 import { buildPermitHook, detectPermit, splitSig, type PermitHook } from '../lib/sdaiPermit';
 import {
-  buildForwardPlan, returnToMainnetCalldata,
+  buildForwardPlan, returnToMainnetCalldata, predictGnosisSafe,
+  finalizeCalldata, convertCalldata, FINALIZE_HELPER, CONVERT_MODULE, FINALIZE_TIP,
   USDS, SDAI, RETURN_ROUTER, REVERSE_MIN_XDAI, SDAI_PERMIT_DOMAIN, SDAI_PERMIT_TYPES,
 } from '../lib/sdai';
 
@@ -66,7 +67,7 @@ function LiveUsds({ shares, pricePerShare, apy, decimals = 12, big }: { shares: 
 }
 
 type Transfer = {
-  uid: string; owner: string; mainnetSafe: string; gnosisSafe: string;
+  uid: string; owner: string; mainnetSafe: string; gnosisSafe: string; gnosisSetup: string;
   saltNonce: string; sellToken: string; sellAmount: string; createdAt?: number; finalizedAt?: number | null;
 };
 
@@ -166,6 +167,48 @@ export function SdaiTab({ tabs }: { tabs?: React.ReactNode }) {
     try { const r = await fetch(`/api/sdai?owner=${address}`); setTransfers((await r.json()).transfers ?? []); } catch { /* ignore */ }
   }, [address]);
   useEffect(() => { refreshTransfers(); }, [refreshTransfers]);
+
+  // per-transfer live state: how much xDAI is parked at the Gnosis Safe (awaiting
+  // finalize) — powers the self-serve "Finalize now" button so users never depend
+  // on the keeper bot.
+  const [parked, setParked] = useState<Record<string, { xdai: bigint; deployed: boolean }>>({});
+  const [finBusy, setFinBusy] = useState<string | null>(null);
+  useEffect(() => {
+    if (!gnoClient) return;
+    let live = true;
+    const load = async () => {
+      const pend = transfers.filter((t) => !t.finalizedAt);
+      const entries = await Promise.all(pend.map(async (t) => {
+        try {
+          const [xdai, code] = await Promise.all([
+            gnoClient.getBalance({ address: t.gnosisSafe as Address }),
+            gnoClient.getCode({ address: t.gnosisSafe as Address }),
+          ]);
+          return [t.uid, { xdai, deployed: !!code && code !== '0x' }] as const;
+        } catch { return [t.uid, { xdai: 0n, deployed: false }] as const; }
+      }));
+      if (live) setParked(Object.fromEntries(entries));
+    };
+    load(); const iv = setInterval(load, 20000);
+    return () => { live = false; clearInterval(iv); };
+  }, [gnoClient, transfers]);
+
+  async function doFinalize(t: Transfer) {
+    if (!walletClient || !gnoClient || !address) return;
+    if (chainId !== gnosis.id) { switchChain({ chainId: gnosis.id }); return; }
+    setFinBusy(t.uid);
+    try {
+      const deployed = parked[t.uid]?.deployed;
+      // resolve the salt that yields this Safe (new = per-transfer, legacy = 0)
+      const sn = predictGnosisSafe(t.owner as Address, BigInt(t.saltNonce)).toLowerCase() === t.gnosisSafe.toLowerCase() ? BigInt(t.saltNonce) : 0n;
+      const hash = deployed
+        ? await walletClient.sendTransaction({ account: address, chain: gnosis, to: CONVERT_MODULE as Address, data: convertCalldata(t.gnosisSafe as Address) })
+        : await walletClient.sendTransaction({ account: address, chain: gnosis, to: FINALIZE_HELPER as Address, data: finalizeCalldata(t.gnosisSetup as `0x${string}`, sn) });
+      await gnoClient.waitForTransactionReceipt({ hash });
+      await fetch('/api/sdai', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ op: 'finalized', gnosisSafe: t.gnosisSafe }) });
+      await refreshTransfers();
+    } catch (e) { setErr((e as Error).message); } finally { setFinBusy(null); }
+  }
 
   const flip = () => {
     const next = mode === 'deposit' ? 'withdraw' : 'deposit';
@@ -396,8 +439,13 @@ export function SdaiTab({ tabs }: { tabs?: React.ReactNode }) {
             <div key={t.uid} style={{ padding: '8px 0', borderTop: '1px solid var(--line, #0001)' }}>
               <div className="kv" style={{ marginBottom: 4 }}>
                 <span className="k mono">{t.gnosisSafe.slice(0, 12)}…</span>
-                <span className="v">{t.finalizedAt ? '✅ sDAI on Gnosis' : '⏳ bridging / finalizing'}</span>
+                <span className="v">{t.finalizedAt ? '✅ sDAI on Gnosis' : (parked[t.uid]?.xdai ?? 0n) > FINALIZE_TIP ? `${dispAmount(parked[t.uid].xdai, 18)} xDAI arrived` : '⏳ bridging / finalizing'}</span>
               </div>
+              {!t.finalizedAt && (parked[t.uid]?.xdai ?? 0n) > FINALIZE_TIP && (
+                <button className="cta" style={{ padding: '9px 0', margin: '2px 0 6px' }} disabled={finBusy === t.uid} onClick={() => doFinalize(t)}>
+                  {finBusy === t.uid ? 'Finalizing…' : chainId !== gnosis.id ? 'Switch to Gnosis to finalize' : 'Finalize now → sDAI'}
+                </button>
+              )}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 13 }}>
                 <a href={`https://explorer.cow.fi/orders/${t.uid}`} target="_blank" rel="noreferrer">CoW order ↗</a>
                 <a href={`https://etherscan.io/address/${t.mainnetSafe}`} target="_blank" rel="noreferrer">Mainnet Safe ↗</a>
