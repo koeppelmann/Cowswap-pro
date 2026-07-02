@@ -4,9 +4,9 @@ import { Providers } from './providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'TWAP Safe — approve-to-deploy CoW TWAP orders',
+  title: 'Cowswap Pro — swaps, TWAP, leverage & sDAI on Gnosis',
   description:
-    'Create a CoW Protocol TWAP order, get a deterministic Safe address, approve it, and it auto-deploys — tokens stay in your wallet until then.',
+    'An experimental pro interface for CoW Protocol: MEV-protected swaps, TWAP orders, one-signature leverage, and cross-chain swaps into sDAI on Gnosis.',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

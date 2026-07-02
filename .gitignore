@@ -34,3 +34,14 @@ contracts/broadcast/
 
 # runtime data
 web/.data/
+
+# finalizer key (DO NOT COMMIT)
+.finalizer/
+
+# e2e test key (DO NOT COMMIT)
+.e2e/
+
+# runtime logs + e2e test harness
+web/.finalizer.log
+web/.server.log
+web/scripts/e2e/

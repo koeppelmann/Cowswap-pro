@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     buyToken?: string;
     from?: string;
     sellAmount?: string; // before fee, base units
+    appData?: string; // full appData JSON — include hooks so the fee reflects hook gas
   };
   try {
     body = await req.json();
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 });
   }
 
-  const { chainId, sellToken, buyToken, from, sellAmount } = body;
+  const { chainId, sellToken, buyToken, from, sellAmount, appData } = body;
   const network = chainId != null ? COW_NETWORK[chainId] : undefined;
   if (!network) return NextResponse.json({ error: 'unsupported chain' }, { status: 400 });
   if (!sellToken || !buyToken || !sellAmount || !from) {
@@ -43,7 +44,9 @@ export async function POST(req: Request) {
         kind: 'sell',
         signingScheme: 'eip1271',
         onchainOrder: false,
-        appData: '{}',
+        // Passing the full appData (with post-hooks) makes CoW price the hook gas
+        // into feeAmount/buyAmount — essential for hook orders to be fillable.
+        appData: appData ?? '{}',
       }),
       // CoW quotes are short-lived; never cache.
       cache: 'no-store',

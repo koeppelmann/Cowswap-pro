@@ -19,6 +19,8 @@ export async function fetchQuote(params: {
   buyToken: Address;
   from: Address;
   sellAmount: bigint;
+  /** full appData JSON — include hooks so the fee reflects hook gas. */
+  appData?: string;
 }): Promise<Quote> {
   const res = await fetch('/api/quote', {
     method: 'POST',
@@ -29,6 +31,7 @@ export async function fetchQuote(params: {
       buyToken: params.buyToken,
       from: params.from,
       sellAmount: params.sellAmount.toString(),
+      ...(params.appData ? { appData: params.appData } : {}),
     }),
   });
   const data = await res.json();
