@@ -112,3 +112,9 @@ complete snapshots atomically. `service.py` runs collection; `http_server.py`
 serves the dedicated public site and accepts same-origin refresh requests.
 
 Canonical schedule and timing rules: [TWAP handler](https://github.com/cowprotocol/composable-cow/blob/2d43cabcfb8b5804d71b8e29a4a0cfbeb11f6322/src/types/twap/TWAP.sol), [child-order fields](https://github.com/cowprotocol/composable-cow/blob/2d43cabcfb8b5804d71b8e29a4a0cfbeb11f6322/src/types/twap/libraries/TWAPOrder.sol), and [window boundaries](https://github.com/cowprotocol/composable-cow/blob/2d43cabcfb8b5804d71b8e29a4a0cfbeb11f6322/src/types/twap/libraries/TWAPOrderMathLib.sol).
+
+The token picker ranks by funded wallet value by default: buys use allocated
+quote budgets normalized to USDC; sells use allocated base inventory at the CoW
+reference price. This avoids treating extreme signed limits as available dollar
+liquidity. TWAP counts remain separate. Search accepts token labels or addresses;
+ranking can switch to order count, TWAP count or alphabetical order.
