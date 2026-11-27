@@ -1,0 +1,504 @@
+{
+  "schema": "dfusion_book_configuration_v1",
+  "metadata": {
+    "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee": {
+      "symbol": "ETH",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e": {
+      "symbol": "YFI",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x18084fba666a33d37592fa2633fd49a74dd93a88": {
+      "symbol": "tBTC",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984": {
+      "symbol": "UNI",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": {
+      "symbol": "WBTC",
+      "decimals": 8,
+      "source": "configured_metadata"
+    },
+    "0x2b591e99afe9f32eaa6214f7b7629768c40eeb39": {
+      "symbol": "HEX",
+      "decimals": 8,
+      "source": "configured_metadata"
+    },
+    "0x45804880de22913dafe09f4980848ece6ecbaf78": {
+      "symbol": "PAXG",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x4833e7f4f0460f4b72a3a5879a6c9841bcc5b58b": {
+      "symbol": "SLVx",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x4a220e6096b25eadb88358cb44068a3248254675": {
+      "symbol": "QNT",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x4c9edd5852cd905f086c759e8383e09bff1e68b3": {
+      "symbol": "USDe",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b": {
+      "symbol": "CVX",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x514910771af9ca656af840dff83e8264ecf986ca": {
+      "symbol": "LINK",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x56072c95faa701256059aa122697b133aded9279": {
+      "symbol": "SKY",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x5a98fcbea516cf06857215779fd812ca3bef1b32": {
+      "symbol": "LDO",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x5e8422345238f34275888049021821e8e08caa1f": {
+      "symbol": "frxETH",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x5f98805a4e8be255a32880fdec7f6728c6568ba0": {
+      "symbol": "LUSD",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x68bbed6a47194eff1cf514b50ea91895597fc91e": {
+      "symbol": "ANDY",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x6b175474e89094c44da98b954eedeac495271d0f": {
+      "symbol": "DAI",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2": {
+      "symbol": "SUSHI",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x6c3ea9036406852006290770bedfcaba0e23a0e8": {
+      "symbol": "PYUSD",
+      "decimals": 6,
+      "source": "configured_metadata"
+    },
+    "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": {
+      "symbol": "wstETH",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x7f792db54b0e580cdc755178443f0430cf799aca": {
+      "symbol": "VOLT",
+      "decimals": 9,
+      "source": "configured_metadata"
+    },
+    "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9": {
+      "symbol": "AAVE",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x808507121b80c02388fad14726482e061b8da827": {
+      "symbol": "PENDLE",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x8143182a775c54578c8b7b3ef77982498866945d": {
+      "symbol": "wQUIL",
+      "decimals": 8,
+      "source": "configured_metadata"
+    },
+    "0x8292bb45bf1ee4d140127049757c2e0ff06317ed": {
+      "symbol": "RLUSD",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x853d955acef822db058eb8505911ed77f175b99e": {
+      "symbol": "FRAX",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce": {
+      "symbol": "SHIB",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9": {
+      "symbol": "stUSDS",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x9ce84f6a69986a83d92c324df10bc8e64771030f": {
+      "symbol": "CHEX",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0x9e18d5bab2fa94a6a95f509ecb38f8f68322abd3": {
+      "symbol": "OMIKAMI",
+      "decimals": 9,
+      "source": "configured_metadata"
+    },
+    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": {
+      "symbol": "USDC",
+      "decimals": 6,
+      "source": "configured_metadata"
+    },
+    "0xa35b1b31ce002fbf2058d22f30f95d405200a15b": {
+      "symbol": "ETHx",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0xae78736cd615f374d3085123a210448e74fc6393": {
+      "symbol": "rETH",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0xae7ab96520de3a18e5e111b5eaab095312d7fe84": {
+      "symbol": "stETH",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0xbe9895146f7af43049ca1c1ae358b0541ea49704": {
+      "symbol": "cbETH",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0xbf5495efe5db9ce00f80364c8b423567e58d2110": {
+      "symbol": "ezETH",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
+      "symbol": "WETH",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0xca530408c3e552b020a2300debc7bd18820fb42f": {
+      "symbol": "RYU",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf": {
+      "symbol": "cbBTC",
+      "decimals": 8,
+      "source": "configured_metadata"
+    },
+    "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee": {
+      "symbol": "weETH",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0xd533a949740bb3306d119cc777fa900ba034cd52": {
+      "symbol": "CRV",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0xd7efb00d12c2c13131fd319336fdf952525da2af": {
+      "symbol": "XPR",
+      "decimals": 4,
+      "source": "configured_metadata"
+    },
+    "0xdac17f958d2ee523a2206206994597c13d831ec7": {
+      "symbol": "USDT",
+      "decimals": 6,
+      "source": "configured_metadata"
+    },
+    "0xdc035d45d973e3ec169d2276ddab16f1e407384f": {
+      "symbol": "USDS",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0xdef1ca1fb7fbcdc777520aa7f396b4e015f497ab": {
+      "symbol": "COW",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0xe76c6c83af64e4c60245d8c7de953df673a7a33d": {
+      "symbol": "RAIL",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0xf1c9acdc66974dfb6decb12aa385b9cd01190e38": {
+      "symbol": "osETH",
+      "decimals": 18,
+      "source": "configured_metadata"
+    },
+    "0xfaba6f8e4a5e8ab82f62fe7c39859fa577269be3": {
+      "symbol": "ONDO",
+      "decimals": 18,
+      "source": "configured_metadata"
+    }
+  },
+  "pairs": [
+    {
+      "id": "eth",
+      "label": "ETH (all forms)",
+      "base_symbol": "ETH-equivalent",
+      "base_decimals": 18,
+      "base_token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "conversions": [
+        {
+          "token": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        },
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        },
+        {
+          "token": "0xae7ab96520de3a18e5e111b5eaab095312d7fe84"
+        },
+        {
+          "token": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"
+        },
+        {
+          "token": "0xae78736cd615f374d3085123a210448e74fc6393"
+        },
+        {
+          "token": "0xbe9895146f7af43049ca1c1ae358b0541ea49704"
+        },
+        {
+          "token": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee"
+        },
+        {
+          "token": "0xbf5495efe5db9ce00f80364c8b423567e58d2110"
+        },
+        {
+          "token": "0x5e8422345238f34275888049021821e8e08caa1f"
+        },
+        {
+          "token": "0xf1c9acdc66974dfb6decb12aa385b9cd01190e38"
+        },
+        {
+          "token": "0xa35b1b31ce002fbf2058d22f30f95d405200a15b"
+        }
+      ]
+    },
+    {
+      "id": "wbtc",
+      "label": "WBTC",
+      "base_symbol": "WBTC",
+      "base_decimals": 8,
+      "base_token": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
+    },
+    {
+      "id": "usdc",
+      "label": "USDC",
+      "base_symbol": "USDC",
+      "base_decimals": 6,
+      "base_token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    },
+    {
+      "id": "link",
+      "label": "LINK",
+      "base_symbol": "LINK",
+      "base_decimals": 18,
+      "base_token": "0x514910771af9ca656af840dff83e8264ecf986ca"
+    },
+    {
+      "id": "stusds",
+      "label": "stUSDS",
+      "base_symbol": "stUSDS",
+      "base_decimals": 18,
+      "base_token": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9"
+    },
+    {
+      "id": "aave",
+      "label": "AAVE",
+      "base_symbol": "AAVE",
+      "base_decimals": 18,
+      "base_token": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9"
+    },
+    {
+      "id": "andy",
+      "label": "ANDY",
+      "base_symbol": "ANDY",
+      "base_decimals": 18,
+      "base_token": "0x68bbed6a47194eff1cf514b50ea91895597fc91e"
+    },
+    {
+      "id": "cbbtc",
+      "label": "cbBTC",
+      "base_symbol": "cbBTC",
+      "base_decimals": 8,
+      "base_token": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
+    },
+    {
+      "id": "chex",
+      "label": "CHEX",
+      "base_symbol": "CHEX",
+      "base_decimals": 18,
+      "base_token": "0x9ce84f6a69986a83d92c324df10bc8e64771030f"
+    },
+    {
+      "id": "cow",
+      "label": "COW",
+      "base_symbol": "COW",
+      "base_decimals": 18,
+      "base_token": "0xdef1ca1fb7fbcdc777520aa7f396b4e015f497ab"
+    },
+    {
+      "id": "crv",
+      "label": "CRV",
+      "base_symbol": "CRV",
+      "base_decimals": 18,
+      "base_token": "0xd533a949740bb3306d119cc777fa900ba034cd52"
+    },
+    {
+      "id": "cvx",
+      "label": "CVX",
+      "base_symbol": "CVX",
+      "base_decimals": 18,
+      "base_token": "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b"
+    },
+    {
+      "id": "hex",
+      "label": "HEX",
+      "base_symbol": "HEX",
+      "base_decimals": 8,
+      "base_token": "0x2b591e99afe9f32eaa6214f7b7629768c40eeb39"
+    },
+    {
+      "id": "ldo",
+      "label": "LDO",
+      "base_symbol": "LDO",
+      "base_decimals": 18,
+      "base_token": "0x5a98fcbea516cf06857215779fd812ca3bef1b32"
+    },
+    {
+      "id": "omikami",
+      "label": "OMIKAMI",
+      "base_symbol": "OMIKAMI",
+      "base_decimals": 9,
+      "base_token": "0x9e18d5bab2fa94a6a95f509ecb38f8f68322abd3"
+    },
+    {
+      "id": "ondo",
+      "label": "ONDO",
+      "base_symbol": "ONDO",
+      "base_decimals": 18,
+      "base_token": "0xfaba6f8e4a5e8ab82f62fe7c39859fa577269be3"
+    },
+    {
+      "id": "paxg",
+      "label": "PAXG",
+      "base_symbol": "PAXG",
+      "base_decimals": 18,
+      "base_token": "0x45804880de22913dafe09f4980848ece6ecbaf78"
+    },
+    {
+      "id": "pendle",
+      "label": "PENDLE",
+      "base_symbol": "PENDLE",
+      "base_decimals": 18,
+      "base_token": "0x808507121b80c02388fad14726482e061b8da827"
+    },
+    {
+      "id": "qnt",
+      "label": "QNT",
+      "base_symbol": "QNT",
+      "base_decimals": 18,
+      "base_token": "0x4a220e6096b25eadb88358cb44068a3248254675"
+    },
+    {
+      "id": "rail",
+      "label": "RAIL",
+      "base_symbol": "RAIL",
+      "base_decimals": 18,
+      "base_token": "0xe76c6c83af64e4c60245d8c7de953df673a7a33d"
+    },
+    {
+      "id": "ryu",
+      "label": "RYU",
+      "base_symbol": "RYU",
+      "base_decimals": 18,
+      "base_token": "0xca530408c3e552b020a2300debc7bd18820fb42f"
+    },
+    {
+      "id": "shib",
+      "label": "SHIB",
+      "base_symbol": "SHIB",
+      "base_decimals": 18,
+      "base_token": "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce"
+    },
+    {
+      "id": "sky",
+      "label": "SKY",
+      "base_symbol": "SKY",
+      "base_decimals": 18,
+      "base_token": "0x56072c95faa701256059aa122697b133aded9279"
+    },
+    {
+      "id": "slvx",
+      "label": "SLVx",
+      "base_symbol": "SLVx",
+      "base_decimals": 18,
+      "base_token": "0x4833e7f4f0460f4b72a3a5879a6c9841bcc5b58b"
+    },
+    {
+      "id": "sushi",
+      "label": "SUSHI",
+      "base_symbol": "SUSHI",
+      "base_decimals": 18,
+      "base_token": "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2"
+    },
+    {
+      "id": "tbtc",
+      "label": "tBTC",
+      "base_symbol": "tBTC",
+      "base_decimals": 18,
+      "base_token": "0x18084fba666a33d37592fa2633fd49a74dd93a88"
+    },
+    {
+      "id": "uni",
+      "label": "UNI",
+      "base_symbol": "UNI",
+      "base_decimals": 18,
+      "base_token": "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984"
+    },
+    {
+      "id": "volt",
+      "label": "VOLT",
+      "base_symbol": "VOLT",
+      "base_decimals": 9,
+      "base_token": "0x7f792db54b0e580cdc755178443f0430cf799aca"
+    },
+    {
+      "id": "wquil",
+      "label": "wQUIL",
+      "base_symbol": "wQUIL",
+      "base_decimals": 8,
+      "base_token": "0x8143182a775c54578c8b7b3ef77982498866945d"
+    },
+    {
+      "id": "xpr",
+      "label": "XPR",
+      "base_symbol": "XPR",
+      "base_decimals": 4,
+      "base_token": "0xd7efb00d12c2c13131fd319336fdf952525da2af"
+    },
+    {
+      "id": "yfi",
+      "label": "YFI",
+      "base_symbol": "YFI",
+      "base_decimals": 18,
+      "base_token": "0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e"
+    }
+  ]
+}

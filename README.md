@@ -36,6 +36,7 @@ Works on **Gnosis Chain** (full feature set) and **Ethereum** (swaps + TWAP).
 
 | Path | What |
 |------|------|
+| [`orderbook-viewer/`](orderbook-viewer/) | Standalone public CoW limit-order depth viewer, funding checks, AMM reference markers and counter-order preparation. |
 | `web/` | Next.js dapp (wagmi + viem). Swap / TWAP / Leverage UI, order history with live P&L, `?view=0xADDR` read-only account viewing. Includes a TS SDK (`web/src/lib`) cross-checked byte-for-byte against the on-chain Solidity encoding. |
 | `contracts/` | Foundry project — the contracts this app adds *on top of* the CoW wrapper stack: the TWAP `approve-to-deploy` initializers + the leverage onboarding/management contracts (`IntentBootstrap15`, `LevManagerModule`, `CloseHelper`, …), with Gnosis fork tests. The generic CoW wrapper layer is pulled in as a dependency from [`koeppelmann/cowswap_wrapper`](https://github.com/koeppelmann/cowswap_wrapper). See `contracts/DEPLOYMENTS.md`. |
 

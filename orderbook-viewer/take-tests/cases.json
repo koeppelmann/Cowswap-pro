@@ -1,0 +1,8 @@
+[
+  {"name":"ask-wbtc-usdc-exact","side":"ask","kind":"sell","sourceSell":"100000000","sourceBuy":"100000000000","allocatedSell":"100000000","extraBps":0,"counterSell":"100000000000","counterBuy":"100000000"},
+  {"name":"bid-usdc-wbtc-exact","side":"bid","kind":"buy","sourceSell":"100000000000","sourceBuy":"100000000","allocatedSell":"100000000000","extraBps":0,"counterSell":"100000000","counterBuy":"100000000000"},
+  {"name":"partial-sell-ceiling","side":"ask","kind":"sell","sourceSell":"3","sourceBuy":"10","allocatedSell":"1","extraBps":0,"counterSell":"4","counterBuy":"1"},
+  {"name":"partial-buy-whole-target","side":"bid","kind":"buy","sourceSell":"10","sourceBuy":"3","allocatedSell":"4","extraBps":0,"counterSell":"1","counterBuy":"3"},
+  {"name":"one-atom-extra-ceiling","side":"ask","kind":"sell","sourceSell":"1","sourceBuy":"1","allocatedSell":"1","extraBps":1,"counterSell":"2","counterBuy":"1"},
+  {"name":"above-safe-number-exact","side":"ask","kind":"sell","sourceSell":"1000000000000000001","sourceBuy":"9007199254740993","allocatedSell":"1000000000000000001","extraBps":0,"counterSell":"9007199254740993","counterBuy":"1000000000000000001"}
+]
