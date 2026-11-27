@@ -35,3 +35,36 @@ main{max-width:1680px;padding:27px 32px 22px}header{margin-bottom:23px}h1{font-s
 .pair-filter{display:flex;align-items:center;gap:12px}.pair-filter select[hidden]{display:none}.token-picker-open{display:flex;align-items:center;justify-content:space-between;gap:30px;min-width:200px;font-size:15px;font-weight:550;padding:10px 14px}.token-picker-open span{color:#92929c}#tokenPicker{color:#e4e4e9;background:#141416;border:1px solid #37373e;border-radius:14px;padding:0;width:min(740px,94vw);max-height:80vh;box-shadow:0 24px 90px #0008}#tokenPicker::backdrop{background:#0009;backdrop-filter:blur(4px)}.picker-head{display:flex;justify-content:space-between;align-items:center;padding:20px 22px 12px}.picker-head h2{font-size:19px;margin:0}.picker-head button{border:0;background:transparent;color:#aaa}.picker-tools{display:flex;gap:10px;align-items:center;padding:0 22px 18px}.picker-tools input[type=search]{flex:1;min-width:80px;background:#0d0d0f;border:1px solid #3a3a43;border-radius:7px;padding:10px 12px;color:#eee;font-size:13px}.picker-tools select{font-size:12px}.picker-tools label{font-size:11px;color:#b3adc4;white-space:nowrap}.picker-scroll{max-height:52vh;overflow:auto}.picker-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}.picker-table th{position:sticky;top:0;background:#1a1a1d;color:#9999a5;font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:500;padding:11px 20px;text-align:right}.picker-table th:first-child{text-align:left}.picker-table td{padding:11px 20px;text-align:right;border-bottom:1px solid #242429;font-size:13px;white-space:nowrap}.picker-table td:first-child{text-align:left}.picker-table td button{padding:0;border:0;background:transparent;color:#e5e5eb;font-size:14px;font-weight:550}.picker-table tr{cursor:pointer}.picker-table tbody tr:hover{background:#222229}.picker-table tr.is-selected{background:#222b30}.picker-table tr.is-selected td:first-child button:before{content:'✓ ';color:#9ed3bb}.picker-twaps{color:#c7b6e3}.picker-foot{display:flex;justify-content:space-between;padding:14px 22px;color:#858590;font-size:10px;border-top:1px solid #303037}@media(max-width:600px){.picker-tools{flex-wrap:wrap;padding:0 12px 12px}.picker-tools input[type=search]{flex-basis:100%}.picker-table td,.picker-table th{padding:10px 8px;font-size:11px}.picker-table td button{font-size:12px}.picker-head{padding:16px 12px}.picker-foot{padding:12px}.token-picker-open{min-width:150px}}
 
 .pro-brand{display:inline-flex;align-items:center;gap:9px;color:#e7eefa;font-size:17px;letter-spacing:-.04em;font-weight:650;text-decoration:none;margin-bottom:10px}.pro-brand span{font-size:9px;letter-spacing:.12em;font-weight:650;border:1px solid #3f536e;background:#172336;color:#b4cdef;border-radius:5px;padding:3px 5px}.pro-brand:hover{color:#c4daf6}header h1{letter-spacing:-.04em}
+
+/* === Mobile optimisation pass === */
+@media(max-width:600px){
+  /* No sideways scroll. */
+  html,body{overflow-x:hidden}
+  /* Market bar wraps instead of overflowing now the network selector is always shown:
+     network + quote share a row, the token picker gets its own full-width row. */
+  .market-bar{flex-wrap:wrap;gap:10px 12px;align-items:stretch}
+  .network-filter{order:1;flex:1 1 44%;font-size:0;gap:0}
+  .network-filter select{width:100%;max-width:none;font-size:13px;padding:10px 11px}
+  .quote-filter{order:2;flex:1 1 44%;margin-left:0;gap:0}
+  .quote-filter select{width:100%;max-width:none;font-size:13px;padding:10px 11px}
+  .pair-filter{order:3;flex:1 1 100%}
+  .pair-filter .token-picker-open{width:100%;min-width:0}
+  .snapshot{width:100%}
+  /* 16px text inputs stop iOS zooming the whole page on focus. */
+  .search input,#orderSearch,.take-controls input,.picker-tools input[type=search]{font-size:16px}
+  /* Comfortable (≥42px) tap targets. */
+  .network-filter select,.quote-filter select,.chart-controls select,.token-picker-open,.export-menu>summary,.settings>summary,.more{min-height:42px}
+  .detail-head button{min-width:42px;min-height:42px}
+  .book-table td{padding-top:7px;padding-bottom:7px}
+  /* Size both panels to the viewport so each is reachable without an oversized scroll. */
+  .chart-panel{height:min(585px,70vh)}
+  .orderbook-panel{height:min(620px,75vh)}
+}
+@media(max-width:400px){
+  /* Token picker: five columns overflow a narrow phone — drop the Buy/Sell value
+     columns (the volume sort still ranks by them); Token · Orders · TWAPs stay. */
+  .picker-table th:nth-child(3),.picker-table td:nth-child(3),
+  .picker-table th:nth-child(4),.picker-table td:nth-child(4){display:none}
+  .network-filter,.quote-filter{flex-basis:47%}
+  h1{font-size:21px}
+}
