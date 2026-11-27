@@ -128,27 +128,30 @@
     const row=twapRows().find(r=>r.id===id);if(!row)return;
     const expanded=selectedTwap===id&&$('detailContent').querySelector('details')?.open;
     selectedTwap=id;selectedUid=null;CowProTakeUI.clearOrder();$('takeOrder').hidden=true;$('detailTitle').textContent=(row.side==='bid'?'Buy ':'Sell ')+(row.base_symbol||symbol())+' · TWAP';$('orderDetail').hidden=false;$('detailContent').replaceChildren();$('twapSelect').value=id;
-    const base=pair().base_decimals,quote=data.metadata[row.quote_token],baseAmount=n=>fmt(Number(n)/10**base,4)+' '+symbol();
+    const base=pair().base_decimals,quote=data.metadata[row.quote_token];
+    // Show the actual sell/buy token (WETH, weETH, …) in its own units, not the pair's
+    // ETH-equivalent aggregate: amounts come from the raw schedule, price is de-converted.
+    const nativeDec=data.metadata[row.base_token]?.decimals??base,tokenSym=row.base_symbol||symbol(),baseAmount=n=>fmt(Number(n)/10**nativeDec,4)+' '+tokenSym;
     const exactTime=n=>n?new Date(Number(n)*1000).toISOString().replace('T',' ').slice(0,19)+' UTC':'Not scheduled';
     const exactAmount=(atoms,decimals)=>CowProTake.formatAtoms(atoms||'0',decimals);
     const root=document.createElement('div');root.className='twap-summary';$('detailContent').append(root);
     const core=document.createElement('div');core.className='twap-core';root.append(core);
     const total=Number(row.slice_usdc_equivalent)*Number(row.total_parts);
-    const totalTokens=fmt(Number(row.slice_base_atoms)/10**base*Number(row.total_parts),4)+' '+symbol();
+    const totalTokens=fmt(Number(row.slice_native_base_atoms)/10**nativeDec*Number(row.total_parts),4)+' '+tokenSym;
     for(const [label,value,sub,title] of [
-      ['Total scheduled',totalTokens,'≈ '+money(total)+' · '+baseAmount(row.remaining_base_atoms)+' remaining','Scheduled token amount (the headline figure). The $ value is an estimate at the CoW reference price — not the signed limit, since a TWAP can set any limit. Remaining excludes missed, expired and filled current slices; it is not a lifetime fill tally.'],
-      ['Per swap',baseAmount(row.slice_base_atoms),'≈ '+money(row.slice_usdc_equivalent),'Token amount per swap (the headline figure). The $ value is an estimate at the CoW reference price; the signed limit is shown separately below.'],
-      ['Swaps remaining',Number(row.remaining_parts).toLocaleString(), 'of '+Number(row.total_parts).toLocaleString()+' scheduled','Remaining eligible swaps, not the number of separate TWAP schedules.']
+      ['Total scheduled',totalTokens,'≈ '+money(total)+' · '+baseAmount(row.remaining_native_base_atoms)+' left','Total '+tokenSym+' this TWAP is scheduled to trade. The $ is an estimate at the current market price — a TWAP’s own limit can be set to anything, so it isn’t used to value the order. “Left” counts only swaps still eligible now, not a lifetime fill total.'],
+      ['Per swap',baseAmount(row.slice_native_base_atoms),'≈ '+money(row.slice_usdc_equivalent),tokenSym+' traded in each individual swap, with an estimated $ value at the current market price. The order’s limit price is shown just below.'],
+      ['Swaps left',Number(row.remaining_parts).toLocaleString(), 'of '+Number(row.total_parts).toLocaleString()+' total','Swaps still eligible to run, out of the total this schedule defines.']
     ]){const card=document.createElement('div');card.className='twap-stat';card.title=title;const name=document.createElement('span');name.className='detail-label';name.textContent=label;const main=document.createElement('strong');main.textContent=value;const note=document.createElement('small');note.textContent=sub;card.append(name,main,note);core.append(card);}
     const info=document.createElement('div');info.className='twap-info';root.append(info);
     function field(parent,label,value,title){const div=document.createElement('div');div.className='detail-field';const name=document.createElement('span');name.className='detail-label';name.textContent=label;const text=document.createElement('span');text.textContent=value;if(title)text.title=title;div.append(name,text);parent.append(div);return text;}
-    field(info,'Limit price',money(row.normalized_price)+' / '+symbol());
+    field(info,'Limit price',money(Number(row.normalized_price)*Number(row.base_conversion))+' / '+tokenSym,'The worst price each swap will accept. A TWAP can set this far from the market, so it is not used for the $ estimates above.');
     const minutes=Number(row.interval_seconds)/60;field(info,'Frequency','Every '+(minutes>=60&&minutes%60===0?fmt(minutes/60,2)+(minutes===60?' hour':' hours'):fmt(minutes,2)+' min'));
     for(const [label,value,isNext] of [['Next swap',row.next_slice_at,true],['Ends',row.end_time,false]]){const el=field(info,label,relativeTime(value),exactTime(value));if(value){el.dataset.relativeTime=value;if(isNext){el.dataset.nextSwap='true';if(row.status==='current_slice'&&!row.current_child_filled&&!row.current_child_invalidated)el.dataset.validUntil=row.current_valid_to;}}}
-    field(info,'Funding',row.funding_status==='balance_covers_next_slice'?'Next swap covered':row.funding_status==='requires_funding'?'Needs funding':'Not verified','Wallet balance and allowance at the snapshot block; shared budgets and future funding are not guaranteed.');
+    field(info,'Funding',row.funding_status==='balance_covers_next_slice'?'Next swap covered':row.funding_status==='requires_funding'?'Needs funding':'Not verified','Whether the wallet’s balance and allowance covered the next swap at the snapshot. This can change, and the budget may be shared with other orders.');
     const details=document.createElement('details');details.className='twap-details';details.open=Boolean(expanded);const summary=document.createElement('summary');summary.textContent='Schedule details';details.append(summary);const grid=document.createElement('div');grid.className='twap-exact';details.append(grid);root.append(details);
     for(const [label,value] of [
-      ['Remaining tokens at limit',exactAmount(row.remaining_base_atoms,base)+' '+symbol()],['Tokens per swap at limit',exactAmount(row.slice_base_atoms,base)+' '+symbol()],
+      ['Tokens left',exactAmount(row.remaining_native_base_atoms,nativeDec)+' '+tokenSym],['Tokens per swap',exactAmount(row.slice_native_base_atoms,nativeDec)+' '+tokenSym],
       ['Remaining quote at limit',exactAmount(row.remaining_quote_atoms,quote.decimals)+' '+quote.symbol],['Quote per swap at limit',exactAmount(row.slice_quote_atoms,quote.decimals)+' '+quote.symbol],
       ['Started',exactTime(row.start_time)],['Ends at',exactTime(row.end_time)],['Next eligible at',exactTime(row.next_slice_at)],
       ['Current slice',row.current_child_invalidated?'Invalidated':row.current_child_filled?'Already executed':row.status?.replaceAll('_',' ')||'Scheduled'],['Owner',row.owner],['Schedule ID',row.id],['Snapshot block',Number(row.block).toLocaleString()]
@@ -159,7 +162,7 @@
     link(row.owner_url||tokenExplorer(row.owner),'Owner ↗','Wallet that placed this TWAP; its full order history.');
     if(/^0x[0-9a-f]{112}$/i.test(row.current_child_uid||''))link(orderExplorer(row.current_child_uid),row.current_child_filled&&!row.current_child_invalidated?'Current slice · filled ↗':'Current slice ↗','This generated slice may not yet have been submitted unless its fill is confirmed.');
     if(/^0x[0-9a-f]{64}$/i.test(row.creation_tx||''))link(row.creation_url||tokenExplorer(row.creation_tx),'Registration ↗');
-    const note=document.createElement('span');note.className='twap-scope';note.textContent='Scheduled flow · not funded order-book depth';note.title='Amounts are valued at signed limits. Eligible swaps can expire or require future funding; execution is not guaranteed.';root.append(note);updateTwapTimes();
+    const note=document.createElement('span');note.className='twap-scope';note.textContent='Scheduled flow · not funded order-book depth';note.title='A TWAP is a schedule of future swaps, not resting order-book liquidity. Swaps can expire or run short of funds, so execution is not guaranteed.';root.append(note);updateTwapTimes();
   }
   function render({preserveViewport=false}={}) {
     const previous=preserveViewport?$('chart').layout:null;
