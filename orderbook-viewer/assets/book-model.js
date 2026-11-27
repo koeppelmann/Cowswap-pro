@@ -1,4 +1,4 @@
-(function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.DfusionBook=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
+(function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.CowProBook=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
   function buildBook(rows,{includeUnfunded=false,search='',baseDecimals,depthUnit='usd',metadata,quoteRates}){
     const quoteValue=row=>Number(row.allocated_quote_atoms)/10**metadata[row.quote_token].decimals*Number(quoteRates[row.quote_token]);

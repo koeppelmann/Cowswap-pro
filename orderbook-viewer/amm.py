@@ -8,7 +8,7 @@ import urllib.request
 from pathlib import Path
 from funding import endpoint, selector, simple, aggregate, decode, MULTICALL, WETH, addr, word, symbol_value
 
-from dfusion_crypto import keccak256
+from ethereum_crypto import keccak256
 
 STATE_VIEW='0x7ffe42c4a5deea5b0fec41c94c136cf115597227'
 BALANCER_VAULT='0xba1333333333a1ba1108e8412f11850a5c319ba9'

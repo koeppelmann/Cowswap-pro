@@ -60,7 +60,7 @@ class RefreshAcceptance(unittest.TestCase):
         base='http://127.0.0.1:'+str(server.server_port)
         with urllib.request.urlopen(base+'/') as response:self.assertEqual(response.read(),b'static report')
         def post(origin,data=b''):
-            request=urllib.request.Request(base+'/dfusion-limit-depth-live/refresh',data=data,headers={'Origin':origin},method='POST')
+            request=urllib.request.Request(base+'/pro/refresh',data=data,headers={'Origin':origin},method='POST')
             try:return urllib.request.urlopen(request)
             except urllib.error.HTTPError as error:return error
         with post('https://elsewhere.invalid') as response:self.assertEqual(response.status,403)

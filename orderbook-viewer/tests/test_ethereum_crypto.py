@@ -2,7 +2,7 @@ import json
 import os
 from unittest.mock import patch
 import unittest
-from dfusion_crypto import function_selector,keccak256
+from ethereum_crypto import function_selector,keccak256
 import funding
 import source
 

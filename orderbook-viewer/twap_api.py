@@ -60,7 +60,7 @@ def _request_page(offset,deadline):
     remaining=deadline-time.monotonic()
     if remaining<=0:raise QueryFailure('query_deadline')
     payload=json.dumps({'query':QUERY,'variables':{'limit':PAGE_SIZE,'offset':offset}}).encode()
-    request=urllib.request.Request(SOURCE,data=payload,headers={'Content-Type':'application/json','Accept':'application/json','User-Agent':'dfusion-orderbook-viewer/1.0'},method='POST')
+    request=urllib.request.Request(SOURCE,data=payload,headers={'Content-Type':'application/json','Accept':'application/json','User-Agent':'cowpro-orderbook-viewer/1.0'},method='POST')
     try:
         with urllib.request.urlopen(request,timeout=min(10,remaining)) as response:raw=response.read(MAX_BODY+1)
     except urllib.error.HTTPError as error:

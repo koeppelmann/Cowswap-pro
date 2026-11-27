@@ -11,7 +11,7 @@ import urllib.request
 from datetime import datetime, timezone
 
 import cowapi
-from dfusion_crypto import keccak256
+from ethereum_crypto import keccak256
 ROOT = Path(__file__).resolve().parent
 BOOK = ROOT/'config-book.json'
 CATALOG = ROOT/'config-catalog.json'

@@ -1,4 +1,4 @@
-# dfusion order-book viewer
+# CoW Swap Pro order book
 
 A standalone Ethereum limit-order depth chart and order book built from public
 CoW APIs and on-chain reads. No solver credentials, wallet or signing key is
@@ -23,7 +23,7 @@ python run.py
 If your Python distribution lacks `venv`/`ensurepip`, `uv venv .venv` and
 `uv pip install --python .venv/bin/python -r requirements.txt` are equivalent.
 
-Open **http://127.0.0.1:8080/dfusion-limit-depth-live/?token=stusds**.
+Open **http://127.0.0.1:8080/pro/?token=stusds**.
 The first complete collection can take a few minutes. Later loads show cached
 data immediately. Reload requests a shared refresh; the browser checks for a new
 snapshot every five seconds. Concurrent requests coalesce, with a 60-second
@@ -90,7 +90,7 @@ frozen pool survey. Refresh it into a new file, review the coverage and package 
 as the next catalog:
 
 ```sh
-python discover_amm.py --output /tmp/dfusion-amm-catalog-new.json
+python discover_amm.py --output /tmp/cowpro-amm-catalog-new.json
 ```
 
 `twap.py` persists a public conditional-schedule index in `.cache/twap-index/`
@@ -129,7 +129,7 @@ apyUSD quotes use same-block apxUSD/USDC pool spot normalization.
 Verify all currently listed assets against a proposed catalog (configured `RPC_ETH`):
 
 ```sh
-python audit_amm.py --snapshot .cache/public/dfusion-eth-book.json --catalog amm-catalog.json --output /tmp/dfusion-amm-coverage.json
+python audit_amm.py --snapshot .cache/public/orderbook.json --catalog amm-catalog.json --output /tmp/cowpro-amm-coverage.json
 ```
 
 The audit writes the coverage report once, retains hashed RPC evidence, and exits

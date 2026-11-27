@@ -101,7 +101,7 @@ class SnapshotCache:
         self._atomic(self.root/'state.json',raw);self._atomic(self.public/'status.json',raw)
 
     def snapshot(self):
-        path=self.public/'dfusion-eth-book.json'
+        path=self.public/'orderbook.json'
         return json.loads(path.read_bytes()) if path.exists() else None
 
     def refresh(self):
@@ -118,7 +118,7 @@ class SnapshotCache:
             raw=(json.dumps(book,separators=(',',':'))+'\n').encode();digest=hashlib.sha256(raw).hexdigest()
             target=self.root/'snapshots'/(str(int(time.time()))+'-'+digest[:16]+'.json')
             self._atomic(target,raw)
-            link=self.public/('book-'+uuid.uuid4().hex+'.tmp');link.symlink_to(target.resolve());os.replace(link,self.public/'dfusion-eth-book.json')
+            link=self.public/('book-'+uuid.uuid4().hex+'.tmp');link.symlink_to(target.resolve());os.replace(link,self.public/'orderbook.json')
             self._state.update(last_success=time.time(),snapshot_id=digest,last_error=None)
             for path in sorted((self.root/'snapshots').glob('*.json'),key=lambda p:p.stat().st_mtime,reverse=True)[24:]:path.unlink()
             return True
@@ -140,7 +140,7 @@ class SnapshotCache:
                 while not self._stop.is_set() and time.monotonic()<deadline:
                     if (self.root/'refresh-request.json').exists():break
                     self._stop.wait(min(1,max(0,deadline-time.monotonic())))
-        self._thread=threading.Thread(target=run,name='dfusion-depth-refresh',daemon=True);self._thread.start()
+        self._thread=threading.Thread(target=run,name='cowpro-depth-refresh',daemon=True);self._thread.start()
 
     def stop(self):
         self._stop.set()

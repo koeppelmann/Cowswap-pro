@@ -49,7 +49,7 @@ class CacheAcceptance(unittest.TestCase):
         cache = self.cache(build)
         self.assertTrue(cache.refresh())
         first = cache.snapshot()
-        public = self.root / 'public' / 'dfusion-eth-book.json'
+        public = self.root / 'public' / 'orderbook.json'
         before = public.read_bytes()
         self.assertFalse(cache.refresh())
         self.assertEqual(first, cache.snapshot())
@@ -79,7 +79,7 @@ class CacheAcceptance(unittest.TestCase):
         self.assertTrue(cache.status()['refreshing'])
         self.assertFalse(cache.refresh())
         self.assertEqual(calls, 2)
-        self.assertEqual(json.loads((self.root/'public'/'dfusion-eth-book.json').read_text())['auction_id'], 1)
+        self.assertEqual(json.loads((self.root/'public'/'orderbook.json').read_text())['auction_id'], 1)
         release.set()
         worker.join(3)
         self.assertFalse(worker.is_alive())

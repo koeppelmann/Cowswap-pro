@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 from cache import RefreshRequests
 
 
-PATHS={'/dfusion-limit-depth-live/refresh','/dfusion-limit-depth/refresh','/dfusion-eth-limit-depth/refresh'}
+PATHS={'/pro/refresh'}
 
 
 class ReportHandler(SimpleHTTPRequestHandler):

@@ -10,7 +10,7 @@ import threading
 from urllib.parse import urlsplit
 
 APP = Path(__file__).resolve().parent
-ALIASES = ('dfusion-limit-depth-live', 'dfusion-limit-depth', 'dfusion-eth-limit-depth')
+ALIASES = ('pro',)
 
 
 def prepare_site(root):
@@ -32,8 +32,8 @@ def prepare_site(root):
             link.symlink_to(public, target_is_directory=True)
     (site / 'index.html').write_text(
         '<!doctype html><meta charset="utf-8">'
-        '<meta http-equiv="refresh" content="0;url=dfusion-limit-depth-live/">'
-        '<a href="dfusion-limit-depth-live/">Open dfusion order book</a>\n'
+        '<meta http-equiv="refresh" content="0;url=pro/">'
+        '<a href="pro/">Open CoW Swap Pro</a>\n'
     )
     return site
 
@@ -85,7 +85,7 @@ def main():
         for command in commands:
             children.append(subprocess.Popen(command, cwd=APP))
         host = '127.0.0.1' if args.bind == '0.0.0.0' else args.bind
-        print(f'dfusion order book: http://{host}:{args.port}/dfusion-limit-depth-live/?token=stusds', flush=True)
+        print(f'cowpro order book: http://{host}:{args.port}/pro/?token=stusds', flush=True)
         print('Collecting a complete snapshot; cached data appears as soon as it is ready.', flush=True)
         while not stop.wait(0.25):
             if any(child.poll() is not None for child in children):

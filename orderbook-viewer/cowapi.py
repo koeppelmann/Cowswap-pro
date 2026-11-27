@@ -13,7 +13,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-USER_AGENT = 'dfusion-orderbook-viewer/1.0'
+USER_AGENT = 'cowpro-orderbook-viewer/1.0'
 MAX_BODY_BYTES = 16 * 1024 * 1024
 
 
@@ -32,7 +32,7 @@ def root():
     configured = os.environ.get('COW_API_CACHE')
     if configured:
         return Path(configured).expanduser()
-    return Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'dfusion-cow-api'
+    return Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'cowpro-cow-api'
 
 
 def _atomic(path, value):

@@ -5,7 +5,7 @@ import json
 import os
 import re
 import urllib.request
-from dfusion_crypto import function_selector
+from ethereum_crypto import function_selector
 from fractions import Fraction
 from pathlib import Path
 
@@ -156,7 +156,7 @@ def read_funding(source_dir,outdir):
             raw=mapping[('decimals',token)];assert len(raw)==32;decimals=int.from_bytes(raw,'big');assert decimals<=36
             metadata[token]={'symbol':symbol_value(mapping[('symbol',token)]),'decimals':decimals,'source':'canonical_block_getters'}
     reference={'block_number':competition['auctionStartBlock'],'block_hash':header['hash'],'timestamp':timestamp,'position':'end_of_auction_start_block'}
-    output={'schema':'dfusion_eth_limit_funding_static_v1','auction_id':competition['auctionId'],'reference_state':reference,'block_hash':header['hash'],'groups':groups,'orders':orders,'metadata':metadata,'getter_errors':errors,'source_orders_sha256':sha(source_path.read_bytes()),'source_batches':batch_evidence,'reader_sha256':sha(Path(__file__).read_bytes()),'rpc_evidence':evidence,'endpoint_kind':endpoint_kind,'scope':'Canonical signed terms, kind-denominated fills, balances and existing relayer allowance. Every pre/post-hook order remains conditional; historical permit execution is never reused. No signature or settlement validation claim.'}
+    output={'schema':'cowpro_eth_limit_funding_static_v1','auction_id':competition['auctionId'],'reference_state':reference,'block_hash':header['hash'],'groups':groups,'orders':orders,'metadata':metadata,'getter_errors':errors,'source_orders_sha256':sha(source_path.read_bytes()),'source_batches':batch_evidence,'reader_sha256':sha(Path(__file__).read_bytes()),'rpc_evidence':evidence,'endpoint_kind':endpoint_kind,'scope':'Canonical signed terms, kind-denominated fills, balances and existing relayer allowance. Every pre/post-hook order remains conditional; historical permit execution is never reused. No signature or settlement validation claim.'}
     prices={k.lower():int(v)for k,v in competition['auction']['prices'].items()};converted={}
     for token,meta in metadata.items():
         row={'address':token,**meta}
@@ -173,7 +173,7 @@ def read_funding(source_dir,outdir):
                 rate=Fraction(int.from_bytes(raw,'big'),10**18);row['getter']['underlying_per_token']=rational(rate)
                 if underlying!='frxETH':row.update(eth_per_token=rational(rate),conversion_kind=kind,conversion_label=sig+'; '+underlying+' denomination')
         converted[token]=row
-    conversions={'schema':'dfusion_eth_family_conversions_v1',**reference,'tokens':converted,'rpc_evidence':evidence,'reader_sha256':sha(Path(__file__).read_bytes()),'scope':'Canonical getter denominations where explicit; otherwise labeled CoW valuation. No executable redemption or peg guarantee.'}
+    conversions={'schema':'cowpro_eth_family_conversions_v1',**reference,'tokens':converted,'rpc_evidence':evidence,'reader_sha256':sha(Path(__file__).read_bytes()),'scope':'Canonical getter denominations where explicit; otherwise labeled CoW valuation. No executable redemption or peg guarantee.'}
     for name,value in [('funding-state.json',output),('eth-conversions.json',conversions)]:
         with (outdir/name).open('x')as handle:json.dump(value,handle,indent=2);handle.write('\n')
     return output,conversions

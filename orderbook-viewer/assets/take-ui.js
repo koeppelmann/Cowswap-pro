@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const $=id=>document.getElementById(id),M=window.DfusionTake,cache=new Map();
+  const $=id=>document.getElementById(id),M=window.CowProTake,cache=new Map();
   let row=null,metadata=null,controller=null,reserveVersion=0,cooldown=0,lastRequest=0,requestEpoch=0;
   const reasons={missing_terms:'Waiting for refreshed signed terms',expired:'Order has expired',not_yet_valid:'Order is not valid yet',conditional_funding:'Funding depends on unverified hooks',unfunded:'No funded amount available',incomplete_fok:'Full-fill order is not fully funded',native_eth_sell:'Counter-order would sell native ETH. Wrap to WETH and review separately in CoW.',explicit_fee_unsupported:'Explicit signed fees need separate review',rounding_zero:'Funded amount is too small',invalid_overlap:'Use whole basis points from 0 to 10000',invalid_amount:'Check amount precision',unsupported_tokens:'Token metadata unavailable',incompatible_limits:'Counter limit does not overlap the signed limit'};
   function model(){if(!row)return{enabled:false,reason:'unfunded'};try{const sell=row.buy_token?.toLowerCase();return M.buildCounterOrder(row,{metadata,overlapBps:Number($('takeOverlap').value),makerFeeBps:Number($('takeMakerFee').value),counterFeeBps:Number($('takeCounterFee').value),bufferBps:Number($('takeBuffer').value),extraSellAtoms:sell?M.parseAtoms($('takeReserve').value||'0',metadata[sell].decimals):'0'});}catch{return{enabled:false,reason:'invalid_amount'};}}
@@ -50,5 +50,5 @@
   $('takeOrder').addEventListener('click',()=>{$('takePanel').hidden=false;render();estimate();});
   for(const id of ['takeOverlap','takeMakerFee','takeCounterFee','takeBuffer'])$(id).addEventListener('input',render);$('takeReserve').addEventListener('input',()=>{reserveVersion++;render();});$('takeEstimate').addEventListener('click',estimate);
   $('takeOpen').addEventListener('click',event=>{const result=render();if(!result.enabled)event.preventDefault();});
-  window.DfusionTakeUI={selectOrder,clearOrder};
+  window.CowProTakeUI={selectOrder,clearOrder};
 })();

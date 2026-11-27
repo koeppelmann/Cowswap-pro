@@ -34,9 +34,9 @@ class BootstrapTests(unittest.TestCase):
                 thread.start()
                 try:
                     base = f'http://127.0.0.1:{server.server_port}'
-                    with urllib.request.urlopen(base + '/dfusion-limit-depth-live/') as response:
+                    with urllib.request.urlopen(base + '/pro/') as response:
                         self.assertEqual(response.read(), b'public viewer')
-                    for path in ['/private.json', '/dfusion-limit-depth-live/../private.json']:
+                    for path in ['/private.json', '/pro/../private.json']:
                         with self.assertRaises(urllib.error.HTTPError) as error:
                             urllib.request.urlopen(base + path)
                         self.assertEqual(error.exception.code, 404)
@@ -48,7 +48,7 @@ class BootstrapTests(unittest.TestCase):
     def test_does_not_overwrite_an_existing_alias(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / 'site' / 'dfusion-limit-depth-live').mkdir(parents=True)
+            (root / 'site' / 'pro').mkdir(parents=True)
             with self.assertRaises(ValueError):
                 prepare_site(root)
 
@@ -105,5 +105,9 @@ class ColdStartAssets(unittest.TestCase):
             with patch.object(service,'build_snapshot',side_effect=AssertionError('must not collect during preparation')):
                 cache=service.prepare_cache(Path(directory))
             self.assertTrue((cache.public/'index.html').is_file())
-            self.assertTrue(list(cache.public.glob('dfusion-eth-depth.*.js')))
+            html=(cache.public/'index.html').read_text()
+            self.assertIn('CoW Swap',html)
+            self.assertIn('href="/pro/"',html)
+            self.assertNotIn('dfusion',html.lower())
+            self.assertTrue(list(cache.public.glob('depth.*.js')))
             self.assertIsNone(cache._thread)

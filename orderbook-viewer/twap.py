@@ -7,7 +7,7 @@ import os
 import time
 import urllib.request
 import uuid
-from dfusion_crypto import keccak256
+from ethereum_crypto import keccak256
 from twap_api import fetch_candidates
 from funding import endpoint, selector, simple, aggregate, decode, word, addr, blob, symbol_value, MULTICALL, SETTLEMENT, RELAYER, NATIVE
 

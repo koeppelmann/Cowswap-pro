@@ -7,7 +7,7 @@ from cache import SnapshotCache
 
 def install_assets(cache,assets):
     html=(assets/'index.html').read_text()
-    for name in ('dfusion-depth.css','dfusion-eth-depth.js','dfusion-plotly.min.js','book-model.js','take-model.js','take-ui.js'):
+    for name in ('depth.css','depth.js','plotly.min.js','book-model.js','take-model.js','take-ui.js'):
         raw=(assets/name).read_bytes();p=Path(name)
         target=p.stem+'.'+hashlib.sha256(raw).hexdigest()[:12]+p.suffix
         destination=cache.public/target

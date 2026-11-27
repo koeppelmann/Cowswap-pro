@@ -10,7 +10,7 @@ from amm import EXTERNAL_ORACLE_POOLS, CATALOG
 
 def discover(book):
     def read(pair):
-        request=urllib.request.Request('https://api.dexscreener.com/token-pairs/v1/ethereum/'+pair['base_token'],headers={'User-Agent':'dfusion-research'})
+        request=urllib.request.Request('https://api.dexscreener.com/token-pairs/v1/ethereum/'+pair['base_token'],headers={'User-Agent':'cowpro-research'})
         try:
             with urllib.request.urlopen(request,timeout=20) as response:raw=json.load(response)
             return pair['id'],[r for r in raw if r.get('chainId')=='ethereum']
