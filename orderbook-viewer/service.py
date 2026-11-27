@@ -5,7 +5,7 @@ from build import build_snapshot
 from cache import SnapshotCache
 import networks
 
-ASSETS=('dfusion-depth.css','dfusion-eth-depth.js','dfusion-plotly.min.js','book-model.js','take-model.js','take-ui.js')
+ASSETS=('depth.css','depth.js','plotly.min.js','book-model.js','take-model.js','take-ui.js')
 
 # CoW Explorer path prefix + block-explorer base per network (for order/address links).
 EXPLORERS={

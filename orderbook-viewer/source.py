@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 
 import cowapi
 import networks
-from dfusion_crypto import keccak256
+from ethereum_crypto import keccak256
 ROOT = Path(__file__).resolve().parent
 
 

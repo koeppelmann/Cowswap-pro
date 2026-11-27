@@ -23,16 +23,15 @@ const nextConfig = {
   },
   async redirects() {
     // Enter at the explicit index.html so there is no directory-index redirect:
-    // Next strips the trailing slash from `…/<alias>/` and the upstream then 301s
-    // the bare directory to a prefix-less `/…/` — a broken loop that 404s. Hitting
+    // Next strips the trailing slash from `/orderbook/pro/` and the upstream then 301s
+    // the bare directory to a prefix-less `/pro/` — a broken loop that 404s. Hitting
     // the file directly avoids that, and the viewer's relative asset/data fetches
-    // still resolve against `/orderbook/<alias>/`. Cover all three upstream aliases
-    // (run.py ALIASES) so any bare-directory entry is caught, not just the live one.
-    const aliases = ['dfusion-limit-depth-live', 'dfusion-limit-depth', 'dfusion-eth-limit-depth'];
-    const entry = (a) => `/orderbook/${a}/index.html?token=stusds`;
+    // still resolve against `/orderbook/pro/`. ('pro' is the viewer's single alias,
+    // run.py ALIASES — the "CoW Swap Pro" rebrand.)
+    const entry = '/orderbook/pro/index.html?token=stusds';
     return [
-      { source: '/orderbook', destination: entry('dfusion-limit-depth-live'), permanent: false },
-      ...aliases.map((a) => ({ source: `/orderbook/${a}`, destination: entry(a), permanent: false })),
+      { source: '/orderbook', destination: entry, permanent: false },
+      { source: '/orderbook/pro', destination: entry, permanent: false },
     ];
   },
 };

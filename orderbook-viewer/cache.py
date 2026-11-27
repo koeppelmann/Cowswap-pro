@@ -1,5 +1,6 @@
 """Atomic last-good depth snapshots with one paced background refresh."""
 import fcntl,hashlib,json,os,re,shutil,threading,time,uuid
+from decimal import Decimal
 from pathlib import Path
 
 
@@ -15,6 +16,15 @@ def validate_snapshot(book):
         assert pair['id'] not in ids;ids.add(pair['id'])
         assert pair['modes']['enriched']['block_hash']==book['block_hash']
         if pair['id']=='eth':assert pair.get('conversions')
+        parents=set()
+        for row in pair.get('twap_schedules',[]):
+            assert row['id'] not in parents;parents.add(row['id'])
+            assert row['block']==book['block'] and row['block_hash']==book['block_hash']
+            count=int(row['remaining_parts']);assert count>0
+            price=Decimal(row['normalized_price']);assert price.is_finite() and price>0
+            for total,slice_ in [('remaining_base_atoms','slice_base_atoms'),('remaining_quote_atoms','slice_quote_atoms')]:
+                assert int(row[slice_])>0 and int(row[total])==int(row[slice_])*count
+            assert row['volume_kind']=='Scheduled at signed limit, not funded executable depth'
         for mode in [pair['modes']['enriched'],*pair.get('quote_modes',{}).values()]:
             assert mode['block_hash']==book['block_hash']
             seen=set();spend={}
@@ -97,7 +107,7 @@ class SnapshotCache:
         self._atomic(self.root/'state.json',raw);self._atomic(self.outdir/'status.json',raw)
 
     def snapshot(self):
-        path=self.outdir/'dfusion-eth-book.json'
+        path=self.outdir/'orderbook.json'
         return json.loads(path.read_bytes()) if path.exists() else None
 
     def refresh(self):
@@ -114,7 +124,7 @@ class SnapshotCache:
             raw=(json.dumps(book,separators=(',',':'))+'\n').encode();digest=hashlib.sha256(raw).hexdigest()
             target=self.root/'snapshots'/(str(int(time.time()))+'-'+digest[:16]+'.json')
             self._atomic(target,raw)
-            link=self.outdir/('book-'+uuid.uuid4().hex+'.tmp');link.symlink_to(target.resolve());os.replace(link,self.outdir/'dfusion-eth-book.json')
+            link=self.outdir/('book-'+uuid.uuid4().hex+'.tmp');link.symlink_to(target.resolve());os.replace(link,self.outdir/'orderbook.json')
             self._state.update(last_success=time.time(),snapshot_id=digest,last_error=None)
             for path in sorted((self.root/'snapshots').glob('*.json'),key=lambda p:p.stat().st_mtime,reverse=True)[24:]:path.unlink()
             return True
@@ -145,7 +155,7 @@ class SnapshotCache:
                 while not self._stop.is_set() and time.monotonic()<deadline:
                     if (self.root/'refresh-request.json').exists():break
                     self._stop.wait(min(1,max(0,deadline-time.monotonic())))
-        self._thread=threading.Thread(target=run,name='dfusion-depth-refresh',daemon=True);self._thread.start()
+        self._thread=threading.Thread(target=run,name='cowpro-depth-refresh',daemon=True);self._thread.start()
 
     def stop(self):
         self._stop.set()

@@ -1,4 +1,4 @@
-# dfusion order-book viewer
+# CoW Swap Pro order book
 
 A standalone Ethereum limit-order depth chart and order book built from public
 CoW APIs and on-chain reads. No solver credentials, wallet or signing key is
@@ -23,7 +23,7 @@ python run.py
 If your Python distribution lacks `venv`/`ensurepip`, `uv venv .venv` and
 `uv pip install --python .venv/bin/python -r requirements.txt` are equivalent.
 
-Open **http://127.0.0.1:8080/dfusion-limit-depth-live/?token=stusds**.
+Open **http://127.0.0.1:8080/pro/?token=stusds**.
 The first complete collection can take a few minutes. Later loads show cached
 data immediately. Reload requests a shared refresh; the browser checks for a new
 snapshot every five seconds. Concurrent requests coalesce, with a 60-second
@@ -52,6 +52,15 @@ arguments. Do not commit local environment files or caches.
   book's pinned block. Curve markers use approximately $1 directional quotes and
   a geometric midpoint. Gas and transfer taxes are excluded. Survey timestamps,
   unsupported venues and fallback selection are exposed in the tooltips.
+- TWAP overlays are vertical lines at their signed limit. The diamond marks
+  remaining eligible scheduled volume; the crossbar marks one swap. Click the
+  bar or select its schedule to see amounts, timing, funding and CoW Explorer
+  links. USD heights value the quote amount at the limit, not current market
+  notional; switch to asset units for token quantities. Future flow is separate
+  from funded depth and has no Take action. Filled current slices, missed windows
+  and cancelled parents are excluded from remaining volume.
+- TWAP-only assets appear in the token selector and can default to a nonstable
+  quote such as ETH. No CoW reference is invented for an unpriced asset.
 - Select an order and choose **Take order** to prepare a normal opposite limit
   order in CoW Swap. It is not reserved for that seller. Both protocol-fee
   assumptions, the network allowance, buffer and extra overlap are editable;
@@ -83,10 +92,48 @@ USD anchor and stablecoins). Mainnet additionally uses `config/mainnet/book.json
 review the coverage and package it as the next catalog:
 
 ```sh
-python discover_amm.py --output /tmp/dfusion-amm-catalog-new.json
+python discover_amm.py --output /tmp/cowpro-amm-catalog-new.json
 ```
+
+`twap.py` persists a public conditional-schedule index in `.cache/twap-index/`
+and rechecks authorization, current child fills, balances and allowances at the
+book's block. `twap_api.py` queries the public CoW programmatic-order index for
+mainnet TWAP parents marked Active, caching the full candidate set for five minutes.
+Raw parent parameters are hashed and verified before on-chain checks; API status
+is not treated as proof of authorization or funding. Recent direct event discovery
+also covers the latest 2,048 blocks and follows new events with a reorg overlap. Coverage is shown in the TWAP tooltip; it is not
+an all-history or private-schedule census. A lag longer than 2,048 blocks is
+recorded as a gap unless `TWAP_LOG_RPC` supplies matching-chain archived logs.
+Use a dedicated archive/research endpoint for backfill. Merkle and custom-handler
+schedules are not indexed. Zero wallet balance can still permit future or
+just-in-time funding; it does not prove a schedule is cancelled.
 
 `source.py` collects public API data, `funding.py` reads canonical funding state,
 `allocator.py` builds the book, and `amm.py` adds pool markers. `cache.py` publishes
 complete snapshots atomically. `service.py` runs collection; `http_server.py`
 serves the dedicated public site and accepts same-origin refresh requests.
+
+Canonical schedule and timing rules: [TWAP handler](https://github.com/cowprotocol/composable-cow/blob/2d43cabcfb8b5804d71b8e29a4a0cfbeb11f6322/src/types/twap/TWAP.sol), [child-order fields](https://github.com/cowprotocol/composable-cow/blob/2d43cabcfb8b5804d71b8e29a4a0cfbeb11f6322/src/types/twap/libraries/TWAPOrder.sol), and [window boundaries](https://github.com/cowprotocol/composable-cow/blob/2d43cabcfb8b5804d71b8e29a4a0cfbeb11f6322/src/types/twap/libraries/TWAPOrderMathLib.sol).
+
+The token picker ranks by funded wallet value by default: buys use allocated
+quote budgets normalized to USDC; sells use allocated base inventory at the CoW
+reference price. This avoids treating extreme signed limits as available dollar
+liquidity. TWAP counts remain separate. Search accepts token labels or addresses;
+ranking can switch to order count, TWAP count or alphabetical order.
+
+AMM coverage includes surveyed v2/v3, Curve, hookless static-fee Uniswap v4
+(with directional protocol fees), and hook-free Balancer v3 weighted pools with
+STANDARD tokens. V4 pool IDs must match the configured PoolKey hash. V4 inventory
+is active virtual reserves, not total deposits. An unpriced base token can use
+the verified pool spot for inventory valuation without inventing a CoW reference.
+apyUSD quotes use same-block apxUSD/USDC pool spot normalization.
+
+Verify all currently listed assets against a proposed catalog (configured `RPC_ETH`):
+
+```sh
+python audit_amm.py --snapshot .cache/public/orderbook.json --catalog amm-catalog.json --output /tmp/cowpro-amm-coverage.json
+```
+
+The audit writes the coverage report once, retains hashed RPC evidence, and exits
+nonzero for missing markers. Candidate discovery is public; marker state and fees
+are verified on our node at the snapshot block.

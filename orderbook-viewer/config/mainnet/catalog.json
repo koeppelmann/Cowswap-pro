@@ -1,6 +1,6 @@
 {
   "stable_tokens": [
-    "0x40d16fc0246ae9be2e8f1226bfa7d685309136d",
+    "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
     "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
     "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
     "0x6b175474e89094c44da98b954eedeac495271d0f",
@@ -175,7 +175,7 @@
       "symbol": "USDe",
       "decimals": 18
     },
-    "0x40d16fc0246ae9be2e8f1226bfa7d685309136d": {
+    "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f": {
       "symbol": "GHO",
       "decimals": 18
     },

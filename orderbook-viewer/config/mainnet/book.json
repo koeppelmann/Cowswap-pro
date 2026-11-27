@@ -1,5 +1,5 @@
 {
-  "schema": "dfusion_book_configuration_v1",
+  "schema": "cowpro_book_configuration_v1",
   "metadata": {
     "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee": {
       "symbol": "ETH",

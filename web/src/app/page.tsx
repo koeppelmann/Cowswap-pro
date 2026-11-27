@@ -110,7 +110,7 @@ export default function Page() {
       <div className="topbar">
         <div className="brand"><h1>🐮 Cowswap Pro</h1></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <a href="/orderbook/dfusion-limit-depth-live/index.html?token=stusds" className="tag">Order book →</a>
+          <a href="/orderbook/pro/index.html?token=stusds" className="tag">Order book →</a>
           {address && <Link href={ordersHref} className="tag">My orders →</Link>}
           <ConnectButton />
         </div>

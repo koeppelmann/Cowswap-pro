@@ -1,9 +1,9 @@
 (function(){
   'use strict';
-  const $=id=>document.getElementById(id),M=window.DfusionTake,cache=new Map();
+  const $=id=>document.getElementById(id),M=window.CowProTake,cache=new Map();
   let row=null,metadata=null,controller=null,reserveVersion=0,cooldown=0,lastRequest=0,requestEpoch=0;
   const reasons={missing_terms:'Waiting for refreshed signed terms',expired:'Order has expired',not_yet_valid:'Order is not valid yet',conditional_funding:'Funding depends on unverified hooks',unfunded:'No funded amount available',incomplete_fok:'Full-fill order is not fully funded',native_eth_sell:'Counter-order would sell native ETH. Wrap to WETH and review separately in CoW.',explicit_fee_unsupported:'Explicit signed fees need separate review',rounding_zero:'Funded amount is too small',invalid_overlap:'Use whole basis points from 0 to 10000',invalid_amount:'Check amount precision',unsupported_tokens:'Token metadata unavailable',incompatible_limits:'Counter limit does not overlap the signed limit'};
-  function model(){if(!row)return{enabled:false,reason:'unfunded'};try{const sell=row.buy_token?.toLowerCase();return M.buildCounterOrder(row,{metadata,overlapBps:Number($('takeOverlap').value),makerFeeBps:Number($('takeMakerFee').value),counterFeeBps:Number($('takeCounterFee').value),bufferBps:Number($('takeBuffer').value),extraSellAtoms:sell?M.parseAtoms($('takeReserve').value||'0',metadata[sell].decimals):'0',chainId:(window.DfusionNet&&window.DfusionNet.chain_id)||1});}catch{return{enabled:false,reason:'invalid_amount'};}}
+  function model(){if(!row)return{enabled:false,reason:'unfunded'};try{const sell=row.buy_token?.toLowerCase();return M.buildCounterOrder(row,{metadata,overlapBps:Number($('takeOverlap').value),makerFeeBps:Number($('takeMakerFee').value),counterFeeBps:Number($('takeCounterFee').value),bufferBps:Number($('takeBuffer').value),extraSellAtoms:sell?M.parseAtoms($('takeReserve').value||'0',metadata[sell].decimals):'0',chainId:(window.CowProNet&&window.CowProNet.chain_id)||1});}catch{return{enabled:false,reason:'invalid_amount'};}}
   function render(){
     const value=model();$('takeOpen').removeAttribute('href');$('takeOpen').setAttribute('aria-disabled',String(!value.enabled));
     $('takeError').textContent=value.enabled?'':reasons[value.reason]||'Order cannot be prepared';
@@ -32,7 +32,7 @@
     const requestId=++requestEpoch;controller?.abort();controller=new AbortController();const requestController=controller,signal=requestController.signal;lastRequest=Date.now();$('takeEstimate').disabled=true;$('takeFeeStatus').textContent='Estimating network fee…';
     const timer=setTimeout(()=>requestController.abort(),20000);
     try{
-      const response=await fetch('https://api.cow.fi/'+((window.DfusionNet&&window.DfusionNet.slug)||'mainnet')+'/api/v1/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sellToken:value.sellToken,buyToken:value.buyToken,kind:'buy',buyAmountAfterFee:value.buyAtoms,from:'0x0000000000000000000000000000000000000000',priceQuality:'optimal'}),signal});
+      const response=await fetch('https://api.cow.fi/'+((window.CowProNet&&window.CowProNet.slug)||'mainnet')+'/api/v1/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sellToken:value.sellToken,buyToken:value.buyToken,kind:'buy',buyAmountAfterFee:value.buyAtoms,from:'0x0000000000000000000000000000000000000000',priceQuality:'optimal'}),signal});
       if(!response.ok){if([403,429,503].includes(response.status)){const retry=Number(response.headers.get('Retry-After'));cooldown=Date.now()+Math.max(60000,Number.isFinite(retry)?retry*1000:0);}throw Error('quote_unavailable');}
       const body=await response.json(),q=body.quote;const expiry=Date.parse(body.expiration||q?.validTo&&new Date(q.validTo*1000).toISOString());
       if(!q||q.sellToken?.toLowerCase()!==value.sellToken||q.buyToken?.toLowerCase()!==value.buyToken||!/^\d+$/.test(q.feeAmount)||!Number.isFinite(expiry)||expiry<=Date.now())throw Error('invalid_quote');
@@ -50,5 +50,5 @@
   $('takeOrder').addEventListener('click',()=>{$('takePanel').hidden=false;render();estimate();});
   for(const id of ['takeOverlap','takeMakerFee','takeCounterFee','takeBuffer'])$(id).addEventListener('input',render);$('takeReserve').addEventListener('input',()=>{reserveVersion++;render();});$('takeEstimate').addEventListener('click',estimate);
   $('takeOpen').addEventListener('click',event=>{const result=render();if(!result.enabled)event.preventDefault();});
-  window.DfusionTakeUI={selectOrder,clearOrder};
+  window.CowProTakeUI={selectOrder,clearOrder};
 })();
