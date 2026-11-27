@@ -72,7 +72,9 @@ def rpc(url,method,params,evidence):
     raw=json.dumps({'jsonrpc':'2.0','id':1,'method':method,'params':params},separators=(',',':')).encode()
     try:
         opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        with opener.open(urllib.request.Request(url,data=raw,headers={'Content-Type':'application/json'}),timeout=60) as response:
+        # Some public RPCs (e.g. Arbitrum's official endpoint) 403 requests without a
+        # User-Agent, so always send one.
+        with opener.open(urllib.request.Request(url,data=raw,headers={'Content-Type':'application/json','User-Agent':'Mozilla/5.0'}),timeout=60) as response:
             body=response.read(8*1024*1024+1)
         assert len(body)<=8*1024*1024
         decoded=json.loads(body)
@@ -140,21 +142,25 @@ def read_funding(source_dir,outdir,network='mainnet'):
         calls.extend([(token,simple('313ce567')),(token,simple('95d89b41'))]);labels.extend([('decimals',token),('symbol',token)])
         if token in CONVERSIONS:
             sig,arg,_,_=CONVERSIONS[token];calls.append((token,selector(sig)+(word(arg)if arg is not None else b'')));labels.append(('conversion',token))
+    # Calls per multicall. Smaller batches help public nodes that reject/time out on
+    # large pinned-block eth_call payloads (set batch_size per network); mainnet's node
+    # handles the default fine.
+    bsize=cfg.get('batch_size',180)
     def acquire(endpoint_url):
         values=[]
-        for offset in range(0,len(calls),180):
-            part=calls[offset:offset+180]
+        for offset in range(0,len(calls),bsize):
+            part=calls[offset:offset+bsize]
             # Retry transient RPC failures per batch (public nodes are flaky on large
             # pinned-block multicalls, especially under multi-network load). PrunedState
             # propagates immediately so the archive fallback can take over.
-            for attempt in range(3):
+            for attempt in range(4):
                 try:
                     response=rpc(endpoint_url,'eth_call',[{'to':MULTICALL,'data':'0x'+aggregate(part).hex(),'gas':'0x1c9c380'},pin],evidence)
                     break
                 except PrunedState:raise
                 except RuntimeError:
-                    if attempt==2:raise
-                    time.sleep(0.6)
+                    if attempt==3:raise
+                    time.sleep(1.0)
             values.extend(decode(response,len(part)))
         return values
     try:values=acquire(url)

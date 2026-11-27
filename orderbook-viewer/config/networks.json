@@ -36,7 +36,7 @@
       "slug": "arbitrum_one",
       "chain_id": 42161,
       "rpc_env": "RPC_ARBITRUM",
-      "rpc_default": "https://arbitrum-one-rpc.publicnode.com",
+      "rpc_default": "https://arb1.arbitrum.io/rpc",
       "native_symbol": "ETH",
       "usdc": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
       "eth_family": false,
