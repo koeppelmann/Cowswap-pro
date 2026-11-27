@@ -64,9 +64,15 @@ class RefreshRequests:
 
 
 class SnapshotCache:
-    def __init__(self,builder,refresh_seconds=300,*,root):
+    def __init__(self,builder,refresh_seconds=300,*,root,public=None,subdir=''):
+        # Single-network default: book/status live in root/public. Multichain passes the
+        # shared static `public` dir + a per-network `subdir`, so each network's book and
+        # status publish under public/<network>/ while its locks/snapshots stay in `root`.
         self.builder=builder;self.refresh_seconds=refresh_seconds;self.root=Path(root)
-        self.public=self.root/'public';self.public.mkdir(parents=True,exist_ok=True)
+        self.root.mkdir(parents=True,exist_ok=True)
+        self.public=Path(public) if public else self.root/'public'
+        self.outdir=self.public/subdir if subdir else self.public
+        self.outdir.mkdir(parents=True,exist_ok=True)
         (self.root/'snapshots').mkdir(exist_ok=True)
         self.requests=RefreshRequests(self.root)
         self._lock=threading.Lock();self._stop=threading.Event();self._thread=None
@@ -88,10 +94,10 @@ class SnapshotCache:
 
     def _write_state(self):
         raw=(json.dumps(self.status(),sort_keys=True)+'\n').encode()
-        self._atomic(self.root/'state.json',raw);self._atomic(self.public/'status.json',raw)
+        self._atomic(self.root/'state.json',raw);self._atomic(self.outdir/'status.json',raw)
 
     def snapshot(self):
-        path=self.public/'dfusion-eth-book.json'
+        path=self.outdir/'dfusion-eth-book.json'
         return json.loads(path.read_bytes()) if path.exists() else None
 
     def refresh(self):
@@ -108,7 +114,7 @@ class SnapshotCache:
             raw=(json.dumps(book,separators=(',',':'))+'\n').encode();digest=hashlib.sha256(raw).hexdigest()
             target=self.root/'snapshots'/(str(int(time.time()))+'-'+digest[:16]+'.json')
             self._atomic(target,raw)
-            link=self.public/('book-'+uuid.uuid4().hex+'.tmp');link.symlink_to(target.resolve());os.replace(link,self.public/'dfusion-eth-book.json')
+            link=self.outdir/('book-'+uuid.uuid4().hex+'.tmp');link.symlink_to(target.resolve());os.replace(link,self.outdir/'dfusion-eth-book.json')
             self._state.update(last_success=time.time(),snapshot_id=digest,last_error=None)
             for path in sorted((self.root/'snapshots').glob('*.json'),key=lambda p:p.stat().st_mtime,reverse=True)[24:]:path.unlink()
             return True
@@ -120,13 +126,22 @@ class SnapshotCache:
             if locked:self._state['refreshing']=False;self._write_state()
             lock.close();self._lock.release()
 
-    def start(self):
+    def start(self,initial_delay=0):
         if self._thread and self._thread.is_alive():return
         self._stop.clear()
         def run():
+            if initial_delay:self._stop.wait(initial_delay)
+            fails=0
             while not self._stop.is_set():
-                started=time.monotonic();self.refresh()
-                deadline=started+self.refresh_seconds
+                started=time.monotonic();ok=self.refresh()
+                # Retry sooner until the first good snapshot (so a transient RPC/API blip under
+                # multi-network load doesn't hide a network for a whole cycle), but back off
+                # 30→60→120→240s so a structurally-failing network can't hammer indefinitely.
+                if ok or self._state.get('last_success'):
+                    fails=0;interval=self.refresh_seconds
+                else:
+                    fails+=1;interval=min(self.refresh_seconds,30*2**min(fails-1,3))
+                deadline=started+interval
                 while not self._stop.is_set() and time.monotonic()<deadline:
                     if (self.root/'refresh-request.json').exists():break
                     self._stop.wait(min(1,max(0,deadline-time.monotonic())))

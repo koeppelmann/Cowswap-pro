@@ -7,15 +7,29 @@ import os
 from pathlib import Path
 from urllib.parse import urlsplit
 from cache import RefreshRequests
+import networks
+from run import ALIASES
 
-
-PATHS={'/dfusion-limit-depth-live/refresh','/dfusion-limit-depth/refresh','/dfusion-eth-limit-depth/refresh'}
+NETWORKS=set(networks.ORDER)
 
 
 class ReportHandler(SimpleHTTPRequestHandler):
     def __init__(self,*args,refresh_root,**kwargs):
-        self.refresh_requests=RefreshRequests(refresh_root)
+        self.refresh_root=Path(refresh_root)
         super().__init__(*args,**kwargs)
+
+    def _refresh_target(self):
+        # <alias>/refresh (single-network, legacy) or <alias>/<network>/refresh (multichain).
+        parts=urlsplit(self.path).path.strip('/').split('/')
+        if len(parts)<2 or parts[0] not in ALIASES or parts[-1]!='refresh':return None
+        mid=parts[1:-1]
+        if not mid:return RefreshRequests(self.refresh_root)
+        if len(mid)==1 and mid[0] in NETWORKS:return RefreshRequests(self.refresh_root/mid[0])
+        return None
+
+    def _is_refresh(self):
+        parts=urlsplit(self.path).path.strip('/').split('/')
+        return 2<=len(parts)<=3 and parts[0] in ALIASES and parts[-1]=='refresh'
 
     def reply(self,status,data):
         raw=json.dumps(data).encode()
@@ -42,7 +56,8 @@ class ReportHandler(SimpleHTTPRequestHandler):
         return bool(host) and urlsplit(origin).netloc==host
 
     def do_POST(self):
-        if urlsplit(self.path).path not in PATHS:
+        target=self._refresh_target()
+        if target is None:
             self.reply(404,{'status':'not_found'});return
         if not self._refresh_allowed():
             self.reply(403,{'status':'same_origin_required'});return
@@ -50,10 +65,10 @@ class ReportHandler(SimpleHTTPRequestHandler):
         except ValueError:self.reply(400,{'status':'invalid_length'});return
         if self.headers.get('Transfer-Encoding') or length!=0:
             self.reply(413,{'status':'body_too_large'});return
-        status,data=self.refresh_requests.request();self.reply(status,data)
+        status,data=target.request();self.reply(status,data)
 
     def do_GET(self):
-        if urlsplit(self.path).path in PATHS:self.reply(405,{'status':'post_required'});return
+        if self._is_refresh():self.reply(405,{'status':'post_required'});return
         super().do_GET()
 
 

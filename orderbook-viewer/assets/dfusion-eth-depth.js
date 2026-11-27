@@ -2,6 +2,13 @@
   'use strict';
   const $ = id => document.getElementById(id);
   let data, selectedUid=null, bookView=null, bookResetPending=false, bookFrame=0, activeBookUid=null, latestRows=[], chartEventsBound=false, yClamp=false,userViewport=null,applyingSnapshot=false,lastSnapshotId=null,polling=false;
+  // Multichain: all book/status/refresh fetches are prefixed with the selected network
+  // (books live at <network>/…); explorer/swap links use that network's chain context.
+  let NET=null;
+  const FALLBACK_NET={key:'mainnet',label:'Ethereum',slug:'mainnet',chain_id:1,cow_explorer:'',token_explorer:'https://etherscan.io'};
+  const api=p=>(NET?NET.key+'/':'')+p;
+  const tokenExplorer=addr=>(NET?NET.token_explorer:'https://etherscan.io')+'/address/'+addr;
+  const orderExplorer=uid=>'https://explorer.cow.fi/'+(NET&&NET.cow_explorer?NET.cow_explorer+'/':'')+'orders/'+uid;
   const axisLabel = (value, base) => {if(value===0)return base?'0':'$0';const label=value>=1000?compact(value):String(Number(value.toPrecision(6)));return (base?'':'$')+label;};
   function volumeTicks(rawMax,compressed,unit,base){rawMax=Math.max(rawMax,unit);const values=[0];if(compressed){const start=Math.ceil(Math.log10(unit));for(let p=start;p<=Math.ceil(Math.log10(rawMax));p++){const v=10**p;if(v<=rawMax*1.08)values.push(v);}}else{const scale=10**Math.floor(Math.log10(rawMax/5));const ratio=rawMax/5/scale;const step=(ratio<=1?1:ratio<=2?2:ratio<=5?5:10)*scale;for(let v=step;v<=rawMax*1.08;v+=step)values.push(v);}return {tickvals:values.map(v=>compressed?Math.log10(1+v/unit):v),ticktext:values.map(v=>axisLabel(v,base))};}
   function visibleDepthMax(traces,range,unit){let max=unit;const lo=range?Math.min(...range):-Infinity,hi=range?Math.max(...range):Infinity;for(const t of traces)for(let i=0;i<t.x.length;i++){const x=Number(t.x[i]);if(x>=lo&&x<=hi)max=Math.max(max,Number(t.customdata[i][7]));if(i>0){const prev=Number(t.x[i-1]);if(Math.min(x,prev)<=hi&&Math.max(x,prev)>=lo)max=Math.max(max,Number(t.customdata[i][7]),Number(t.customdata[i-1][7]));}}return max;}
@@ -14,7 +21,7 @@
   function symbol() { return pair().base_symbol; }
   function baseSymbol(row) { return data.metadata[row.base_token]?.symbol||symbol(); }
   function current() { return $('market').value==='all'?pair().modes.enriched:pair().quote_modes[$('market').value]; }
-  function updateURL(){const url=new URL(location.href);url.search='';url.searchParams.set('token',pair().id);if($('market').value!=='all')url.searchParams.set('quote',data.metadata[$('market').value].symbol);history.replaceState(null,'',url);}
+  function updateURL(){const url=new URL(location.href);url.search='';if(NET)url.searchParams.set('chain',NET.key);url.searchParams.set('token',pair().id);if($('market').value!=='all')url.searchParams.set('quote',data.metadata[$('market').value].symbol);history.replaceState(null,'',url);}
   function selectPair(){userViewport=null;const p=pair();renderConversions();$('window').value='quotes';$('depth').querySelector('[value=base]').textContent=p.base_symbol;$('reference').textContent=p.reference_available===false?'—':money(p.reference_usdc_equivalent);$('reference').title=p.reference_usdc_equivalent+' USDC-equivalent per '+p.base_symbol;resetSelection();markets();render();updateURL();}
   function renderConversions(){const entries=pair().conversions||[];$('conversionPanel').hidden=!entries.length;$('conversions').replaceChildren();for(const c of entries){const tr=cells($('conversions'),[c.symbol,fmt(c.eth_per_token,10),c.source?'Reference ⓘ':'—']);tr.title=c.source||'';tr.children[2].title=c.source||'';}}
   function resetSelection(){DfusionTakeUI.clearOrder();bookView=null;selectedUid=null;$('orderDetail').hidden=true;$('orderSearch').value='';}
@@ -40,7 +47,7 @@
     $('ammStatus').title=marker?(description.curve?'Curve bid/ask sample approximately $1 in each direction, including pool fees and finite-size impact; mid is geometric. Gas is excluded. ':'Pool spot price with fee-adjusted marginal bid/ask. Gas and trade-size price impact are excluded. ')+'Quote tokens are normalized with CoW reference values. Transfer taxes are excluded. '+(marker.selection_caveat||'Most active verified supported pool by surveyed 24h volume')+'. '+(marker.activity_observed_at?'Volume survey as of '+marker.activity_observed_at+'. ':'')+'Coverage may be incomplete.':'No verified on-chain pool marker is available for this snapshot.';
     if(marker){
       $('ammPool').textContent=marker.venue+' · '+description.pair;
-      if(/^0x[0-9a-f]{40}$/i.test(marker.pool))$('ammPool').href='https://etherscan.io/address/'+marker.pool;else $('ammPool').removeAttribute('href');
+      if(/^0x[0-9a-f]{40}$/i.test(marker.pool))$('ammPool').href=tokenExplorer(marker.pool);else $('ammPool').removeAttribute('href');
       $('ammPool').title=marker.pool+' · block '+Number(marker.block).toLocaleString();
       $('ammBid').textContent=money(marker.bid);$('ammMid').textContent=money(marker.mid);$('ammAsk').textContent=money(marker.ask);
       $('ammPrices').title='USDC-equivalent per '+symbol()+'. Bid: output when selling the asset. Ask: cost when buying it. '+(description.curve?'Approximately $1 quotes include pool fees and finite-size impact; geometric mid; no gas.':'Marginal pool fee included; gas and size impact excluded.');
@@ -159,7 +166,7 @@
     },{passive:true});
   }
   function updateVisibleCount(bounds){const mode=current();const funded=mode.normalized_orders.filter(r=>BigInt(r.allocated_sell_atoms)>0n);const selected=funded.filter(r=>($('market').value==='all'||r.quote_token===$('market').value)&&($('dust').checked||Number(r.allocated_quote_atoms)/10**data.metadata[r.quote_token].decimals*Number(mode.quote_usdc_equivalent_rates[r.quote_token])>=1));const visible=selected.filter(r=>!bounds||(Number(r.normalized_price)>=Number(bounds[0])&&Number(r.normalized_price)<=Number(bounds[1])));$('visibleCount').textContent=visible.length+' displayed orders in view · '+funded.length+' funded in book · '+mode.normalized_orders.length+' total';}
-  function orderLink(uid){const a=document.createElement('a');a.href='https://explorer.cow.fi/orders/'+uid;a.textContent='Explorer ↗';a.title='View order on CoW Explorer';a.target='_blank';a.rel='noopener noreferrer';a.addEventListener('click',e=>e.stopPropagation());return a;}
+  function orderLink(uid){const a=document.createElement('a');a.href=orderExplorer(uid);a.textContent='Explorer ↗';a.title='View order on CoW Explorer';a.target='_blank';a.rel='noopener noreferrer';a.addEventListener('click',e=>e.stopPropagation());return a;}
   function highlightOrder(uid){
     markBookOrder(uid);
     const chart=$('chart');if(!chart.layout||!chart._fullLayout)return;
@@ -212,7 +219,7 @@
     if(bookResetPending){$('asksScroll').scrollTop=$('asksScroll').scrollHeight;$('bidsScroll').scrollTop=0;}
     requestAnimationFrame(()=>{if(frame!==bookFrame)return;$('asksScroll').scrollTop=bookResetPending?$('asksScroll').scrollHeight:Math.max(0,$('asksScroll').scrollHeight-$('asksScroll').clientHeight-askBottom);$('bidsScroll').scrollTop=bookResetPending?0:bidTop;bookResetPending=false;if(activeBookUid)markBookOrder(activeBookUid);});
   }
-  function showOrder(uid){const r=current().normalized_orders.find(r=>r.uid===uid);if(!r)return;selectedUid=uid;$('orderDetail').hidden=false;$('detailContent').replaceChildren();for(const[label,value]of [['Side',(r.side==='ask'?'Sell ':'Buy ')+baseSymbol(r)],['Limit price',money(r.normalized_price)+' / '+symbol()],['Funded size',fmt(Number(r.allocated_base_atoms)/10**pair().base_decimals,7)+' '+symbol()],...(r.allocated_actual_base_atoms!=null?[['Original asset',baseSymbol(r)],['Original order size',fmt(Number(r.nominal_actual_base_atoms)/10**data.metadata[r.base_token].decimals,9)+' '+baseSymbol(r)],['Original funded size',fmt(Number(r.allocated_actual_base_atoms)/10**data.metadata[r.base_token].decimals,9)+' '+baseSymbol(r)],...(pair().conversions?[['Conversion',fmt(r.base_conversion,10)+' ETH / '+baseSymbol(r)]]:[])]:[]),['Quote',r.quote_symbol],['Funding',r.funding_status.replaceAll('_',' ')]]){const div=document.createElement('div');div.className='detail-field';const l=document.createElement('span');l.className='detail-label';l.textContent=label;div.append(l,document.createTextNode(value));$('detailContent').append(div);}const owner=document.createElement('div');owner.className='detail-field';const l=document.createElement('span');l.className='detail-label';l.textContent='Seller / order owner';const a=document.createElement('a');a.href='https://etherscan.io/address/'+r.owner;a.target='_blank';a.rel='noopener noreferrer';a.textContent=r.owner;owner.append(l,a);$('detailContent').append(owner);const id=document.createElement('div');id.className='detail-id';id.textContent='Order '+r.uid;id.append(document.createTextNode(' · '),orderLink(r.uid));$('detailContent').append(id);DfusionTakeUI.selectOrder(r,data.metadata);}
+  function showOrder(uid){const r=current().normalized_orders.find(r=>r.uid===uid);if(!r)return;selectedUid=uid;$('orderDetail').hidden=false;$('detailContent').replaceChildren();for(const[label,value]of [['Side',(r.side==='ask'?'Sell ':'Buy ')+baseSymbol(r)],['Limit price',money(r.normalized_price)+' / '+symbol()],['Funded size',fmt(Number(r.allocated_base_atoms)/10**pair().base_decimals,7)+' '+symbol()],...(r.allocated_actual_base_atoms!=null?[['Original asset',baseSymbol(r)],['Original order size',fmt(Number(r.nominal_actual_base_atoms)/10**data.metadata[r.base_token].decimals,9)+' '+baseSymbol(r)],['Original funded size',fmt(Number(r.allocated_actual_base_atoms)/10**data.metadata[r.base_token].decimals,9)+' '+baseSymbol(r)],...(pair().conversions?[['Conversion',fmt(r.base_conversion,10)+' ETH / '+baseSymbol(r)]]:[])]:[]),['Quote',r.quote_symbol],['Funding',r.funding_status.replaceAll('_',' ')]]){const div=document.createElement('div');div.className='detail-field';const l=document.createElement('span');l.className='detail-label';l.textContent=label;div.append(l,document.createTextNode(value));$('detailContent').append(div);}const owner=document.createElement('div');owner.className='detail-field';const l=document.createElement('span');l.className='detail-label';l.textContent='Seller / order owner';const a=document.createElement('a');a.href=tokenExplorer(r.owner);a.target='_blank';a.rel='noopener noreferrer';a.textContent=r.owner;owner.append(l,a);$('detailContent').append(owner);const id=document.createElement('div');id.className='detail-id';id.textContent='Order '+r.uid;id.append(document.createTextNode(' · '),orderLink(r.uid));$('detailContent').append(id);DfusionTakeUI.selectOrder(r,data.metadata);}
   function download(name,type,text){const u=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
   function applySnapshot(next){
     const token=$('pair').value,quote=$('market').value,viewport=userViewport;
@@ -230,33 +237,62 @@
   async function pollSnapshot(){
     if(polling)return;polling=true;
     try{
-      const response=await fetch('status.json',{cache:'no-store'});if(!response.ok)throw Error('status');const state=await response.json();
+      const response=await fetch(api('status.json'),{cache:'no-store'});if(!response.ok)throw Error('status');const state=await response.json();
       const age=state.last_success==null?Infinity:Date.now()/1000-state.last_success;
       const stale=state.stale||age>state.refresh_seconds*2;
       $('freshness').textContent=state.refreshing?'Updating…':stale?'Update delayed':'Auto · 5 min';$('bookLiveStatus').textContent=state.refreshing?'Updating':stale?'Delayed':'Live';$('bookLiveStatus').parentElement.classList.toggle('warning',Boolean(stale));
       $('freshness').title=state.last_success?'Last successful refresh '+new Date(state.last_success*1000).toISOString().replace('T',' ').slice(0,19)+' UTC'+(state.last_error?' · last refresh failed':''):'Waiting for a complete snapshot';
       $('freshness').classList.toggle('warning',Boolean(stale));
-      if(state.snapshot_id&&state.snapshot_id!==lastSnapshotId){const r=await fetch('dfusion-eth-book.json?v='+encodeURIComponent(state.snapshot_id),{cache:'no-store'});if(!r.ok)throw Error('snapshot');const next=await r.json();applySnapshot(next);lastSnapshotId=state.snapshot_id;}
+      if(state.snapshot_id&&state.snapshot_id!==lastSnapshotId){const r=await fetch(api('dfusion-eth-book.json')+'?v='+encodeURIComponent(state.snapshot_id),{cache:'no-store'});if(!r.ok)throw Error('snapshot');const next=await r.json();applySnapshot(next);lastSnapshotId=state.snapshot_id;}
     }catch{ $('bookLiveStatus').textContent='Cached';$('bookLiveStatus').parentElement.classList.add('warning');$('freshness').textContent='Connection delayed';$('freshness').classList.add('warning');}
     finally{polling=false;}
   }
   async function requestFreshSnapshot(){
     try{
-      const response=await fetch('refresh',{method:'POST',cache:'no-store'});
+      const response=await fetch(api('refresh'),{method:'POST',cache:'no-store'});
       if(response.ok){$('freshness').textContent='Refresh requested';$('freshness').title='Reload requested a shared server refresh. Cached data stays visible until the next complete snapshot.';}
       else if(response.status!==429)throw Error('refresh');
     }catch{$('freshness').title='Automatic refresh is still enabled; reload refresh request could not be sent.';}
   }
   async function initialSnapshot(){
     for(;;){
-      try{const response=await fetch('dfusion-eth-book.json',{cache:'no-store'});if(response.ok)return await response.json();}
+      try{const response=await fetch(api('dfusion-eth-book.json'),{cache:'no-store'});if(response.ok)return await response.json();}
       catch{}
       $('status').textContent='Waiting for the first complete snapshot…';
       await new Promise(resolve=>setTimeout(resolve,5000));
     }
   }
-  async function start(){const refreshRequest=requestFreshSnapshot();data=await initialSnapshot();$('timestamp').textContent=new Date(data.as_of_timestamp*1000).toISOString().slice(0,19).replace('T',' ')+' UTC';$('auction').textContent=data.auction_id.toLocaleString();for(const p of data.pairs){const o=document.createElement('option');o.value=p.id;o.textContent=p.label||p.base_symbol;$('pair').append(o);}const params=new URLSearchParams(location.search);const requested=params.get('token')||(params.get('pair')||'').split('-')[0];const requestedQuote=params.get('quote');if(data.pairs.some(p=>p.id===requested))$('pair').value=requested;$('pair').addEventListener('change',selectPair);selectPair();if(requestedQuote){const q=Object.keys(pair().quote_modes).find(a=>data.metadata[a].symbol.toLowerCase()===requestedQuote.toLowerCase());if(q)$('market').value=q;}$('market').addEventListener('change',()=>{resetSelection();render();updateURL();});$('showUnfunded').addEventListener('change',()=>{bookView=null;highlightOrder(null);renderTable();});$('orderSearch').addEventListener('input',()=>{bookView=null;renderTable();});$('closeDetail').addEventListener('click',()=>{DfusionTakeUI.clearOrder();$('orderDetail').hidden=true;selectedUid=null;});for(const id of ['depth','volumeScale','scale','window','nominal','dust','amm'])$(id).addEventListener('change',()=>{if(id==='window'||id==='scale')userViewport=null;render();});
-    $('json').addEventListener('click',()=>download('dfusion-pair-limit-funding.json','application/json',JSON.stringify(data,null,2)));$('svg').addEventListener('click',()=>Plotly.downloadImage('chart',{format:'svg',filename:'dfusion-pair-limit-depth'}));$('csv').addEventListener('click',()=>{const fields=['uid','owner','side','base_token','quote_symbol','kind','normalized_price','remaining_sell_atoms','remaining_buy_atoms','allocated_sell_atoms','allocated_base_atoms','allocated_quote_atoms','nominal_actual_base_atoms','allocated_actual_base_atoms','base_conversion','funding_status'];const cell=v=>{let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};download('dfusion-pair-limit-orders.csv','text/csv',[fields,...latestRows.map(r=>fields.map(k=>r[k]))].map(r=>r.map(cell).join(',')).join('\r\n'));});let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if($('chart').data){const mobile=window.innerWidth<600,ref=Number(pair().reference_usdc_equivalent),annotations=($('chart').layout.annotations||[]).map(a=>a.text?.startsWith('Reference ')?{...a,xref:mobile?'paper':'x',x:mobile?1:($('scale').value==='log'?Math.log10(ref):ref),y:mobile?.98:1.02}:a);Plotly.relayout('chart',{'xaxis.nticks':mobile?3:8,height:chartHeight(),'margin.l':mobile?55:70,annotations});}},150);});window.dfusionEthBook=data;window.dfusionPairBook=data;render();updateURL();await refreshRequest;await pollSnapshot();setInterval(pollSnapshot,5000);}
+  async function loadNetwork(reset){
+    if(reset){resetSelection();lastSnapshotId=null;}
+    window.DfusionNet=NET;
+    data=await initialSnapshot();
+    $('timestamp').textContent=new Date(data.as_of_timestamp*1000).toISOString().slice(0,19).replace('T',' ')+' UTC';$('auction').textContent=data.auction_id.toLocaleString();
+    $('pair').replaceChildren();for(const p of data.pairs){const o=document.createElement('option');o.value=p.id;o.textContent=p.label||p.base_symbol;$('pair').append(o);}
+    const params=new URLSearchParams(location.search);
+    const requested=reset?null:(params.get('token')||(params.get('pair')||'').split('-')[0]);
+    if(requested&&data.pairs.some(p=>p.id===requested))$('pair').value=requested;
+    selectPair();
+    const requestedQuote=reset?null:params.get('quote');
+    if(requestedQuote){const q=Object.keys(pair().quote_modes).find(a=>data.metadata[a].symbol.toLowerCase()===requestedQuote.toLowerCase());if(q){$('market').value=q;selectPair();}}
+    window.dfusionEthBook=data;window.dfusionPairBook=data;render();updateURL();
+  }
+  async function start(){
+    let manifest=[];try{const m=await fetch('networks.json',{cache:'no-store'});if(m.ok)manifest=await m.json();}catch{}
+    if(!Array.isArray(manifest)||!manifest.length)manifest=[FALLBACK_NET];
+    const wanted=new URLSearchParams(location.search).get('chain');
+    NET=manifest.find(n=>n.key===wanted)||manifest[0];
+    const sel=$('network');sel.replaceChildren();for(const n of manifest){const o=document.createElement('option');o.value=n.key;o.textContent=n.label;sel.append(o);}
+    sel.value=NET.key;if(manifest.length>1)sel.closest('.network-filter').classList.remove('hidden');
+    sel.addEventListener('change',async()=>{NET=manifest.find(n=>n.key===sel.value)||manifest[0];const r=requestFreshSnapshot();await loadNetwork(true);await r;});
+    $('pair').addEventListener('change',selectPair);
+    $('market').addEventListener('change',()=>{resetSelection();render();updateURL();});
+    $('showUnfunded').addEventListener('change',()=>{bookView=null;highlightOrder(null);renderTable();});
+    $('orderSearch').addEventListener('input',()=>{bookView=null;renderTable();});
+    $('closeDetail').addEventListener('click',()=>{DfusionTakeUI.clearOrder();$('orderDetail').hidden=true;selectedUid=null;});
+    for(const id of ['depth','volumeScale','scale','window','nominal','dust','amm'])$(id).addEventListener('change',()=>{if(id==='window'||id==='scale')userViewport=null;render();});
+    $('json').addEventListener('click',()=>download('dfusion-pair-limit-funding.json','application/json',JSON.stringify(data,null,2)));$('svg').addEventListener('click',()=>Plotly.downloadImage('chart',{format:'svg',filename:'dfusion-pair-limit-depth'}));$('csv').addEventListener('click',()=>{const fields=['uid','owner','side','base_token','quote_symbol','kind','normalized_price','remaining_sell_atoms','remaining_buy_atoms','allocated_sell_atoms','allocated_base_atoms','allocated_quote_atoms','nominal_actual_base_atoms','allocated_actual_base_atoms','base_conversion','funding_status'];const cell=v=>{let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};download('dfusion-pair-limit-orders.csv','text/csv',[fields,...latestRows.map(r=>fields.map(k=>r[k]))].map(r=>r.map(cell).join(',')).join('\r\n'));});let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if($('chart').data){const mobile=window.innerWidth<600,ref=Number(pair().reference_usdc_equivalent),annotations=($('chart').layout.annotations||[]).map(a=>a.text?.startsWith('Reference ')?{...a,xref:mobile?'paper':'x',x:mobile?1:($('scale').value==='log'?Math.log10(ref):ref),y:mobile?.98:1.02}:a);Plotly.relayout('chart',{'xaxis.nticks':mobile?3:8,height:chartHeight(),'margin.l':mobile?55:70,annotations});}},150);});
+    const refreshRequest=requestFreshSnapshot();await loadNetwork(false);await refreshRequest;await pollSnapshot();setInterval(pollSnapshot,5000);
+  }
 
   start().catch(()=>{$('status').textContent='Limit-order snapshot could not load. Reload this page.';$('status').classList.add('warning');});
 })();

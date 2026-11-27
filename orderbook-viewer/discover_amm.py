@@ -39,7 +39,7 @@ def catalog_from_discovery(discovery,discovered_at):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--book',type=Path,default=Path(__file__).with_name('config-book.json'));parser.add_argument('--output',type=Path,required=True);args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--book',type=Path,default=Path(__file__).parent/'config'/'mainnet'/'book.json');parser.add_argument('--output',type=Path,required=True);args=parser.parse_args()
     value=discover(json.loads(args.book.read_bytes()))
     with args.output.open('x') as stream:json.dump(value,stream,indent=2);stream.write('\n')
     print('Wrote frozen Ethereum pool survey; review and verify onchain before packaging')

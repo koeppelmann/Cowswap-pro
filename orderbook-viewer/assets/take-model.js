@@ -5,8 +5,8 @@
   function atoms(value){if(!/^\d+$/.test(String(value)))throw Error('Invalid integer amount');return BigInt(value);}
   function formatAtoms(value,decimals){const n=atoms(value);if(!Number.isInteger(decimals)||decimals<0||decimals>36)throw Error('Invalid decimals');if(!decimals)return n.toString();const s=n.toString().padStart(decimals+1,'0'),fraction=s.slice(-decimals).replace(/0+$/,'');return s.slice(0,-decimals)+(fraction?'.'+fraction:'');}
   function parseAtoms(value,decimals){const s=String(value).trim();if(!/^\d+(\.\d*)?$/.test(s))throw Error('Enter a nonnegative decimal amount');const [whole,fraction='']=s.split('.');if(fraction.length>decimals)throw Error('Too many decimal places');return(BigInt(whole)*10n**BigInt(decimals)+BigInt(fraction.padEnd(decimals,'0')||'0')).toString();}
-  function buildCowUrl(result){if(!result.enabled)return null;const q=new URLSearchParams({sellAmount:result.sellAmount,buyAmount:result.buyAmount,orderKind:'sell'});return 'https://swap.cow.fi/#/1/limit/'+result.sellToken+'/'+result.buyToken+'?'+q;}
-  function buildCounterOrder(row,{metadata,overlapBps=0,extraSellAtoms='0',makerFeeBps=0,counterFeeBps=0,bufferBps=0,now=Date.now()/1000}){
+  function buildCowUrl(result,chainId){if(!result.enabled)return null;const q=new URLSearchParams({sellAmount:result.sellAmount,buyAmount:result.buyAmount,orderKind:'sell'});return 'https://swap.cow.fi/#/'+(chainId||1)+'/limit/'+result.sellToken+'/'+result.buyToken+'?'+q;}
+  function buildCounterOrder(row,{metadata,overlapBps=0,extraSellAtoms='0',makerFeeBps=0,counterFeeBps=0,bufferBps=0,now=Date.now()/1000,chainId=1}){
     const no=reason=>({enabled:false,reason});
     try{
       if(row.signed_sell_atoms==null||row.signed_buy_atoms==null||!row.sell_token||!row.buy_token)return no('missing_terms');
@@ -35,7 +35,7 @@
       const extra=ceil(sourceBuy*BigInt(overlapBps),10000n)+network+protocol+bufferAmount,sell=sourceBuy+extra;
       if(B*sourceSell>S*sell)return no('incompatible_limits');
       const result={enabled:true,reason:null,sellToken,buyToken,sellAtoms:sell.toString(),buyAtoms:sourceSell.toString(),baseSellAtoms:sourceBuy.toString(),protocolAtoms:protocol.toString(),bufferAtoms:bufferAmount.toString(),networkAtoms:network.toString(),extraAtoms:extra.toString(),overlapBps:Number(overlapBps),sellAmount:formatAtoms(sell,metadata[sellToken].decimals),buyAmount:formatAtoms(sourceSell,metadata[buyToken].decimals)};
-      result.url=buildCowUrl(result);return result;
+      result.url=buildCowUrl(result,chainId);return result;
     }catch{return no('invalid_amount');}
   }
   return{buildCounterOrder,formatAtoms,parseAtoms,buildCowUrl};

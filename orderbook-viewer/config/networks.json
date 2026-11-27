@@ -1,0 +1,118 @@
+{
+  "_doc": "Per-network config for the multichain order-book viewer. mainnet keeps its rich static book/catalog (config/mainnet/) with the ETH-family aggregation, LST conversions and AMM markers. Other chains derive their tradeable base tokens dynamically from each live CoW auction + on-chain metadata; only the USD-stablecoin set (bid/ask sides) and a 6-decimal USD anchor are curated here (every address verified on-chain and present in the live auction). settlement/relayer/multicall are the same address on all CoW chains, so they stay in funding.py.",
+  "order": ["mainnet", "gnosis", "arbitrum", "base", "polygon", "avalanche", "sepolia"],
+  "networks": {
+    "mainnet": {
+      "label": "Ethereum",
+      "slug": "mainnet",
+      "chain_id": 1,
+      "rpc_env": "RPC_ETH",
+      "rpc_default": "https://ethereum-rpc.publicnode.com",
+      "native_symbol": "ETH",
+      "usdc": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "weth": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "eth_family": true,
+      "amm": true
+    },
+    "gnosis": {
+      "label": "Gnosis",
+      "slug": "xdai",
+      "chain_id": 100,
+      "rpc_env": "RPC_GNOSIS",
+      "rpc_default": "https://gnosis-rpc.publicnode.com",
+      "native_symbol": "xDAI",
+      "usdc": "0x2a22f9c3b484c3629090feed35f17ff8f88f76f0",
+      "eth_family": false,
+      "amm": false,
+      "stables": {
+        "0x2a22f9c3b484c3629090feed35f17ff8f88f76f0": {"symbol": "USDC.e", "decimals": 6},
+        "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83": {"symbol": "USDC", "decimals": 6},
+        "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d": {"symbol": "WXDAI", "decimals": 18},
+        "0x4ecaba5870353805a9f068101a40e0f32ed605c6": {"symbol": "USDT", "decimals": 6}
+      }
+    },
+    "arbitrum": {
+      "label": "Arbitrum",
+      "slug": "arbitrum_one",
+      "chain_id": 42161,
+      "rpc_env": "RPC_ARBITRUM",
+      "rpc_default": "https://arbitrum-one-rpc.publicnode.com",
+      "native_symbol": "ETH",
+      "usdc": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "eth_family": false,
+      "amm": false,
+      "stables": {
+        "0xaf88d065e77c8cc2239327c5edb3a432268e5831": {"symbol": "USDC", "decimals": 6},
+        "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8": {"symbol": "USDC.e", "decimals": 6},
+        "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9": {"symbol": "USD₮0", "decimals": 6},
+        "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1": {"symbol": "DAI", "decimals": 18}
+      }
+    },
+    "base": {
+      "label": "Base",
+      "slug": "base",
+      "chain_id": 8453,
+      "rpc_env": "RPC_BASE",
+      "rpc_default": "https://base-rpc.publicnode.com",
+      "native_symbol": "ETH",
+      "usdc": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "eth_family": false,
+      "amm": false,
+      "stables": {
+        "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": {"symbol": "USDC", "decimals": 6},
+        "0xd9aaec86b65d86f6a7b5b1b0c42ffa531710b6ca": {"symbol": "USDbC", "decimals": 6},
+        "0x50c5725949a6f0c72e6c4a641f24049a917db0cb": {"symbol": "DAI", "decimals": 18},
+        "0x820c137fa70c8691f0e44dc420a5e53c168921dc": {"symbol": "USDS", "decimals": 18}
+      }
+    },
+    "polygon": {
+      "label": "Polygon",
+      "slug": "polygon",
+      "chain_id": 137,
+      "rpc_env": "RPC_POLYGON",
+      "rpc_default": "https://polygon-bor-rpc.publicnode.com",
+      "native_symbol": "POL",
+      "usdc": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+      "eth_family": false,
+      "amm": false,
+      "stables": {
+        "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359": {"symbol": "USDC", "decimals": 6},
+        "0x2791bca1f2de4661ed88a30c99a7a9449aa84174": {"symbol": "USDC.e", "decimals": 6},
+        "0xc2132d05d31c914a87c6611c10748aeb04b58e8f": {"symbol": "USDT0", "decimals": 6},
+        "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063": {"symbol": "DAI", "decimals": 18}
+      }
+    },
+    "avalanche": {
+      "label": "Avalanche",
+      "slug": "avalanche",
+      "chain_id": 43114,
+      "rpc_env": "RPC_AVALANCHE",
+      "rpc_default": "https://api.avax.network/ext/bc/C/rpc",
+      "native_symbol": "AVAX",
+      "usdc": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+      "eth_family": false,
+      "amm": false,
+      "stables": {
+        "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e": {"symbol": "USDC", "decimals": 6},
+        "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7": {"symbol": "USDt", "decimals": 6},
+        "0xd586e7f844cea2f87f50152665bcbc2c279d8d70": {"symbol": "DAI.e", "decimals": 18}
+      }
+    },
+    "sepolia": {
+      "label": "Sepolia",
+      "slug": "sepolia",
+      "chain_id": 11155111,
+      "rpc_env": "RPC_SEPOLIA",
+      "rpc_default": "https://ethereum-sepolia-rpc.publicnode.com",
+      "native_symbol": "ETH",
+      "usdc": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+      "eth_family": false,
+      "amm": false,
+      "max_staleness": 604800,
+      "stables": {
+        "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238": {"symbol": "USDC", "decimals": 6},
+        "0xbe72e441bf55620febc26715db68d3494213d8cb": {"symbol": "USDC", "decimals": 18}
+      }
+    }
+  }
+}

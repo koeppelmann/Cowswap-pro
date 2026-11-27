@@ -11,12 +11,15 @@ import urllib.request
 from datetime import datetime, timezone
 
 import cowapi
+import networks
 from dfusion_crypto import keccak256
 ROOT = Path(__file__).resolve().parent
-BOOK = ROOT/'config-book.json'
-CATALOG = ROOT/'config-catalog.json'
-LATEST = 'https://api.cow.fi/mainnet/api/v2/solver_competition/latest'
-ORDERS = 'https://api.cow.fi/mainnet/api/v1/orders/by_uids'
+
+
+def urls(network):
+    slug = networks.get(network)['slug']
+    return (f'https://api.cow.fi/{slug}/api/v2/solver_competition/latest',
+            f'https://api.cow.fi/{slug}/api/v1/orders/by_uids')
 
 
 def now():
@@ -27,18 +30,29 @@ def write(path, value):
     path.write_text(json.dumps(value, indent=2)+'\n')
 
 
-def configuration():
-    book = json.loads(BOOK.read_bytes())
-    catalog = json.loads(CATALOG.read_bytes())
-    bases = {p['base_token'].lower() for p in book['pairs']}
-    bases.update(address for address in catalog['eth_family_tokens'] if address in book['metadata'])
-    stables = set(catalog['stable_tokens'])
-    return bases, stables, catalog
+def configuration(network='mainnet'):
+    # mainnet (and any network that ships a static catalog) uses a curated base list;
+    # other networks discover bases dynamically, so they only need their stable set.
+    catalog_path = networks.config_dir(network) / 'catalog.json'
+    if catalog_path.exists():
+        book = json.loads((networks.config_dir(network) / 'book.json').read_bytes())
+        catalog = json.loads(catalog_path.read_bytes())
+        bases = {p['base_token'].lower() for p in book['pairs']}
+        bases.update(address for address in catalog['eth_family_tokens'] if address in book['metadata'])
+        return bases, set(a.lower() for a in catalog['stable_tokens']), catalog
+    stable_meta = networks.stable_metadata(network)
+    return set(), set(stable_meta), {'tokens': stable_meta}
 
 
-def member(data, bases, stables):
+def member(data, bases, stables, dynamic=False):
     sell, buy = data['sellToken'].lower(), data['buyToken'].lower()
-    return sell != buy and ((sell in bases and buy in stables) or (buy in bases and sell in stables))
+    if sell == buy:
+        return False
+    # Dynamic networks keep any order where exactly one side is a stable (the other is
+    # the base, whatever it is); curated networks require the base to be in the list.
+    if dynamic:
+        return (sell in stables) != (buy in stables)
+    return (sell in bases and buy in stables) or (buy in bases and sell in stables)
 
 
 def project(order, hashes):
@@ -70,12 +84,12 @@ def project(order, hashes):
     return row
 
 
-def lookup(uids, deadline):
+def lookup(uids, deadline, orders_url):
     cowapi.acquire(deadline=deadline)
     remaining = deadline-time.monotonic()
     if remaining <= 0:
         raise RuntimeError('source_deadline')
-    request = urllib.request.Request(ORDERS, data=json.dumps(uids).encode(), headers={'Accept':'application/json','Content-Type':'application/json','User-Agent':cowapi.USER_AGENT}, method='POST')
+    request = urllib.request.Request(orders_url, data=json.dumps(uids).encode(), headers={'Accept':'application/json','Content-Type':'application/json','User-Agent':cowapi.USER_AGENT}, method='POST')
     try:
         with urllib.request.urlopen(request, timeout=min(30,remaining)) as response:
             raw = response.read(16*1024*1024+1)
@@ -92,26 +106,28 @@ def lookup(uids, deadline):
     return raw
 
 
-def collect(outdir):
+def collect(outdir, network='mainnet'):
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=False)
     rawdir = outdir/'raw'
     rawdir.mkdir()
     deadline = time.monotonic()+600
     started = now()
-    competition = cowapi.get_json(LATEST, refresh=True, deadline=deadline)
+    latest_url, orders_url = urls(network)
+    dynamic = network != 'mainnet'
+    competition = cowapi.get_json(latest_url, refresh=True, deadline=deadline)
     write(outdir/'competition.private.json', competition)
     source_hash = hashlib.sha256((outdir/'competition.private.json').read_bytes()).hexdigest()
     uids = competition['auction']['orders']
     if not isinstance(uids,list) or len(uids)!=len(set(uids)) or len(uids)>20000:
         raise ValueError('invalid competition UID population')
-    bases, stables, catalog = configuration()
+    bases, stables, catalog = configuration(network)
     seen, rows, errors, batches, hashes = set(), [], [], [], {}
     for offset in range(0,len(uids),128):
         if time.monotonic() >= deadline:
             raise RuntimeError('source_deadline')
         requested = uids[offset:offset+128]
-        raw = lookup(requested, deadline)
+        raw = lookup(requested, deadline, orders_url)
         path = rawdir/f'batch-{offset//128:03d}.private.json'
         path.write_bytes(raw)
         entries = json.loads(raw)
@@ -126,7 +142,7 @@ def collect(outdir):
                 errors.append({'uid':uid,'reason':'public order lookup unavailable'})
             elif 'order' in entry:
                 order=entry['order']; d=order.get('data',order); m=order.get('metadata',order); uid=m['uid']
-                if member(d,bases,stables):
+                if member(d,bases,stables,dynamic):
                     rows.append(project(order,hashes))
             else:
                 raise ValueError('unknown order response')

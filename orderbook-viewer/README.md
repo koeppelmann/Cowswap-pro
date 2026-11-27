@@ -75,10 +75,12 @@ mocks; they do not require an RPC endpoint or privileged API access.
 
 ## Configuration and files
 
-`config-book.json` defines asset choices and static metadata;
-`config-catalog.json` defines stablecoins and ETH forms. `amm-catalog.json` is a
-frozen pool survey. Refresh it into a new file, review the coverage and package it
-as the next catalog:
+`config/networks.json` defines every supported network (CoW API slug, chain id, RPC,
+USD anchor and stablecoins). Mainnet additionally uses `config/mainnet/book.json`
+(curated asset choices and static metadata) and `config/mainnet/catalog.json`
+(stablecoins and ETH forms); other networks derive their bases from the live auction.
+`amm-catalog.json` is a frozen pool survey (mainnet only). Refresh it into a new file,
+review the coverage and package it as the next catalog:
 
 ```sh
 python discover_amm.py --output /tmp/dfusion-amm-catalog-new.json

@@ -30,24 +30,27 @@ def text(value):
         return s.rstrip('0').rstrip('.') if '.' in s else s
 
 
-def build_depth(orders, metadata, cow_prices, funding, *, block_hash, mode='direct', base_token=WETH, quote_token=USDC, base_conversion=None):
+def build_depth(orders, metadata, cow_prices, funding, *, block_hash, mode='direct', base_token=WETH, quote_token=USDC, base_conversion=None, usdc=USDC, stables=STABLES, weth=WETH, eth_family=True):
     if mode not in ('direct', 'enriched') or funding['block_hash'].lower() != block_hash.lower():
         raise ValueError('Invalid mode or inconsistent funding state')
     meta = {a.lower(): v for a, v in metadata.items()}
     prices = {a.lower(): int(v, 0) if str(v).startswith('0x') else int(v) for a, v in cow_prices.items()}
     base_token, quote_token = base_token.lower(), quote_token.lower()
-    assert meta[USDC]['decimals'] == 6 and prices[USDC] > 0
+    usdc, weth = usdc.lower(), weth.lower()
+    stables = {s.lower() for s in stables}
+    assert meta[usdc]['decimals'] == 6 and prices[usdc] > 0
     base_decimals = int(meta[base_token]['decimals'])
     assert 0 <= base_decimals <= 36
-    base_assets = {WETH, ETH} if mode == 'enriched' and base_token in (WETH, ETH) else {base_token}
+    # ETH/WETH aggregation is a mainnet-only family behaviour; elsewhere each base is itself.
+    base_assets = {weth, ETH} if eth_family and mode == 'enriched' and base_token in (weth, ETH) else {base_token}
     if base_conversion is not None:
         if mode != 'enriched':
             raise ValueError('Family conversion requires enriched mode')
         base_assets = set(base_conversion)
         if any(Fraction(rate) <= 0 for rate in base_conversion.values()):
             raise ValueError('Invalid family conversion')
-    stable_quotes = STABLES - base_assets
-    usd = prices[USDC]*10**6
+    stable_quotes = stables - base_assets
+    usd = prices[usdc]*10**6
     groups, available = {}, {}
     for g in funding['groups']:
         key = (g['owner'].lower(), g['sell_token'].lower())
