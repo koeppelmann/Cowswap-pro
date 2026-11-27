@@ -72,6 +72,10 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
     prices={a.lower():int(v)for a,v in competition['auction']['prices'].items()}
     assert prices.get(usdc,0)>0 and (not fam or prices.get(weth,0)>0)
     assert conversions['block_hash']==state['block_hash']
+    # Freshness guard: the auction's reference block must be recent. Checked here, before
+    # the slower TWAP/AMM collection, so build latency doesn't count against the auction's
+    # age (testnets get a wider window via max_staleness).
+    ref=state['reference_state'];assert -60<=time.time()-ref['timestamp']<=cfg.get('max_staleness',900)
     orders=state['orders']
     # Mainnet keeps its curated static book + allocator's built-in constants (unchanged);
     # other networks derive ranked pairs and pass their own stables + USD anchor with the
@@ -91,16 +95,15 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
         orders=[o for o in orders if o['sellToken'].lower() in state['metadata'] and o['buyToken'].lower() in state['metadata'] and (o['sellToken'].lower()==ETH or (o['owner'].lower(),o['sellToken'].lower()) in readable)]
         template={'metadata':{},'pairs':derive_pairs(orders,state['metadata'],stables,prices)}
     metadata={**template.get('metadata',{}),**state['metadata']}
-    # TWAP overlay is a mainnet-only feature (its index + decoders assume chainId 1); other
-    # networks degrade to no schedules. collect_twap_schedules is already defensively wrapped.
-    if network=='mainnet':
-        try:
-            twaps=collect_twap_schedules(metadata,state['reference_state']['block_number'],state['block_hash'],work/'twap',cache_root=work.parent)
-        except Exception:
-            twaps={'schedules':[],'metadata':{},'coverage':{'status':'unavailable'}}
-        metadata.update(twaps.get('metadata',{}))
-    else:
+    # TWAP overlay: active TWAP parents are discovered per chainId from CoW's
+    # programmatic-orders index and revalidated on-chain (ComposableCoW + the TWAP
+    # handler are at the same address on every CoW network). Runs on every network;
+    # defensively wrapped so a TWAP failure degrades to no schedules, never a failed book.
+    try:
+        twaps=collect_twap_schedules(metadata,state['reference_state']['block_number'],state['block_hash'],work/'twap',cache_root=work.parent,network=network)
+    except Exception:
         twaps={'schedules':[],'metadata':{},'coverage':{'status':'unavailable'}}
+    metadata.update(twaps.get('metadata',{}))
     families=set();rates={ETH:Fraction(1),weth:Fraction(1)}
     details=[dict(token=t,symbol=s,eth_per_token='1',source='1:1 ETH denomination')for t,s in [(ETH,'ETH'),(weth,'WETH')]]
     if fam:
@@ -136,18 +139,16 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
         if family:p['conversions']=details
         pairs.append(p)
     assert pairs and (not fam or pairs[0]['id']=='eth')
-    if network=='mainnet':
-        # Isolate the overlay like the collector: a normalize-side error degrades to no
-        # schedules rather than stalling every book refresh (validate_snapshot would else
-        # reject a partially-attached book). Clear any half-written rows on failure.
-        try:
-            stable_tokens=set(json.loads((networks.config_dir('mainnet')/'catalog.json').read_bytes())['stable_tokens'])
-            twap_coverage=attach_schedules(pairs,twaps,metadata,prices,stable_tokens,rates,lambda base,family:mode([],base,family))
-        except Exception:
-            for p in pairs:p.pop('twap_schedules',None)
-            twap_coverage={'status':'unavailable'}
-    else:
-        twap_coverage=twaps['coverage']
+    # Attach schedules to their pairs (all networks). Isolate like the collector: a
+    # normalize-side error degrades to no schedules rather than stalling the whole book
+    # refresh (validate_snapshot would else reject a partially-attached book). Mainnet
+    # keeps its curated stable set; other networks pass the derived one.
+    try:
+        stable_tokens=set(json.loads((networks.config_dir('mainnet')/'catalog.json').read_bytes())['stable_tokens']) if network=='mainnet' else stables
+        twap_coverage=attach_schedules(pairs,twaps,metadata,prices,stable_tokens,rates,lambda base,family:mode([],base,family),usdc,weth)
+    except Exception:
+        for p in pairs:p.pop('twap_schedules',None)
+        twap_coverage={'status':'unavailable'}
     if cfg['amm']:
         try:markers=collect_markers(metadata,prices,pairs,state['reference_state']['block_number'],state['block_hash'],work/'amm')
         except Exception:markers={}
@@ -155,8 +156,5 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
         markers={}
     for pair in pairs:
         pair['amm_marker']=markers.get(pair['id'],{'status':'unavailable','reason':'AMM markers are available on Ethereum only','block':state['reference_state']['block_number'],'block_hash':state['block_hash']})
-    # Freshness guard: the auction's reference block must be recent. Testnets (sparse,
-    # slow auctions) get a wider window via max_staleness so their thin book still builds.
-    ref=state['reference_state'];assert -60<=time.time()-ref['timestamp']<=cfg.get('max_staleness',900)
     evidence=dict(auction_id=state['auction_id'],block=ref['block_number'],block_hash=state['block_hash'],source_sha256=digest(source_dir/'sanitized-orders.json'),funding_sha256=digest(funding_dir/'funding-state.json'),conversions_sha256=digest(funding_dir/'eth-conversions.json'))
-    return dict(schema='cowpro_live_depth_v1',network=network,chain_id=cfg['chain_id'],auction_id=state['auction_id'],block=ref['block_number'],block_hash=state['block_hash'],as_of_timestamp=ref['timestamp'],native_eth=ETH,metadata=metadata,verified_limit_orders=len(orders),classification_excluded=sum(source.get('classification_summary',{}).get('excluded_candidates',{}).values()),pairs=pairs,twap_coverage=twap_coverage,modes=pairs[0]['modes'],scope='Live cached auction limits; canonical same-block wallet/approval budgets allocated once per view. Hook-conditional funding excluded. '+('ETH conversion provenance in asset details. TWAP overlays are scheduled flow, not funded executable depth. ' if network=='mainnet' else '')+'No full settlement guarantee.',snapshot_evidence=evidence,generated_at=time.time(),refresh_seconds=300)
+    return dict(schema='cowpro_live_depth_v1',network=network,chain_id=cfg['chain_id'],auction_id=state['auction_id'],block=ref['block_number'],block_hash=state['block_hash'],as_of_timestamp=ref['timestamp'],native_eth=ETH,metadata=metadata,verified_limit_orders=len(orders),classification_excluded=sum(source.get('classification_summary',{}).get('excluded_candidates',{}).values()),pairs=pairs,twap_coverage=twap_coverage,modes=pairs[0]['modes'],scope='Live cached auction limits; canonical same-block wallet/approval budgets allocated once per view. Hook-conditional funding excluded. '+('ETH conversion provenance in asset details. ' if fam else '')+('TWAP overlays are scheduled flow, not funded executable depth. ' if twap_coverage.get('status')=='available' else '')+'No full settlement guarantee.',snapshot_evidence=evidence,generated_at=time.time(),refresh_seconds=300)

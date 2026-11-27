@@ -16,7 +16,10 @@ PAGE_SIZE=1000
 MAX_PAGES=5
 MAX_BODY=8*1024*1024
 CACHE_SECONDS=300
-QUERY='''query TwapCandidates($limit:Int!,$offset:Int!){programmaticOrders(where:{chainId:1,orderType:TWAP,status:Active},limit:$limit,offset:$offset,orderBy:"eventId",orderDirection:"desc"){items{eventId chainId hash txHash owner handler salt staticInput creationDate}totalCount}}'''
+def _query(chain_id):
+    # chain_id is a trusted int from networks config; inlined so the where-filter chainId
+    # is unambiguous (the index serves every CoW network, not just mainnet).
+    return 'query TwapCandidates($limit:Int!,$offset:Int!){programmaticOrders(where:{chainId:%d,orderType:TWAP,status:Active},limit:$limit,offset:$offset,orderBy:"eventId",orderDirection:"desc"){items{eventId chainId hash txHash owner handler salt staticInput creationDate}totalCount}}' % int(chain_id)
 HEX_ADDRESS=re.compile(r'^0x[0-9a-fA-F]{40}$')
 HEX_WORD=re.compile(r'^0x[0-9a-fA-F]{64}$')
 HEX_BYTES=re.compile(r'^0x(?:[0-9a-fA-F]{2})*$')
@@ -56,10 +59,10 @@ def _retry_after(headers):
         except (ValueError,TypeError,OverflowError):return 0
 
 
-def _request_page(offset,deadline):
+def _request_page(offset,deadline,chain_id=1):
     remaining=deadline-time.monotonic()
     if remaining<=0:raise QueryFailure('query_deadline')
-    payload=json.dumps({'query':QUERY,'variables':{'limit':PAGE_SIZE,'offset':offset}}).encode()
+    payload=json.dumps({'query':_query(chain_id),'variables':{'limit':PAGE_SIZE,'offset':offset}}).encode()
     request=urllib.request.Request(SOURCE,data=payload,headers={'Content-Type':'application/json','Accept':'application/json','User-Agent':'cowpro-orderbook-viewer/1.0'},method='POST')
     try:
         with urllib.request.urlopen(request,timeout=min(10,remaining)) as response:raw=response.read(MAX_BODY+1)
@@ -79,8 +82,8 @@ def _request_page(offset,deadline):
     return page
 
 
-def _record(item):
-    if not isinstance(item,dict) or type(item.get('chainId')) is not int or item.get('chainId')!=1:return None
+def _record(item,chain_id):
+    if not isinstance(item,dict) or type(item.get('chainId')) is not int or item.get('chainId')!=chain_id:return None
     for key in ('owner','handler'):
         if not isinstance(item.get(key),str) or not HEX_ADDRESS.fullmatch(item[key]) or int(item[key],16)==0:return None
     for key in ('hash','salt'):
@@ -93,7 +96,7 @@ def _record(item):
     if not created.isdigit() or len(created)>20:return None
     transaction=item.get('txHash')
     if transaction is not None and (not isinstance(transaction,str) or not HEX_WORD.fullmatch(transaction)):return None
-    return {'chainId':1,'eventId':event,'owner':item['owner'].lower(),'hash':item['hash'].lower(),'handler':item['handler'].lower(),'salt':item['salt'].lower(),'staticInput':data.lower(),'txHash':transaction.lower() if transaction else None,'creationDate':created}
+    return {'chainId':chain_id,'eventId':event,'owner':item['owner'].lower(),'hash':item['hash'].lower(),'handler':item['handler'].lower(),'salt':item['salt'].lower(),'staticInput':data.lower(),'txHash':transaction.lower() if transaction else None,'creationDate':created}
 
 
 def _result(cache,status,reason=None):
@@ -103,7 +106,7 @@ def _result(cache,status,reason=None):
     return result
 
 
-def fetch_candidates(cache_root,*,deadline=None):
+def fetch_candidates(cache_root,*,deadline=None,chain_id=1):
     """Fetch dated candidate metadata, never a declaration of live authorization."""
     deadline=min(deadline,time.monotonic()+30) if deadline is not None else time.monotonic()+30
     root=Path(cache_root)/'twap-api';root.mkdir(parents=True,exist_ok=True)
@@ -135,13 +138,13 @@ def fetch_candidates(cache_root,*,deadline=None):
                 if wait:time.sleep(wait)
                 if time.monotonic()>=deadline:raise QueryFailure('query_deadline')
                 state['next_request']=time.time()+1;_atomic(root/'pacing.json',state)
-                page=_request_page(page_number*PAGE_SIZE,deadline)
+                page=_request_page(page_number*PAGE_SIZE,deadline,chain_id)
                 if total is None:total=page['totalCount']
                 elif total!=page['totalCount']:raise QueryFailure('query_population_changed')
                 items=page['items']
                 if len(items)>PAGE_SIZE:raise QueryFailure('query_page_too_large')
                 for item in items:
-                    row=_record(item)
+                    row=_record(item,chain_id)
                     if row is None:invalid+=1;continue
                     if row['eventId'] in seen:raise QueryFailure('query_duplicate_event')
                     seen.add(row['eventId']);records.append(row)

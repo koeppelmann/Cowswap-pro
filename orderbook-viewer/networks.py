@@ -16,6 +16,17 @@ ORDER = _DATA['order']
 NETWORKS = _DATA['networks']
 DEFAULT = ORDER[0]
 
+# CoW Explorer path prefix + block-explorer base per network (order/address/tx links).
+EXPLORERS = {
+    'mainnet': ('', 'https://etherscan.io'),
+    'gnosis': ('gc', 'https://gnosisscan.io'),
+    'arbitrum': ('arb1', 'https://arbiscan.io'),
+    'base': ('base', 'https://basescan.org'),
+    'polygon': ('pol', 'https://polygonscan.com'),
+    'avalanche': ('avax', 'https://snowtrace.io'),
+    'sepolia': ('sepolia', 'https://sepolia.etherscan.io'),
+}
+
 
 def get(network):
     if network not in NETWORKS:

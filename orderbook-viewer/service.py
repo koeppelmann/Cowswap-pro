@@ -7,22 +7,10 @@ import networks
 
 ASSETS=('depth.css','depth.js','plotly.min.js','book-model.js','take-model.js','take-ui.js')
 
-# CoW Explorer path prefix + block-explorer base per network (for order/address links).
-EXPLORERS={
-    'mainnet':('','https://etherscan.io'),
-    'gnosis':('gc','https://gnosisscan.io'),
-    'arbitrum':('arb1','https://arbiscan.io'),
-    'base':('base','https://basescan.org'),
-    'polygon':('pol','https://polygonscan.com'),
-    'avalanche':('avax','https://snowtrace.io'),
-    'sepolia':('sepolia','https://sepolia.etherscan.io'),
-}
-
-
 def write_manifest(public,order):
     manifest=[]
     for net in order:
-        cfg=networks.get(net);cow,token=EXPLORERS.get(net,('',''))
+        cfg=networks.get(net);cow,token=networks.EXPLORERS.get(net,('',''))
         manifest.append({'key':net,'label':cfg['label'],'slug':cfg['slug'],'chain_id':cfg['chain_id'],'cow_explorer':cow,'token_explorer':token})
     _atomic(public/'networks.json',(json.dumps(manifest)+'\n').encode())
 

@@ -10,6 +10,7 @@ import uuid
 from ethereum_crypto import keccak256
 from twap_api import fetch_candidates
 from funding import endpoint, selector, simple, aggregate, decode, word, addr, blob, symbol_value, MULTICALL, SETTLEMENT, RELAYER, NATIVE
+import networks
 
 COMPOSABLE='0xfdafc9d1902f4e0b84f65f49f244b32b31013b74'
 HANDLER='0x6cf1e9ca41f7611def408122793c358a3d11e5a5'
@@ -73,8 +74,8 @@ def decode_created(log):
     return {'id':owner+':'+digest,'owner':owner,'schedule_hash':digest,'handler':handler,'sell_token':address(0),'buy_token':address(1),'receiver':address(2),'part_sell_atoms':str(number(3)),'min_buy_atoms':str(number(4)),'start_time':number(5),'total_parts':number(6),'interval_seconds':number(7),'span_seconds':number(8),'creation_tx':log['transactionHash'],'creation_block':int(log['blockNumber'],16),'event_index':int(log['logIndex'],16),'_app_data':'0x'+words[9].hex()}
 
 
-def decode_api_parent(record):
-    if type(record.get('chainId')) is not int or record['chainId']!=1:raise ValueError('wrong_api_chain')
+def decode_api_parent(record,chain_id=1):
+    if type(record.get('chainId')) is not int or record['chainId']!=chain_id:raise ValueError('wrong_api_chain')
     def raw(key,size):
         value=record[key]
         if not isinstance(value,str) or not value.startswith('0x') or len(value)!=2+size*2:raise ValueError('invalid_api_encoding')
@@ -95,10 +96,10 @@ def decode_api_parent(record):
     return row
 
 
-def merge_candidates(retained,events,candidates):
+def merge_candidates(retained,events,candidates,chain_id=1):
     latest={r['id']:r for r in retained};invalid_api=0
     for candidate in candidates:
-        try:row=decode_api_parent(candidate)
+        try:row=decode_api_parent(candidate,chain_id)
         except (ValueError,TypeError,KeyError,IndexError,OverflowError):
             invalid_api+=1;continue
         if row:latest.setdefault(row['id'],row)
@@ -128,7 +129,9 @@ def _atomic(path,value):
         if temporary.exists():temporary.unlink()
 
 
-def collect_twap_schedules(metadata,block_number,block_hash,workdir,cache_root=None):
+def collect_twap_schedules(metadata,block_number,block_hash,workdir,cache_root=None,network='mainnet'):
+    cfg=networks.get(network);chain_id=cfg['chain_id']
+    cow_prefix,token_base=networks.EXPLORERS.get(network,('','https://etherscan.io'))
     workdir=Path(workdir);workdir.mkdir(parents=True,exist_ok=True)
     store=Path(cache_root)/'twap-index' if cache_root is not None else workdir/'index'
     store.mkdir(parents=True,exist_ok=True)
@@ -139,19 +142,19 @@ def collect_twap_schedules(metadata,block_number,block_hash,workdir,cache_root=N
         if remaining<=0:raise TimeoutError('twap_collection_budget')
         body=json.dumps({'jsonrpc':'2.0','id':1,'method':method,'params':params},separators=(',',':')).encode()
         opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        with opener.open(urllib.request.Request(url,data=body,headers={'Content-Type':'application/json'}),timeout=min(5,remaining)) as response:raw=response.read(16*1024*1024+1)
+        with opener.open(urllib.request.Request(url,data=body,headers={'Content-Type':'application/json','User-Agent':'Mozilla/5.0'}),timeout=min(5,remaining)) as response:raw=response.read(16*1024*1024+1)
         if len(raw)>16*1024*1024:raise ValueError('twap_rpc_size')
         result=json.loads(raw)
         evidence.append({'method':method,'request_sha256':hashlib.sha256(body).hexdigest(),'response_sha256':hashlib.sha256(raw).hexdigest()})
         if result.get('error') or result.get('id')!=1:raise RuntimeError('twap_rpc_failed')
         return result['result']
     try:
-        url=endpoint();pin={'blockHash':block_hash,'requireCanonical':True}
+        url=endpoint() if network=='mainnet' else networks.rpc_url(network);pin={'blockHash':block_hash,'requireCanonical':True}
         header=rpc(url,'eth_getBlockByNumber',[hex(block_number),False])
         if not header or header['hash'].lower()!=block_hash.lower():raise ValueError('twap_pin_changed')
         timestamp=int(header['timestamp'],16)
-        if int(rpc(url,'eth_chainId',[]),16)!=1:raise ValueError('wrong_twap_chain')
-        try:api=fetch_candidates(Path(cache_root) if cache_root is not None else workdir,deadline=min(deadline,time.monotonic()+8))
+        if int(rpc(url,'eth_chainId',[]),16)!=chain_id:raise ValueError('wrong_twap_chain')
+        try:api=fetch_candidates(Path(cache_root) if cache_root is not None else workdir,deadline=min(deadline,time.monotonic()+8),chain_id=chain_id)
         except Exception:api={'records':[],'status':'unavailable','reason':'optional_source_failed'}
         guard=(store/'index.lock').open('a')
         try:
@@ -169,12 +172,20 @@ def collect_twap_schedules(metadata,block_number,block_hash,workdir,cache_root=N
                     gaps.append({'from_block':start,'to_block':block_number-2049});start=block_number-2048
             retained=[r for r in index['records'] if r.get('creation_block') is None or r['creation_block']<start] if index else []
             if log_url!=url:
-                if int(rpc(log_url,'eth_chainId',[]),16)!=1:raise ValueError('wrong_twap_log_chain')
+                if int(rpc(log_url,'eth_chainId',[]),16)!=chain_id:raise ValueError('wrong_twap_log_chain')
                 archive_pin=rpc(log_url,'eth_getBlockByNumber',[hex(block_number),False])
                 if not archive_pin or archive_pin['hash'].lower()!=block_hash.lower():raise ValueError('wrong_twap_log_pin')
-            logs=rpc(log_url,'eth_getLogs',[{'address':COMPOSABLE,'fromBlock':hex(start),'toBlock':hex(block_number),'topics':[CREATED]}])
-            if not isinstance(logs,list) or len(logs)>10000:raise ValueError('twap_log_count')
-            records,invalid_events,invalid_api=merge_candidates(retained,logs,api.get('records',[]))
+            try:
+                logs=rpc(log_url,'eth_getLogs',[{'address':COMPOSABLE,'fromBlock':hex(start),'toBlock':hex(block_number),'topics':[CREATED]}])
+                if not isinstance(logs,list) or len(logs)>10000:raise ValueError('twap_log_count')
+            except Exception:
+                # Some public nodes cap eth_getLogs ranges far below our window (e.g. Avalanche
+                # = 100 blocks). The programmatic-orders index already lists every active parent
+                # and each is revalidated on-chain, so a missed recent event is only a brief lag:
+                # record the unscanned range as a gap and continue from the API candidates. Later
+                # incremental scans (~64 blocks) fit the node's limit.
+                logs=[];gaps.append({'from_block':start,'to_block':block_number})
+            records,invalid_events,invalid_api=merge_candidates(retained,logs,api.get('records',[]),chain_id)
             index={'schema':1,'from_block':index['from_block'] if index else start,'through_block':block_number,'through_hash':block_hash,'gaps':gaps,'records':records}
             end=rpc(url,'eth_getBlockByNumber',[hex(block_number),False])
             if end['hash'].lower()!=block_hash.lower():raise ValueError('twap_reorg')
@@ -223,7 +234,7 @@ def collect_twap_schedules(metadata,block_number,block_hash,workdir,cache_root=N
         for token in tokens:
             if token not in metadata:calls.extend([(token,selector('symbol()')),(token,selector('decimals()'))])
         batch(calls)
-        extra={NATIVE:{'symbol':'ETH','decimals':18,'source':'native_asset_identity'}}
+        extra={NATIVE:{'symbol':cfg['native_symbol'],'decimals':18,'source':'native_asset_identity'}}
         for token in tokens:
             if token in metadata:continue
             raw=read(token,selector('symbol()'));decimals=number(token,selector('decimals()'))
@@ -243,7 +254,7 @@ def collect_twap_schedules(metadata,block_number,block_hash,workdir,cache_root=N
             row['balance_atoms']=str(balance) if balance is not None else None;row['allowance_atoms']=str(allowance) if allowance is not None else None
             row['funding_status']='unknown' if balance is None or allowance is None else 'balance_covers_next_slice' if min(balance,allowance)>=int(row['part_sell_atoms']) else 'requires_funding'
             row['funding_note']='Observed wallet budget may be shared with other orders; future funding or hooks are not guaranteed.'
-            row['explorer_url']='https://explorer.cow.fi/address/'+row['owner'];row['creation_url']='https://etherscan.io/tx/'+row['creation_tx'] if row['creation_tx'] else None;row['current_child_posted']=True if row['current_child_filled'] else None
+            row['explorer_url']='https://explorer.cow.fi/'+(cow_prefix+'/' if cow_prefix else '')+'address/'+row['owner'];row['creation_url']=token_base+'/tx/'+row['creation_tx'] if row['creation_tx'] else None;row['current_child_posted']=True if row['current_child_filled'] else None
             output.append({k:v for k,v in row.items() if not k.startswith('_')})
         end=rpc(url,'eth_getBlockByNumber',[hex(block_number),False])
         if end['hash'].lower()!=block_hash.lower():raise ValueError('twap_reorg')

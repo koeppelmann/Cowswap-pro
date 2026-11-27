@@ -4,13 +4,13 @@ from fractions import Fraction
 from allocator import ETH,WETH,USDC,text
 
 
-def quote_rate(token,metadata,prices):
-    priced=WETH if token==ETH else token
-    if not prices.get(priced) or not prices.get(USDC) or token not in metadata:return None
-    return Fraction(int(prices[priced])*10**metadata[token]['decimals'],int(prices[USDC])*10**6)
+def quote_rate(token,metadata,prices,usdc=USDC,weth=WETH):
+    priced=weth if token==ETH else token
+    if not prices.get(priced) or not prices.get(usdc) or token not in metadata:return None
+    return Fraction(int(prices[priced])*10**metadata[token]['decimals'],int(prices[usdc])*10**6)
 
 
-def project_schedule(schedule,pair,metadata,prices,stable_tokens,family_rates):
+def project_schedule(schedule,pair,metadata,prices,stable_tokens,family_rates,usdc=USDC,weth=WETH):
     sell,buy=schedule['sell_token'].lower(),schedule['buy_token'].lower()
     if not schedule.get('state_complete') or not schedule.get('remaining_parts') or not schedule.get('registered'):return None
     family=pair['id']=='eth';assets=set(family_rates) if family else {pair['base_token']}
@@ -18,7 +18,7 @@ def project_schedule(schedule,pair,metadata,prices,stable_tokens,family_rates):
     elif buy in assets:actual,quote,side=buy,sell,'bid'
     else:return None
     if actual not in metadata or quote not in metadata:return None
-    rate=quote_rate(quote,metadata,prices)
+    rate=quote_rate(quote,metadata,prices,usdc,weth)
     if rate is None:return None
     count=int(schedule['remaining_parts']);part_sell=int(schedule['part_sell_atoms']);part_buy=int(schedule['min_buy_atoms'])
     if min(count,part_sell,part_buy)<=0:return None
@@ -32,7 +32,7 @@ def project_schedule(schedule,pair,metadata,prices,stable_tokens,family_rates):
     return row
 
 
-def attach_schedules(pairs,collection,metadata,prices,stable_tokens,family_rates,empty_mode):
+def attach_schedules(pairs,collection,metadata,prices,stable_tokens,family_rates,empty_mode,usdc=USDC,weth=WETH):
     """Add TWAP-only assets when the other leg has a reference valuation."""
     records=collection.get('schedules',[])
     usable=[r for r in records if r.get('state_complete') and r.get('registered') and int(r.get('remaining_parts',0))>0]
@@ -41,23 +41,23 @@ def attach_schedules(pairs,collection,metadata,prices,stable_tokens,family_rates
     for row in usable:
         sell,buy=row['sell_token'].lower(),row['buy_token'].lower()
         for asset,quote in [(sell,buy),(buy,sell)]:
-            if asset in covered or asset in stable_tokens or asset not in metadata or quote_rate(quote,metadata,prices) is None:continue
+            if asset in covered or asset in stable_tokens or asset not in metadata or quote_rate(quote,metadata,prices,usdc,weth) is None:continue
             symbol=metadata[asset]['symbol'];slug=re.sub('[^a-z0-9]+','',symbol.lower()) or 'token'
             if slug in ids:slug+='-'+asset[2:8]
-            ref=quote_rate(asset,metadata,prices)
+            ref=quote_rate(asset,metadata,prices,usdc,weth)
             p={'id':slug,'label':symbol,'base_symbol':symbol,'base_decimals':metadata[asset]['decimals'],'base_token':asset,'reference_available':ref is not None,'reference_usdc_equivalent':text(ref) if ref is not None else '1','order_count':0,'modes':{'enriched':empty_mode(asset,False)},'quote_modes':{},'twap_only':True,'default_quote':quote,'amm_marker':{'status':'unavailable','reason':'TWAP-only asset; no AMM survey configured'}}
             pairs.append(p);covered.add(asset);ids.add(slug)
     projected_ids=set()
     for pair in pairs:
         rows=[]
         for record in usable:
-            row=project_schedule(record,pair,metadata,prices,stable_tokens,family_rates)
+            row=project_schedule(record,pair,metadata,prices,stable_tokens,family_rates,usdc,weth)
             if row is not None:rows.append(row);projected_ids.add(row['id'])
         pair['twap_schedules']=rows
         for quote in {r['quote_token'] for r in rows}:
             if quote not in pair['quote_modes']:
                 mode=empty_mode(pair['base_token'],pair['id']=='eth')
-                mode['quote_usdc_equivalent_rates'][quote]=text(quote_rate(quote,metadata,prices))
+                mode['quote_usdc_equivalent_rates'][quote]=text(quote_rate(quote,metadata,prices,usdc,weth))
                 pair['quote_modes'][quote]=mode
         if pair.get('twap_only'):
             stable_quotes=[r['quote_token'] for r in rows if r['quote_is_stable']]
