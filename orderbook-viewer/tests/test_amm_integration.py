@@ -23,11 +23,11 @@ class AmmIntegration(unittest.TestCase):
             template={'metadata':{WETH:{'symbol':'WETH','decimals':18},USDC:{'symbol':'USDC','decimals':6}},'pairs':[{'id':'eth','label':'ETH','base_symbol':'ETH-equivalent','base_token':WETH,'base_decimals':18,'conversions':[{'token':WETH}]}]}
             write(root/'template.json',template)
             marker={'status':'available','pool':'0x'+'b'*40,'block':123,'block_hash':header['block_hash']}
-            with patch.object(build,'BASE',root/'template.json'),patch.object(build,'collect_markers',return_value={'eth':marker}) as collect:
+            with patch.object(build,'BASE',root/'template.json'),patch.object(build,'collect_twap_schedules',return_value={'schedules':[],'metadata':{},'coverage':{}}),patch.object(build,'collect_markers',return_value={'eth':marker}) as collect:
                 book=build.build_snapshot(root,source_dir=source,funding_dir=funding)
                 self.assertEqual(book['pairs'][0]['amm_marker'],marker)
                 self.assertEqual(collect.call_args.args[3:5],(123,header['block_hash']))
-            with patch.object(build,'BASE',root/'template.json'),patch.object(build,'collect_markers',side_effect=RuntimeError('offline')):
+            with patch.object(build,'BASE',root/'template.json'),patch.object(build,'collect_twap_schedules',return_value={'schedules':[],'metadata':{},'coverage':{}}),patch.object(build,'collect_markers',side_effect=RuntimeError('offline')):
                 book=build.build_snapshot(root,source_dir=source,funding_dir=funding)
                 self.assertEqual(book['pairs'][0]['amm_marker']['status'],'unavailable')
                 self.assertEqual(book['block'],123)

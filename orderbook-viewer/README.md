@@ -52,6 +52,15 @@ arguments. Do not commit local environment files or caches.
   book's pinned block. Curve markers use approximately $1 directional quotes and
   a geometric midpoint. Gas and transfer taxes are excluded. Survey timestamps,
   unsupported venues and fallback selection are exposed in the tooltips.
+- TWAP overlays are vertical lines at their signed limit. The diamond marks
+  remaining eligible scheduled volume; the crossbar marks one swap. Click the
+  bar or select its schedule to see amounts, timing, funding and CoW Explorer
+  links. USD heights value the quote amount at the limit, not current market
+  notional; switch to asset units for token quantities. Future flow is separate
+  from funded depth and has no Take action. Filled current slices, missed windows
+  and cancelled parents are excluded from remaining volume.
+- TWAP-only assets appear in the token selector and can default to a nonstable
+  quote such as ETH. No CoW reference is invented for an unpriced asset.
 - Select an order and choose **Take order** to prepare a normal opposite limit
   order in CoW Swap. It is not reserved for that seller. Both protocol-fee
   assumptions, the network allowance, buffer and extra overlap are editable;
@@ -84,7 +93,19 @@ as the next catalog:
 python discover_amm.py --output /tmp/dfusion-amm-catalog-new.json
 ```
 
+`twap.py` persists a public conditional-schedule index in `.cache/twap-index/`
+and rechecks authorization, current child fills, balances and allowances at the
+book's block. Initial discovery covers the latest 2,048 blocks and then follows
+new events with a reorg overlap. Coverage is shown in the TWAP tooltip; it is not
+an all-history or private-schedule census. A lag longer than 2,048 blocks is
+recorded as a gap unless `TWAP_LOG_RPC` supplies matching-chain archived logs.
+Use a dedicated archive/research endpoint for backfill. Merkle and custom-handler
+schedules are not indexed. Zero wallet balance can still permit future or
+just-in-time funding; it does not prove a schedule is cancelled.
+
 `source.py` collects public API data, `funding.py` reads canonical funding state,
 `allocator.py` builds the book, and `amm.py` adds pool markers. `cache.py` publishes
 complete snapshots atomically. `service.py` runs collection; `http_server.py`
 serves the dedicated public site and accepts same-origin refresh requests.
+
+Canonical schedule and timing rules: [TWAP handler](https://github.com/cowprotocol/composable-cow/blob/2d43cabcfb8b5804d71b8e29a4a0cfbeb11f6322/src/types/twap/TWAP.sol), [child-order fields](https://github.com/cowprotocol/composable-cow/blob/2d43cabcfb8b5804d71b8e29a4a0cfbeb11f6322/src/types/twap/libraries/TWAPOrder.sol), and [window boundaries](https://github.com/cowprotocol/composable-cow/blob/2d43cabcfb8b5804d71b8e29a4a0cfbeb11f6322/src/types/twap/libraries/TWAPOrderMathLib.sol).

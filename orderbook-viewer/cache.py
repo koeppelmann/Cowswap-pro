@@ -1,5 +1,6 @@
 """Atomic last-good depth snapshots with one paced background refresh."""
 import fcntl,hashlib,json,os,re,shutil,threading,time,uuid
+from decimal import Decimal
 from pathlib import Path
 
 
@@ -15,6 +16,15 @@ def validate_snapshot(book):
         assert pair['id'] not in ids;ids.add(pair['id'])
         assert pair['modes']['enriched']['block_hash']==book['block_hash']
         if pair['id']=='eth':assert pair.get('conversions')
+        parents=set()
+        for row in pair.get('twap_schedules',[]):
+            assert row['id'] not in parents;parents.add(row['id'])
+            assert row['block']==book['block'] and row['block_hash']==book['block_hash']
+            count=int(row['remaining_parts']);assert count>0
+            price=Decimal(row['normalized_price']);assert price.is_finite() and price>0
+            for total,slice_ in [('remaining_base_atoms','slice_base_atoms'),('remaining_quote_atoms','slice_quote_atoms')]:
+                assert int(row[slice_])>0 and int(row[total])==int(row[slice_])*count
+            assert row['volume_kind']=='Scheduled at signed limit, not funded executable depth'
         for mode in [pair['modes']['enriched'],*pair.get('quote_modes',{}).values()]:
             assert mode['block_hash']==book['block_hash']
             seen=set();spend={}
