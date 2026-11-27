@@ -19,7 +19,7 @@
     const mode=p.default_quote?p.quote_modes[p.default_quote]:p.modes.enriched;
     const rows=(mode?.normalized_orders||[]).filter(r=>BigInt(r.allocated_sell_atoms)>0n);
     const ref=p.reference_available===false?null:Number(p.reference_usdc_equivalent);
-    const volume=side=>ref===null?null:rows.filter(r=>r.side===side).reduce((sum,r)=>sum+(side==='bid'?Number(r.allocated_quote_atoms)/10**data.metadata[r.quote_token].decimals*Number(mode.quote_usdc_equivalent_rates[r.quote_token]):Number(r.allocated_base_atoms)/10**p.base_decimals*ref),0);
+    const volume=side=>side==='ask'&&ref===null?null:rows.filter(r=>r.side===side).reduce((sum,r)=>sum+(side==='bid'?Number(r.allocated_quote_atoms)/10**data.metadata[r.quote_token].decimals*Number(mode.quote_usdc_equivalent_rates[r.quote_token]):Number(r.allocated_base_atoms)/10**p.base_decimals*ref),0);
     const twaps=(p.twap_schedules||[]).filter(r=>Number(r.remaining_parts)>0&&(p.default_quote?r.quote_token===p.default_quote:r.quote_is_stable)).length;
     return {p,orders:rows.length,buy:volume('bid'),sell:volume('ask'),twaps};
   }
