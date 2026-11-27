@@ -104,7 +104,7 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
     except Exception:
         twaps={'schedules':[],'metadata':{},'coverage':{'status':'unavailable'}}
     metadata.update(twaps.get('metadata',{}))
-    families=set();rates={ETH:Fraction(1),weth:Fraction(1)}
+    families=set();rates={ETH:Fraction(1),weth:Fraction(1)} if fam else {}
     details=[dict(token=t,symbol=s,eth_per_token='1',source='1:1 ETH denomination')for t,s in [(ETH,'ETH'),(weth,'WETH')]]
     if fam:
         families={v['token']for v in template['pairs'][0]['conversions']}
@@ -138,7 +138,7 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
         p.update(reference_available=reference_available,reference_usdc_equivalent=text(Fraction(prices[base]*10**p['base_decimals'],prices[usdc]*10**6))if reference_available else '1',order_count=len(aggregate['normalized_orders']),modes={'enriched':aggregate},quote_modes=quote_modes)
         if family:p['conversions']=details
         pairs.append(p)
-    assert pairs and (not fam or pairs[0]['id']=='eth')
+    if fam:assert pairs and pairs[0]['id']=='eth'
     # Attach schedules to their pairs (all networks). Isolate like the collector: a
     # normalize-side error degrades to no schedules rather than stalling the whole book
     # refresh (validate_snapshot would else reject a partially-attached book). Mainnet
@@ -149,12 +149,13 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
     except Exception:
         for p in pairs:p.pop('twap_schedules',None)
         twap_coverage={'status':'unavailable'}
+    assert pairs, 'No priced limit or TWAP markets'
     if cfg['amm']:
         try:markers=collect_markers(metadata,prices,pairs,state['reference_state']['block_number'],state['block_hash'],work/'amm',network)
         except Exception:markers={}
     else:
         markers={}
     for pair in pairs:
-        pair['amm_marker']=markers.get(pair['id'],{'status':'unavailable','reason':'AMM markers are available on Ethereum only','block':state['reference_state']['block_number'],'block_hash':state['block_hash']})
+        pair['amm_marker']=markers.get(pair['id'],{'status':'unavailable','reason':'AMM snapshot unavailable' if cfg['amm'] else 'AMM survey not configured for this network','block':state['reference_state']['block_number'],'block_hash':state['block_hash']})
     evidence=dict(auction_id=state['auction_id'],block=ref['block_number'],block_hash=state['block_hash'],source_sha256=digest(source_dir/'sanitized-orders.json'),funding_sha256=digest(funding_dir/'funding-state.json'),conversions_sha256=digest(funding_dir/'eth-conversions.json'))
     return dict(schema='cowpro_live_depth_v1',network=network,chain_id=cfg['chain_id'],auction_id=state['auction_id'],block=ref['block_number'],block_hash=state['block_hash'],as_of_timestamp=ref['timestamp'],native_eth=ETH,metadata=metadata,verified_limit_orders=len(orders),classification_excluded=sum(source.get('classification_summary',{}).get('excluded_candidates',{}).values()),pairs=pairs,twap_coverage=twap_coverage,modes=pairs[0]['modes'],scope='Live cached auction limits; canonical same-block wallet/approval budgets allocated once per view. Hook-conditional funding excluded. '+('ETH conversion provenance in asset details. ' if fam else '')+('TWAP overlays are scheduled flow, not funded executable depth. ' if twap_coverage.get('status')=='available' else '')+'No full settlement guarantee.',snapshot_evidence=evidence,generated_at=time.time(),refresh_seconds=300)

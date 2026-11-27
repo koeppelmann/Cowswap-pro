@@ -4,9 +4,9 @@
   let data, selectedTwap=null, selectedUid=null, bookView=null, bookResetPending=false, bookFrame=0, activeBookUid=null, latestRows=[], chartEventsBound=false, yClamp=false,userViewport=null,applyingSnapshot=false,lastSnapshotId=null,polling=false;
   // Multichain: all book/status/refresh fetches are prefixed with the selected network
   // (books live at <network>/…); explorer/swap links use that network's chain context.
-  let NET=null;
+  let NET=null,networkEpoch=0,networkController=null,transitioning=false;
   const FALLBACK_NET={key:'mainnet',label:'Ethereum',slug:'mainnet',chain_id:1,cow_explorer:'',token_explorer:'https://etherscan.io'};
-  const api=p=>(NET?NET.key+'/':'')+p;
+  const api=(p,net=NET)=>(net?net.key+'/':'')+p;
   const tokenExplorer=addr=>(NET?NET.token_explorer:'https://etherscan.io')+'/address/'+addr;
   const orderExplorer=uid=>'https://explorer.cow.fi/'+(NET&&NET.cow_explorer?NET.cow_explorer+'/':'')+'orders/'+uid;
   const axisLabel = (value, base) => {if(value===0)return base?'0':'$0';const label=value>=1000?compact(value):String(Number(value.toPrecision(6)));return (base?'':'$')+label;};
@@ -124,6 +124,7 @@
     document.querySelectorAll('[data-relative-time]').forEach(el=>{const time=Number(el.dataset.relativeTime);el.textContent=el.dataset.nextSwap&&time<=Date.now()/1000?(Number(el.dataset.validUntil)>=Date.now()/1000?'Eligible now':'Awaiting updated schedule'):relativeTime(time);});
   }
   function showTwap(id){
+    if(transitioning)return;
     const row=twapRows().find(r=>r.id===id);if(!row)return;
     const expanded=selectedTwap===id&&$('detailContent').querySelector('details')?.open;
     selectedTwap=id;selectedUid=null;CowProTakeUI.clearOrder();$('takeOrder').hidden=true;$('detailTitle').textContent=(row.side==='bid'?'Buy ':'Sell ')+(row.base_symbol||symbol())+' · TWAP';$('orderDetail').hidden=false;$('detailContent').replaceChildren();$('twapSelect').value=id;
@@ -335,7 +336,7 @@
     if(bookResetPending){$('asksScroll').scrollTop=$('asksScroll').scrollHeight;$('bidsScroll').scrollTop=0;}
     requestAnimationFrame(()=>{if(frame!==bookFrame)return;$('asksScroll').scrollTop=bookResetPending?$('asksScroll').scrollHeight:Math.max(0,$('asksScroll').scrollHeight-$('asksScroll').clientHeight-askBottom);$('bidsScroll').scrollTop=bookResetPending?0:bidTop;bookResetPending=false;if(activeBookUid)markBookOrder(activeBookUid);});
   }
-  function showOrder(uid){selectedTwap=null;$('takeOrder').hidden=false;$('detailTitle').textContent='Selected order';const r=current().normalized_orders.find(r=>r.uid===uid);if(!r)return;selectedUid=uid;$('orderDetail').hidden=false;$('detailContent').replaceChildren();for(const[label,value]of [['Side',(r.side==='ask'?'Sell ':'Buy ')+baseSymbol(r)],['Limit price',money(r.normalized_price)+' / '+symbol()],['Funded size',fmt(Number(r.allocated_base_atoms)/10**pair().base_decimals,7)+' '+symbol()],...(r.allocated_actual_base_atoms!=null?[['Original asset',baseSymbol(r)],['Original order size',fmt(Number(r.nominal_actual_base_atoms)/10**data.metadata[r.base_token].decimals,9)+' '+baseSymbol(r)],['Original funded size',fmt(Number(r.allocated_actual_base_atoms)/10**data.metadata[r.base_token].decimals,9)+' '+baseSymbol(r)],...(pair().conversions?[['Conversion',fmt(r.base_conversion,10)+' ETH / '+baseSymbol(r)]]:[])]:[]),['Quote',r.quote_symbol],['Funding',r.funding_status.replaceAll('_',' ')]]){const div=document.createElement('div');div.className='detail-field';const l=document.createElement('span');l.className='detail-label';l.textContent=label;div.append(l,document.createTextNode(value));$('detailContent').append(div);}const owner=document.createElement('div');owner.className='detail-field';const l=document.createElement('span');l.className='detail-label';l.textContent='Seller / order owner';const a=document.createElement('a');a.href=tokenExplorer(r.owner);a.target='_blank';a.rel='noopener noreferrer';a.textContent=r.owner;owner.append(l,a);$('detailContent').append(owner);const id=document.createElement('div');id.className='detail-id';id.textContent='Order '+r.uid;id.append(document.createTextNode(' · '),orderLink(r.uid));$('detailContent').append(id);CowProTakeUI.selectOrder(r,data.metadata);}
+  function showOrder(uid){if(transitioning)return;selectedTwap=null;$('takeOrder').hidden=false;$('detailTitle').textContent='Selected order';const r=current().normalized_orders.find(r=>r.uid===uid);if(!r)return;selectedUid=uid;$('orderDetail').hidden=false;$('detailContent').replaceChildren();for(const[label,value]of [['Side',(r.side==='ask'?'Sell ':'Buy ')+baseSymbol(r)],['Limit price',money(r.normalized_price)+' / '+symbol()],['Funded size',fmt(Number(r.allocated_base_atoms)/10**pair().base_decimals,7)+' '+symbol()],...(r.allocated_actual_base_atoms!=null?[['Original asset',baseSymbol(r)],['Original order size',fmt(Number(r.nominal_actual_base_atoms)/10**data.metadata[r.base_token].decimals,9)+' '+baseSymbol(r)],['Original funded size',fmt(Number(r.allocated_actual_base_atoms)/10**data.metadata[r.base_token].decimals,9)+' '+baseSymbol(r)],...(pair().conversions?[['Conversion',fmt(r.base_conversion,10)+' ETH / '+baseSymbol(r)]]:[])]:[]),['Quote',r.quote_symbol],['Funding',r.funding_status.replaceAll('_',' ')]]){const div=document.createElement('div');div.className='detail-field';const l=document.createElement('span');l.className='detail-label';l.textContent=label;div.append(l,document.createTextNode(value));$('detailContent').append(div);}const owner=document.createElement('div');owner.className='detail-field';const l=document.createElement('span');l.className='detail-label';l.textContent='Seller / order owner';const a=document.createElement('a');a.href=tokenExplorer(r.owner);a.target='_blank';a.rel='noopener noreferrer';a.textContent=r.owner;owner.append(l,a);$('detailContent').append(owner);const id=document.createElement('div');id.className='detail-id';id.textContent='Order '+r.uid;id.append(document.createTextNode(' · '),orderLink(r.uid));$('detailContent').append(id);CowProTakeUI.selectOrder(r,data.metadata);}
   function download(name,type,text){const u=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
   function applySnapshot(next){
     const token=$('pair').value,quote=$('market').value,viewport=userViewport;
@@ -351,37 +352,46 @@
     requestAnimationFrame(()=>{const done=()=>{applyingSnapshot=false;};if(viewport&&viewport.scale===$('scale').value){userViewport=viewport;Promise.resolve(Plotly.relayout('chart',{'xaxis.range':viewport.scale==='log'?viewport.range.map(Math.log10):viewport.range,'xaxis.autorange':false})).finally(done);}else done();});
   }
   async function pollSnapshot(){
-    if(polling)return;polling=true;
+    if(polling||transitioning)return;polling=true;
+    const epoch=networkEpoch,net=NET,signal=networkController.signal;
     try{
-      const response=await fetch(api('status.json'),{cache:'no-store'});if(!response.ok)throw Error('status');const state=await response.json();
+      const response=await fetch(api('status.json',net),{cache:'no-store',signal});if(!response.ok)throw Error('status');const state=await response.json();if(epoch!==networkEpoch)return;
       const age=state.last_success==null?Infinity:Date.now()/1000-state.last_success;
       const stale=state.stale||age>state.refresh_seconds*2;
       $('freshness').textContent=state.refreshing?'Updating…':stale?'Update delayed':'Auto · 5 min';$('bookLiveStatus').textContent=state.refreshing?'Updating':stale?'Delayed':'Live';$('bookLiveStatus').parentElement.classList.toggle('warning',Boolean(stale));
       $('freshness').title=state.last_success?'Last successful refresh '+new Date(state.last_success*1000).toISOString().replace('T',' ').slice(0,19)+' UTC'+(state.last_error?' · last refresh failed':''):'Waiting for a complete snapshot';
       $('freshness').classList.toggle('warning',Boolean(stale));
-      if(state.snapshot_id&&state.snapshot_id!==lastSnapshotId){const r=await fetch(api('orderbook.json')+'?v='+encodeURIComponent(state.snapshot_id),{cache:'no-store'});if(!r.ok)throw Error('snapshot');const next=await r.json();applySnapshot(next);lastSnapshotId=state.snapshot_id;}
-    }catch{ $('bookLiveStatus').textContent='Cached';$('bookLiveStatus').parentElement.classList.add('warning');$('freshness').textContent='Connection delayed';$('freshness').classList.add('warning');}
+      if(state.snapshot_id&&state.snapshot_id!==lastSnapshotId){const r=await fetch(api('orderbook.json',net)+'?v='+encodeURIComponent(state.snapshot_id),{cache:'no-store',signal});if(!r.ok)throw Error('snapshot');const next=await r.json();if(epoch!==networkEpoch)return;applySnapshot(next);lastSnapshotId=state.snapshot_id;}
+    }catch{ if(epoch!==networkEpoch)return;$('bookLiveStatus').textContent='Cached';$('bookLiveStatus').parentElement.classList.add('warning');$('freshness').textContent='Connection delayed';$('freshness').classList.add('warning');}
     finally{polling=false;}
   }
-  async function requestFreshSnapshot(){
+  async function requestFreshSnapshot(net=NET,signal){
     try{
-      const response=await fetch(api('refresh'),{method:'POST',cache:'no-store'});
-      if(response.ok){$('freshness').textContent='Refresh requested';$('freshness').title='Reload requested a shared server refresh. Cached data stays visible until the next complete snapshot.';}
+      const response=await fetch(api('refresh',net),{method:'POST',cache:'no-store',signal});
+      if(signal?.aborted)return;if(response.ok){$('freshness').textContent='Refresh requested';$('freshness').title='Reload requested a shared server refresh. Cached data stays visible until the next complete snapshot.';}
       else if(response.status!==429)throw Error('refresh');
-    }catch{$('freshness').title='Automatic refresh is still enabled; reload refresh request could not be sent.';}
+    }catch{if(signal?.aborted)return;$('freshness').title='Automatic refresh is still enabled; reload refresh request could not be sent.';}
   }
-  async function initialSnapshot(){
+  async function initialSnapshot(net,signal){
     for(;;){
-      try{const response=await fetch(api('orderbook.json'),{cache:'no-store'});if(response.ok)return await response.json();}
-      catch{}
+      try{const response=await fetch(api('orderbook.json',net),{cache:'no-store',signal});if(response.ok)return await response.json();}
+      catch{if(signal.aborted)throw signal.reason;}
+      if(signal.aborted)throw signal.reason;
       $('status').textContent='Waiting for the first complete snapshot…';
-      await new Promise(resolve=>setTimeout(resolve,5000));
+      await new Promise((resolve,reject)=>{const done=()=>{signal.removeEventListener('abort',cancel);resolve();},timer=setTimeout(done,5000);const cancel=()=>{clearTimeout(timer);reject(signal.reason);};signal.addEventListener('abort',cancel,{once:true});});
     }
   }
-  async function loadNetwork(reset){
-    if(reset){resetSelection();lastSnapshotId=null;}
-    window.CowProNet=NET;
-    data=await initialSnapshot();
+  async function loadNetwork(reset,net=NET){
+    const epoch=++networkEpoch;networkController?.abort();networkController=new AbortController();
+    const signal=networkController.signal;transitioning=true;
+    if(reset)resetSelection();
+    $('orderDetail').inert=true;
+    requestFreshSnapshot(net,signal);
+    let next;
+    try{next=await initialSnapshot(net,signal);}catch{if(epoch===networkEpoch){transitioning=false;$('orderDetail').inert=false;$('network').value=NET.key;}return;}
+    if(epoch!==networkEpoch)return;
+    NET=net;window.CowProNet=net;data=next;lastSnapshotId=null;
+    transitioning=false;$('orderDetail').inert=false;
     $('timestamp').textContent=new Date(data.as_of_timestamp*1000).toISOString().slice(0,19).replace('T',' ')+' UTC';$('auction').textContent=data.auction_id.toLocaleString();
     $('pair').replaceChildren();for(const p of data.pairs){const o=document.createElement('option');o.value=p.id;o.textContent=p.label||p.base_symbol;$('pair').append(o);}
     const params=new URLSearchParams(location.search);
@@ -389,7 +399,7 @@
     if(requested&&data.pairs.some(p=>p.id===requested))$('pair').value=requested;
     selectPair();
     const requestedQuote=reset?null:params.get('quote');
-    if(requestedQuote){const q=Object.keys(pair().quote_modes).find(a=>data.metadata[a].symbol.toLowerCase()===requestedQuote.toLowerCase());if(q){$('market').value=q;selectPair();}}
+    if(requestedQuote){const q=Object.keys(pair().quote_modes).find(a=>data.metadata[a].symbol.toLowerCase()===requestedQuote.toLowerCase());if(q)$('market').value=q;}
     if($('netLabel'))$('netLabel').textContent=NET?NET.label+' · chain '+NET.chain_id:'Ethereum · Mainnet';
     window.cowproEthBook=data;window.cowproPairBook=data;render();updateURL();
   }
@@ -400,7 +410,8 @@
     NET=manifest.find(n=>n.key===wanted)||manifest[0];
     const sel=$('network');sel.replaceChildren();for(const n of manifest){const o=document.createElement('option');o.value=n.key;o.textContent=n.label;sel.append(o);}
     sel.value=NET.key;if(manifest.length>1)sel.closest('.network-filter').classList.remove('hidden');
-    sel.addEventListener('change',async()=>{NET=manifest.find(n=>n.key===sel.value)||manifest[0];const r=requestFreshSnapshot();await loadNetwork(true);await r;});
+    sel.addEventListener('change',()=>loadNetwork(true,manifest.find(n=>n.key===sel.value)||manifest[0]));
+    document.querySelector('main').addEventListener('click',event=>{if(transitioning&&event.target!==sel){event.preventDefault();event.stopImmediatePropagation();}},true);
     $('pair').title='Funded order count and allocated buy/sell volume in USDC-equivalent for each asset’s default quote view. TWAP schedules are counted separately and excluded from these volumes.';
     $('pair').addEventListener('change',selectPair);bindTokenPicker();
     $('market').addEventListener('change',()=>{resetSelection();render();updateURL();});
@@ -410,7 +421,7 @@
     $('closeDetail').addEventListener('click',()=>{selectedTwap=null;$('twapSelect').value='';CowProTakeUI.clearOrder();$('orderDetail').hidden=true;selectedUid=null;});
     for(const id of ['depth','volumeScale','scale','window','nominal','dust','amm','twaps'])$(id).addEventListener('change',()=>{if(id==='window'||id==='scale')userViewport=null;render({preserveViewport:id==='amm'});});
     $('json').addEventListener('click',()=>download('cowpro-pair-limit-funding.json','application/json',JSON.stringify(data,null,2)));$('svg').addEventListener('click',()=>Plotly.downloadImage('chart',{format:'svg',filename:'cowpro-pair-limit-depth'}));$('csv').addEventListener('click',()=>{const fields=['uid','owner','side','base_token','quote_symbol','kind','normalized_price','remaining_sell_atoms','remaining_buy_atoms','allocated_sell_atoms','allocated_base_atoms','allocated_quote_atoms','nominal_actual_base_atoms','allocated_actual_base_atoms','base_conversion','funding_status'];const cell=v=>{let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};download('cowpro-pair-limit-orders.csv','text/csv',[fields,...latestRows.map(r=>fields.map(k=>r[k]))].map(r=>r.map(cell).join(',')).join('\r\n'));});let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if($('chart').data){const mobile=window.innerWidth<600,ref=Number(pair().reference_usdc_equivalent),annotations=($('chart').layout.annotations||[]).map(a=>a.text?.startsWith('Reference ')?{...a,xref:mobile?'paper':'x',x:mobile?1:($('scale').value==='log'?Math.log10(ref):ref),y:mobile?.98:1.02}:a);Plotly.relayout('chart',{'xaxis.nticks':mobile?3:8,height:chartHeight(),'margin.l':mobile?55:70,annotations});}},150);});
-    const refreshRequest=requestFreshSnapshot();await loadNetwork(false);await refreshRequest;await pollSnapshot();setInterval(pollSnapshot,5000);setInterval(updateTwapTimes,30000);
+    await loadNetwork(false);await pollSnapshot();setInterval(pollSnapshot,5000);setInterval(updateTwapTimes,30000);
   }
 
   start().catch(()=>{$('status').textContent='Limit-order snapshot could not load. Reload this page.';$('status').classList.add('warning');});

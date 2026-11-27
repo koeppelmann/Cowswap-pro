@@ -1,6 +1,14 @@
 {
   "_doc": "Per-network config for the multichain order-book viewer. mainnet keeps its rich static book/catalog (config/mainnet/) with the ETH-family aggregation, LST conversions and AMM markers. Other chains derive their tradeable base tokens dynamically from each live CoW auction + on-chain metadata; only the USD-stablecoin set (bid/ask sides) and a 6-decimal USD anchor are curated here (every address verified on-chain and present in the live auction). settlement/relayer/multicall are the same address on all CoW chains, so they stay in funding.py.",
-  "order": ["mainnet", "gnosis", "arbitrum", "base", "polygon", "avalanche", "sepolia"],
+  "order": [
+    "mainnet",
+    "gnosis",
+    "arbitrum",
+    "base",
+    "polygon",
+    "avalanche",
+    "sepolia"
+  ],
   "networks": {
     "mainnet": {
       "label": "Ethereum",
@@ -25,11 +33,24 @@
       "eth_family": false,
       "amm": false,
       "stables": {
-        "0x2a22f9c3b484c3629090feed35f17ff8f88f76f0": {"symbol": "USDC.e", "decimals": 6},
-        "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83": {"symbol": "USDC", "decimals": 6},
-        "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d": {"symbol": "WXDAI", "decimals": 18},
-        "0x4ecaba5870353805a9f068101a40e0f32ed605c6": {"symbol": "USDT", "decimals": 6}
-      }
+        "0x2a22f9c3b484c3629090feed35f17ff8f88f76f0": {
+          "symbol": "USDC.e",
+          "decimals": 6
+        },
+        "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83": {
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d": {
+          "symbol": "WXDAI",
+          "decimals": 18
+        },
+        "0x4ecaba5870353805a9f068101a40e0f32ed605c6": {
+          "symbol": "USDT",
+          "decimals": 6
+        }
+      },
+      "weth": "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d"
     },
     "arbitrum": {
       "label": "Arbitrum",
@@ -42,11 +63,24 @@
       "eth_family": false,
       "amm": false,
       "stables": {
-        "0xaf88d065e77c8cc2239327c5edb3a432268e5831": {"symbol": "USDC", "decimals": 6},
-        "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8": {"symbol": "USDC.e", "decimals": 6},
-        "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9": {"symbol": "USD₮0", "decimals": 6},
-        "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1": {"symbol": "DAI", "decimals": 18}
-      }
+        "0xaf88d065e77c8cc2239327c5edb3a432268e5831": {
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8": {
+          "symbol": "USDC.e",
+          "decimals": 6
+        },
+        "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9": {
+          "symbol": "USD\u20ae0",
+          "decimals": 6
+        },
+        "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1": {
+          "symbol": "DAI",
+          "decimals": 18
+        }
+      },
+      "weth": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1"
     },
     "base": {
       "label": "Base",
@@ -60,10 +94,22 @@
       "eth_family": false,
       "amm": true,
       "stables": {
-        "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": {"symbol": "USDC", "decimals": 6},
-        "0xd9aaec86b65d86f6a7b5b1b0c42ffa531710b6ca": {"symbol": "USDbC", "decimals": 6},
-        "0x50c5725949a6f0c72e6c4a641f24049a917db0cb": {"symbol": "DAI", "decimals": 18},
-        "0x820c137fa70c8691f0e44dc420a5e53c168921dc": {"symbol": "USDS", "decimals": 18}
+        "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": {
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "0xd9aaec86b65d86f6a7b5b1b0c42ffa531710b6ca": {
+          "symbol": "USDbC",
+          "decimals": 6
+        },
+        "0x50c5725949a6f0c72e6c4a641f24049a917db0cb": {
+          "symbol": "DAI",
+          "decimals": 18
+        },
+        "0x820c137fa70c8691f0e44dc420a5e53c168921dc": {
+          "symbol": "USDS",
+          "decimals": 18
+        }
       }
     },
     "polygon": {
@@ -77,11 +123,24 @@
       "eth_family": false,
       "amm": false,
       "stables": {
-        "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359": {"symbol": "USDC", "decimals": 6},
-        "0x2791bca1f2de4661ed88a30c99a7a9449aa84174": {"symbol": "USDC.e", "decimals": 6},
-        "0xc2132d05d31c914a87c6611c10748aeb04b58e8f": {"symbol": "USDT0", "decimals": 6},
-        "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063": {"symbol": "DAI", "decimals": 18}
-      }
+        "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359": {
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "0x2791bca1f2de4661ed88a30c99a7a9449aa84174": {
+          "symbol": "USDC.e",
+          "decimals": 6
+        },
+        "0xc2132d05d31c914a87c6611c10748aeb04b58e8f": {
+          "symbol": "USDT0",
+          "decimals": 6
+        },
+        "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063": {
+          "symbol": "DAI",
+          "decimals": 18
+        }
+      },
+      "weth": "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270"
     },
     "avalanche": {
       "label": "Avalanche",
@@ -95,10 +154,20 @@
       "amm": false,
       "max_staleness": 7200,
       "stables": {
-        "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e": {"symbol": "USDC", "decimals": 6},
-        "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7": {"symbol": "USDt", "decimals": 6},
-        "0xd586e7f844cea2f87f50152665bcbc2c279d8d70": {"symbol": "DAI.e", "decimals": 18}
-      }
+        "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e": {
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7": {
+          "symbol": "USDt",
+          "decimals": 6
+        },
+        "0xd586e7f844cea2f87f50152665bcbc2c279d8d70": {
+          "symbol": "DAI.e",
+          "decimals": 18
+        }
+      },
+      "weth": "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7"
     },
     "sepolia": {
       "label": "Sepolia",
@@ -112,9 +181,16 @@
       "amm": false,
       "max_staleness": 604800,
       "stables": {
-        "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238": {"symbol": "USDC", "decimals": 6},
-        "0xbe72e441bf55620febc26715db68d3494213d8cb": {"symbol": "USDC", "decimals": 18}
-      }
+        "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238": {
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "0xbe72e441bf55620febc26715db68d3494213d8cb": {
+          "symbol": "USDC",
+          "decimals": 18
+        }
+      },
+      "weth": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14"
     }
   }
 }
