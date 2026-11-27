@@ -134,9 +134,10 @@
     const root=document.createElement('div');root.className='twap-summary';$('detailContent').append(root);
     const core=document.createElement('div');core.className='twap-core';root.append(core);
     const total=Number(row.slice_usdc_equivalent)*Number(row.total_parts);
+    const totalTokens=fmt(Number(row.slice_base_atoms)/10**base*Number(row.total_parts),4)+' '+symbol();
     for(const [label,value,sub,title] of [
-      ['Total scheduled',money(total),money(row.remaining_usdc_equivalent)+' in eligible swaps remaining','Scheduled tokens valued at the CoW reference price (not the signed limit — a TWAP can set any limit). Remaining excludes missed, expired and filled current slices; it is not a lifetime fill tally.'],
-      ['Per swap',money(row.slice_usdc_equivalent),baseAmount(row.slice_base_atoms)+' per swap','Reference (CoW) value of the tokens in one swap. The signed limit is shown separately as the limit price.'],
+      ['Total scheduled',totalTokens,'≈ '+money(total)+' · '+baseAmount(row.remaining_base_atoms)+' remaining','Scheduled token amount (the headline figure). The $ value is an estimate at the CoW reference price — not the signed limit, since a TWAP can set any limit. Remaining excludes missed, expired and filled current slices; it is not a lifetime fill tally.'],
+      ['Per swap',baseAmount(row.slice_base_atoms),'≈ '+money(row.slice_usdc_equivalent),'Token amount per swap (the headline figure). The $ value is an estimate at the CoW reference price; the signed limit is shown separately below.'],
       ['Swaps remaining',Number(row.remaining_parts).toLocaleString(), 'of '+Number(row.total_parts).toLocaleString()+' scheduled','Remaining eligible swaps, not the number of separate TWAP schedules.']
     ]){const card=document.createElement('div');card.className='twap-stat';card.title=title;const name=document.createElement('span');name.className='detail-label';name.textContent=label;const main=document.createElement('strong');main.textContent=value;const note=document.createElement('small');note.textContent=sub;card.append(name,main,note);core.append(card);}
     const info=document.createElement('div');info.className='twap-info';root.append(info);
@@ -154,7 +155,8 @@
     ])field(grid,label,value);
     const links=document.createElement('div');links.className='detail-links';root.append(links);
     function link(url,text,title){const a=document.createElement('a');a.href=url;a.textContent=text;a.target='_blank';a.rel='noopener noreferrer';if(title)a.title=title;links.append(a);}
-    link(row.explorer_url||tokenExplorer(row.owner),'CoW Explorer ↗','Owner history; one TWAP schedule produces multiple swap orders.');
+    link(row.explorer_url||row.owner_url||tokenExplorer(row.owner),row.explorer_url?'CoW Explorer · TWAP ↗':'CoW Explorer ↗','The TWAP order on CoW Explorer — the parent order and all the swaps it generates.');
+    link(row.owner_url||tokenExplorer(row.owner),'Owner ↗','Wallet that placed this TWAP; its full order history.');
     if(/^0x[0-9a-f]{112}$/i.test(row.current_child_uid||''))link(orderExplorer(row.current_child_uid),row.current_child_filled&&!row.current_child_invalidated?'Current slice · filled ↗':'Current slice ↗','This generated slice may not yet have been submitted unless its fill is confirmed.');
     if(/^0x[0-9a-f]{64}$/i.test(row.creation_tx||''))link(row.creation_url||tokenExplorer(row.creation_tx),'Registration ↗');
     const note=document.createElement('span');note.className='twap-scope';note.textContent='Scheduled flow · not funded order-book depth';note.title='Amounts are valued at signed limits. Eligible swaps can expire or require future funding; execution is not guaranteed.';root.append(note);updateTwapTimes();

@@ -255,7 +255,11 @@ def collect_twap_schedules(metadata,block_number,block_hash,workdir,cache_root=N
             row['balance_atoms']=str(balance) if balance is not None else None;row['allowance_atoms']=str(allowance) if allowance is not None else None
             row['funding_status']='unknown' if balance is None or allowance is None else 'balance_covers_next_slice' if min(balance,allowance)>=int(row['part_sell_atoms']) else 'requires_funding'
             row['funding_note']='Observed wallet budget may be shared with other orders; future funding or hooks are not guaranteed.'
-            row['explorer_url']='https://explorer.cow.fi/'+(cow_prefix+'/' if cow_prefix else '')+'address/'+row['owner'];row['creation_url']=token_base+'/tx/'+row['creation_tx'] if row['creation_tx'] else None;row['current_child_posted']=True if row['current_child_filled'] else None
+            cow_base='https://explorer.cow.fi/'+(cow_prefix+'/' if cow_prefix else '')
+            # CoW Explorer keys a TWAP order page on the ComposableCoW conditional-order
+            # hash in decimal (keccak256(abi.encode(params)) == schedule_hash); the owner
+            # page only lists history. Link straight to the TWAP order, keep the owner too.
+            row['explorer_url']=cow_base+'twap/'+str(int(row['schedule_hash'],16));row['owner_url']=cow_base+'address/'+row['owner'];row['creation_url']=token_base+'/tx/'+row['creation_tx'] if row['creation_tx'] else None;row['current_child_posted']=True if row['current_child_filled'] else None
             output.append({k:v for k,v in row.items() if not k.startswith('_')})
         end=rpc(url,'eth_getBlockByNumber',[hex(block_number),False])
         if end['hash'].lower()!=block_hash.lower():raise ValueError('twap_reorg')
