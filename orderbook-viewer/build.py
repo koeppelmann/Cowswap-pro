@@ -135,7 +135,7 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
         aggregate=mode(selected,base,family)
         quote_modes={q:mode([o for o in selected if q in (o['sellToken'].lower(),o['buyToken'].lower())],base,family)for q in aggregate['quote_usdc_equivalent_rates']}
         p={k:prior[k]for k in ('id','label','base_symbol','base_decimals','base_token')}
-        p.update(reference_available=reference_available,reference_usdc_equivalent=text(Fraction(prices[base]*10**p['base_decimals'],prices[usdc]*10**6))if reference_available else '1',order_count=len(aggregate['normalized_orders']),modes={'enriched':aggregate},quote_modes=quote_modes)
+        p.update(reference_available=reference_available,reference_usdc_equivalent=text(Fraction(prices[base]*10**p['base_decimals'],prices[usdc]*10**int(metadata[usdc]['decimals'])))if reference_available else '1',order_count=len(aggregate['normalized_orders']),modes={'enriched':aggregate},quote_modes=quote_modes)
         if family:p['conversions']=details
         pairs.append(p)
     if fam:assert pairs and pairs[0]['id']=='eth'

@@ -84,7 +84,7 @@ def abi_array(raw,index):
 
 def collect_markers(metadata,prices,pairs,block_number,block_hash,workdir,network='mainnet'):
     cfg=networks.get(network)
-    usdc=cfg['usdc'].lower();weth=cfg.get('weth',WETH).lower()
+    usdc=cfg['usdc'].lower();weth=cfg.get('weth',WETH).lower();usd_dec=int(metadata[usdc]['decimals']) if usdc in metadata else 6
     # mainnet keeps the root frozen survey; other chains load config/<network>/amm-catalog.json.
     catalog_path=CATALOG if network=='mainnet' else networks.config_dir(network)/'amm-catalog.json'
     workdir=Path(workdir);workdir.mkdir(parents=True,exist_ok=True)
@@ -174,7 +174,7 @@ def collect_markers(metadata,prices,pairs,block_number,block_hash,workdir,networ
             if t in derived_rates:return derived_rates[t]
             ref=prices.get(t,prices.get(weth) if t==ETH else None)
             if ref is None or decimals.get(t) is None or not prices.get(usdc):return None
-            return Fraction(int(ref)*10**decimals[t],int(prices[usdc])*10**6)
+            return Fraction(int(ref)*10**decimals[t],int(prices[usdc])*10**usd_dec)
         for reference in catalog.get('quote_references',[]):
             try:
                 base=reference['base_token'];coins=v4_key(reference);i=coins.index(base);quote=coins[1-i]

@@ -38,7 +38,8 @@ def build_depth(orders, metadata, cow_prices, funding, *, block_hash, mode='dire
     base_token, quote_token = base_token.lower(), quote_token.lower()
     usdc, weth = usdc.lower(), weth.lower()
     stables = {s.lower() for s in stables}
-    assert meta[usdc]['decimals'] == 6 and prices[usdc] > 0
+    usd_decimals = int(meta[usdc]['decimals'])
+    assert 0 <= usd_decimals <= 36 and prices[usdc] > 0
     base_decimals = int(meta[base_token]['decimals'])
     assert 0 <= base_decimals <= 36
     # ETH/WETH aggregation is a mainnet-only family behaviour; elsewhere each base is itself.
@@ -50,7 +51,7 @@ def build_depth(orders, metadata, cow_prices, funding, *, block_hash, mode='dire
         if any(Fraction(rate) <= 0 for rate in base_conversion.values()):
             raise ValueError('Invalid family conversion')
     stable_quotes = stables - base_assets
-    usd = prices[usdc]*10**6
+    usd = prices[usdc]*10**usd_decimals
     groups, available = {}, {}
     for g in funding['groups']:
         key = (g['owner'].lower(), g['sell_token'].lower())

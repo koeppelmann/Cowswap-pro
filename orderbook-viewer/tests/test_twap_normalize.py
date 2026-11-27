@@ -19,6 +19,20 @@ class NormalizeTwap(unittest.TestCase):
         row=self.row(sell_token=WSTETH,buy_token=USDC,part_sell_atoms=str(10**18),min_buy_atoms='2400000000');p=self.pair(WETH,'eth',18);out=self.project(row,p)
         self.assertEqual(F(out['normalized_price']),2000);self.assertEqual(out['slice_base_atoms'],str(12*10**17));self.assertEqual(out['remaining_base_atoms'],str(36*10**17))
         row=self.row(sell_token=HYPER,buy_token=ETH,part_sell_atoms=str(10000*10**18),min_buy_atoms=str(10**18));out=self.project(row,self.pair(HYPER,'hyper',18));self.assertEqual(F(out['normalized_price']),F(1,5));self.assertFalse(out['quote_is_stable']);self.assertEqual(out['quote_symbol'],'ETH')
+    def test_eighteen_decimal_usd_anchor_values_identically(self):
+        # BNB-style: the USD anchor is an 18-decimal stable (Binance-Peg USDC), not 6.
+        # The reference math must key off the anchor's real decimals, not a hardcoded 10**6.
+        from twap_normalize import quote_rate
+        ANCHOR='0x'+'55'*20
+        meta={**self.meta,ANCHOR:{'symbol':'USDC','decimals':18}}
+        prices={ANCHOR:10**18,WBTC:60000*10**28,WETH:2000*10**18}
+        self.assertEqual(quote_rate(WBTC,meta,prices,ANCHOR,WETH),60000)
+        self.assertEqual(quote_rate(WETH,meta,prices,ANCHOR,WETH),2000)
+        row=self.row(buy_token=ANCHOR,min_buy_atoms=str(6000*10**18))  # sell 0.1 WBTC for >=6000 anchor
+        out=project_schedule(row,self.pair(WBTC,'wbtc',8),meta,prices,{ANCHOR},self.rates,ANCHOR,WETH)
+        self.assertEqual(F(out['normalized_price']),60000)
+        self.assertEqual(F(out['slice_usdc_equivalent']),6000)
+        self.assertEqual(F(out['remaining_usdc_equivalent']),18000)
     def test_unknown_or_cancelled_state_never_gets_a_plotted_volume(self):
         for changes in [{'state_complete':False},{'registered':False},{'remaining_parts':0}]:self.assertIsNone(self.project(self.row(**changes)))
         self.assertIsNone(self.project(self.row(buy_token=HYPER)))

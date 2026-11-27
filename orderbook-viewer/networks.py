@@ -24,6 +24,10 @@ EXPLORERS = {
     'base': ('base', 'https://basescan.org'),
     'polygon': ('pol', 'https://polygonscan.com'),
     'avalanche': ('avax', 'https://snowtrace.io'),
+    'bnb': ('bnb', 'https://bscscan.com'),
+    'linea': ('linea', 'https://lineascan.build'),
+    'plasma': ('plasma', 'https://plasmascan.to'),
+    'ink': ('ink', 'https://explorer.inkonchain.com'),
     'sepolia': ('sepolia', 'https://sepolia.etherscan.io'),
 }
 

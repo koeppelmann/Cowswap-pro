@@ -7,6 +7,10 @@
     "base",
     "polygon",
     "avalanche",
+    "bnb",
+    "linea",
+    "plasma",
+    "ink",
     "sepolia"
   ],
   "networks": {
@@ -72,7 +76,7 @@
           "decimals": 6
         },
         "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9": {
-          "symbol": "USD\u20ae0",
+          "symbol": "USD₮0",
           "decimals": 6
         },
         "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1": {
@@ -191,6 +195,119 @@
         }
       },
       "weth": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14"
+    },
+    "linea": {
+      "label": "Linea",
+      "slug": "linea",
+      "chain_id": 59144,
+      "rpc_env": "RPC_LINEA",
+      "rpc_default": "https://rpc.linea.build",
+      "native_symbol": "ETH",
+      "usdc": "0x176211869ca2b568f2a7d4ee941e073a821ee1ff",
+      "weth": "0xe5d7c2a44ffddf6b295a15c148167daaaf5cf34f",
+      "eth_family": false,
+      "amm": false,
+      "stables": {
+        "0x176211869ca2b568f2a7d4ee941e073a821ee1ff": {
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "0xa219439258ca9da29e9cc4ce5596924745e12b93": {
+          "symbol": "USDT",
+          "decimals": 6
+        },
+        "0x4af15ec2a0bd43db75dd04e62faa3b8ef36b00d5": {
+          "symbol": "DAI",
+          "decimals": 18
+        }
+      },
+      "batch_size": 60,
+      "max_staleness": 86400
+    },
+    "plasma": {
+      "label": "Plasma",
+      "slug": "plasma",
+      "chain_id": 9745,
+      "rpc_env": "RPC_PLASMA",
+      "rpc_default": "https://rpc.plasma.to",
+      "native_symbol": "XPL",
+      "usdc": "0x2d661c89d812261039af9764eceaaee884f5f67f",
+      "weth": "0x6100e367285b01f48d07953803a2d8dca5d19873",
+      "eth_family": false,
+      "amm": false,
+      "stables": {
+        "0x2d661c89d812261039af9764eceaaee884f5f67f": {
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb": {
+          "symbol": "USDT0",
+          "decimals": 6
+        },
+        "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34": {
+          "symbol": "USDe",
+          "decimals": 18
+        }
+      },
+      "max_staleness": 86400
+    },
+    "ink": {
+      "label": "Ink",
+      "slug": "ink",
+      "chain_id": 57073,
+      "rpc_env": "RPC_INK",
+      "rpc_default": "https://rpc-gel.inkonchain.com",
+      "native_symbol": "ETH",
+      "usdc": "0x2d270e6886d130d724215a266106e6832161eaed",
+      "weth": "0x4200000000000000000000000000000000000006",
+      "eth_family": false,
+      "amm": false,
+      "stables": {
+        "0x2d270e6886d130d724215a266106e6832161eaed": {
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "0xf1815bd50389c46847f0bda824ec8da914045d14": {
+          "symbol": "USDC.e",
+          "decimals": 6
+        },
+        "0x0200c29006150606b650577bbe7b6248f58470c1": {
+          "symbol": "USD₮0",
+          "decimals": 6
+        }
+      },
+      "max_staleness": 86400
+    },
+    "bnb": {
+      "label": "BNB Chain",
+      "slug": "bnb",
+      "chain_id": 56,
+      "rpc_env": "RPC_BNB",
+      "rpc_default": "https://bsc-rpc.publicnode.com",
+      "native_symbol": "BNB",
+      "usdc": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+      "weth": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+      "eth_family": false,
+      "amm": false,
+      "batch_size": 80,
+      "stables": {
+        "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d": {
+          "symbol": "USDC",
+          "decimals": 18
+        },
+        "0x55d398326f99059ff775485246999027b3197955": {
+          "symbol": "USDT",
+          "decimals": 18
+        },
+        "0xe9e7cea3dedca5984780bafc599bd69add087d56": {
+          "symbol": "BUSD",
+          "decimals": 18
+        },
+        "0x1af3f329e8be154074d8769d1ffa4ee058b1dbc3": {
+          "symbol": "DAI",
+          "decimals": 18
+        }
+      }
     }
   }
 }

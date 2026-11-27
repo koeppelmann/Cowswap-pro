@@ -6,8 +6,8 @@ from allocator import ETH,WETH,USDC,text
 
 def quote_rate(token,metadata,prices,usdc=USDC,weth=WETH):
     priced=token if prices.get(token) else weth if token==ETH else token
-    if not prices.get(priced) or not prices.get(usdc) or token not in metadata:return None
-    return Fraction(int(prices[priced])*10**metadata[token]['decimals'],int(prices[usdc])*10**6)
+    if not prices.get(priced) or not prices.get(usdc) or token not in metadata or usdc not in metadata:return None
+    return Fraction(int(prices[priced])*10**metadata[token]['decimals'],int(prices[usdc])*10**int(metadata[usdc]['decimals']))
 
 
 def project_schedule(schedule,pair,metadata,prices,stable_tokens,family_rates,usdc=USDC,weth=WETH):
