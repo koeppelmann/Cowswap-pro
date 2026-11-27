@@ -8,6 +8,7 @@ import time
 import urllib.request
 import uuid
 from dfusion_crypto import keccak256
+from twap_api import fetch_candidates
 from funding import endpoint, selector, simple, aggregate, decode, word, addr, blob, symbol_value, MULTICALL, SETTLEMENT, RELAYER, NATIVE
 
 COMPOSABLE='0xfdafc9d1902f4e0b84f65f49f244b32b31013b74'
@@ -73,6 +74,45 @@ def decode_created(log):
     return {'id':owner+':'+digest,'owner':owner,'schedule_hash':digest,'handler':handler,'sell_token':address(0),'buy_token':address(1),'receiver':address(2),'part_sell_atoms':str(number(3)),'min_buy_atoms':str(number(4)),'start_time':number(5),'total_parts':number(6),'interval_seconds':number(7),'span_seconds':number(8),'creation_tx':log['transactionHash'],'creation_block':int(log['blockNumber'],16),'event_index':int(log['logIndex'],16),'_app_data':'0x'+words[9].hex(),'_event_data':log['data']}
 
 
+def decode_api_parent(record):
+    if type(record.get('chainId')) is not int or record['chainId']!=1:raise ValueError('wrong_api_chain')
+    def raw(key,size):
+        value=record[key]
+        if not isinstance(value,str) or not value.startswith('0x') or len(value)!=2+size*2:raise ValueError('invalid_api_encoding')
+        return bytes.fromhex(value[2:])
+    owner=raw('owner',20);handler=raw('handler',20);salt=raw('salt',32);static=raw('staticInput',320)
+    claimed=raw('hash',32)
+    if not any(owner):raise ValueError('invalid_api_owner')
+    if '0x'+handler.hex()!=HANDLER:return None
+    encoded=word(32)+b'\0'*12+handler+salt+word(96)+blob(static)
+    if keccak256(encoded)!=claimed:raise ValueError('api_parent_hash_mismatch')
+    transaction=record.get('txHash')
+    if transaction is not None:
+        if not isinstance(transaction,str) or len(transaction)!=66 or not transaction.startswith('0x'):raise ValueError('invalid_api_transaction')
+        bytes.fromhex(transaction[2:])
+    row=decode_created({'data':'0x'+encoded.hex(),'topics':[CREATED,'0x'+(b'\0'*12+owner).hex()],
+                        'transactionHash':transaction,'blockNumber':'0x0','logIndex':'0x0'})
+    row.update(creation_block=None,event_index=None,discovery_source='public_programmatic_index')
+    return row
+
+
+def merge_candidates(retained,events,candidates):
+    latest={r['id']:r for r in retained};invalid_api=0
+    for candidate in candidates:
+        try:row=decode_api_parent(candidate)
+        except (ValueError,TypeError,KeyError,IndexError,OverflowError):
+            invalid_api+=1;continue
+        if row:latest.setdefault(row['id'],row)
+    invalid_events=0
+    for log in events:
+        if log.get('removed') or log.get('address','').lower()!=COMPOSABLE:continue
+        try:row=decode_created(log)
+        except (ValueError,IndexError,KeyError,OverflowError):
+            invalid_events+=1;continue
+        if row:latest[row['id']]=row
+    return list(latest.values()),invalid_events,invalid_api
+
+
 def child_uid(schedule, valid_to, domain_separator):
     if not 0<=valid_to<=MAX_VALID_TO:raise ValueError('invalid_child_expiry')
     encoded=(ORDER_TYPE+addr(schedule['sell_token'])+addr(schedule['buy_token'])+addr(schedule['receiver'])+word(schedule['part_sell_atoms'])+word(schedule['min_buy_atoms'])+word(valid_to)+bytes.fromhex(schedule['_app_data'][2:])+word(0)+keccak256(b'sell')+word(0)+keccak256(b'erc20')+keccak256(b'erc20'))
@@ -112,6 +152,8 @@ def collect_twap_schedules(metadata,block_number,block_hash,workdir,cache_root=N
         if not header or header['hash'].lower()!=block_hash.lower():raise ValueError('twap_pin_changed')
         timestamp=int(header['timestamp'],16)
         if int(rpc(url,'eth_chainId',[]),16)!=1:raise ValueError('wrong_twap_chain')
+        try:api=fetch_candidates(Path(cache_root) if cache_root is not None else workdir,deadline=min(deadline,time.monotonic()+8))
+        except Exception:api={'records':[],'status':'unavailable','reason':'optional_source_failed'}
         guard=(store/'index.lock').open('a')
         try:
             fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -126,21 +168,14 @@ def collect_twap_schedules(metadata,block_number,block_hash,workdir,cache_root=N
                 if os.environ.get('TWAP_LOG_RPC'):log_url=os.environ['TWAP_LOG_RPC']
                 else:
                     gaps.append({'from_block':start,'to_block':block_number-2049});start=block_number-2048
-            retained=[r for r in index['records'] if r['creation_block']<start] if index else []
+            retained=[r for r in index['records'] if r.get('creation_block') is None or r['creation_block']<start] if index else []
             if log_url!=url:
                 if int(rpc(log_url,'eth_chainId',[]),16)!=1:raise ValueError('wrong_twap_log_chain')
                 archive_pin=rpc(log_url,'eth_getBlockByNumber',[hex(block_number),False])
                 if not archive_pin or archive_pin['hash'].lower()!=block_hash.lower():raise ValueError('wrong_twap_log_pin')
             logs=rpc(log_url,'eth_getLogs',[{'address':COMPOSABLE,'fromBlock':hex(start),'toBlock':hex(block_number),'topics':[CREATED]}])
             if not isinstance(logs,list) or len(logs)>10000:raise ValueError('twap_log_count')
-            latest={r['id']:r for r in retained};invalid_events=0
-            for log in logs:
-                if log.get('removed') or log.get('address','').lower()!=COMPOSABLE:continue
-                try:row=decode_created(log)
-                except (ValueError,IndexError,KeyError,OverflowError):
-                    invalid_events+=1;continue
-                if row:latest[row['id']]=row
-            records=list(latest.values())
+            records,invalid_events,invalid_api=merge_candidates(retained,logs,api.get('records',[]))
             index={'schema':1,'from_block':index['from_block'] if index else start,'through_block':block_number,'through_hash':block_hash,'gaps':gaps,'records':records}
             end=rpc(url,'eth_getBlockByNumber',[hex(block_number),False])
             if end['hash'].lower()!=block_hash.lower():raise ValueError('twap_reorg')
@@ -209,7 +244,7 @@ def collect_twap_schedules(metadata,block_number,block_hash,workdir,cache_root=N
             row['balance_atoms']=str(balance) if balance is not None else None;row['allowance_atoms']=str(allowance) if allowance is not None else None
             row['funding_status']='unknown' if balance is None or allowance is None else 'balance_covers_next_slice' if min(balance,allowance)>=int(row['part_sell_atoms']) else 'requires_funding'
             row['funding_note']='Observed wallet budget may be shared with other orders; future funding or hooks are not guaranteed.'
-            row['explorer_url']='https://explorer.cow.fi/address/'+row['owner'];row['creation_url']='https://etherscan.io/tx/'+row['creation_tx'];row['current_child_posted']=True if row['current_child_filled'] else None
+            row['explorer_url']='https://explorer.cow.fi/address/'+row['owner'];row['creation_url']='https://etherscan.io/tx/'+row['creation_tx'] if row['creation_tx'] else None;row['current_child_posted']=True if row['current_child_filled'] else None
             output.append({k:v for k,v in row.items() if not k.startswith('_')})
         end=rpc(url,'eth_getBlockByNumber',[hex(block_number),False])
         if end['hash'].lower()!=block_hash.lower():raise ValueError('twap_reorg')
@@ -221,7 +256,7 @@ def collect_twap_schedules(metadata,block_number,block_hash,workdir,cache_root=N
                     current['records']=[row for row in current['records'] if row['id'] in keep_ids]
                     _atomic(store/'index.json',current)
             except BlockingIOError:pass
-        coverage={'status':'available','from_block':index['from_block'],'to_block':block_number,'block':block_number,'block_hash':block_hash,'gaps':index.get('gaps',[]),'indexed_parents':len(records),'invalid_event_count':invalid_events,'ongoing_parents':len(output),'pending_state_parents':unknown_states,'metadata_unavailable_tokens':sorted(tokens-set(metadata)-set(extra)),'complete_census':False,'scope':'Dispatched canonical TWAP schedules since indexed block; private, Merkle and custom handlers not enumerated.'}
+        coverage={'status':'available','from_block':index['from_block'],'to_block':block_number,'block':block_number,'block_hash':block_hash,'gaps':index.get('gaps',[]),'indexed_parents':len(records),'invalid_event_count':invalid_events,'ongoing_parents':len(output),'pending_state_parents':unknown_states,'metadata_unavailable_tokens':sorted(tokens-set(metadata)-set(extra)),'api_status':api.get('status','unavailable'),'api_source':api.get('source'),'api_total_count':api.get('total_count'),'api_fetched_count':api.get('fetched_count',len(api.get('records',[]))),'api_observed_at':api.get('observed_at'),'api_complete_query':api.get('complete_query',False),'api_reason':api.get('reason'),'invalid_api_parent_count':invalid_api,'complete_census':False,'scope':'Public index candidates plus recent canonical events, revalidated on-chain; private, Merkle and custom handlers not enumerated.'}
         result={'schedules':output,'coverage':coverage,'metadata':extra}
     except Exception:
         result=unavailable

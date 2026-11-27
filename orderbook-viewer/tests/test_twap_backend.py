@@ -48,7 +48,7 @@ class Response:
 
 
 class TwapIndex(unittest.TestCase):
-    def collect(self,root,head=5000,hash_='0x'+'aa'*32,archive_chain='0x1',archive_hash=None,logs=None):
+    def collect(self,root,head=5000,hash_='0x'+'aa'*32,archive_chain='0x1',archive_hash=None,logs=None,api=None):
         seen=[]
         def request(req,timeout):
             data=json.loads(req.data);method=data['method'];params=data['params'];seen.append((method,params))
@@ -59,7 +59,7 @@ class TwapIndex(unittest.TestCase):
             raise AssertionError(method)
         class Opener:
             open=staticmethod(request)
-        with patch.object(twap,'endpoint',return_value='http://unused.invalid'),patch.object(twap.urllib.request,'build_opener',return_value=Opener()),patch.object(twap,'decode',side_effect=lambda _,n:[(True,b'\x55'*32)]*n):
+        with patch.object(twap,'fetch_candidates',return_value=api or {'records':[],'status':'unavailable'},side_effect=api if isinstance(api,Exception) else None),patch.object(twap,'endpoint',return_value='http://unused.invalid'),patch.object(twap.urllib.request,'build_opener',return_value=Opener()),patch.object(twap,'decode',side_effect=lambda _,n:[(True,b'\x55'*32)]*n):
             result=twap.collect_twap_schedules({},head,hash_,root/'work',root/'cache')
         return result,seen
     def test_bootstrap_and_long_downtime_never_backfill_production_node(self):

@@ -95,8 +95,11 @@ python discover_amm.py --output /tmp/dfusion-amm-catalog-new.json
 
 `twap.py` persists a public conditional-schedule index in `.cache/twap-index/`
 and rechecks authorization, current child fills, balances and allowances at the
-book's block. Initial discovery covers the latest 2,048 blocks and then follows
-new events with a reorg overlap. Coverage is shown in the TWAP tooltip; it is not
+book's block. `twap_api.py` queries the public CoW programmatic-order index for
+mainnet TWAP parents marked Active, caching the full candidate set for five minutes.
+Raw parent parameters are hashed and verified before on-chain checks; API status
+is not treated as proof of authorization or funding. Recent direct event discovery
+also covers the latest 2,048 blocks and follows new events with a reorg overlap. Coverage is shown in the TWAP tooltip; it is not
 an all-history or private-schedule census. A lag longer than 2,048 blocks is
 recorded as a gap unless `TWAP_LOG_RPC` supplies matching-chain archived logs.
 Use a dedicated archive/research endpoint for backfill. Merkle and custom-handler
