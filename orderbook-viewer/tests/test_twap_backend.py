@@ -48,13 +48,15 @@ class Response:
 
 
 class TwapIndex(unittest.TestCase):
-    def collect(self,root,head=5000,hash_='0x'+'aa'*32,archive_chain='0x1',archive_hash=None,logs=None,api=None):
+    def collect(self,root,head=5000,hash_='0x'+'aa'*32,archive_chain='0x1',archive_hash=None,logs=None,api=None,fail_logs=False):
         seen=[]
         def request(req,timeout):
             data=json.loads(req.data);method=data['method'];params=data['params'];seen.append((method,params))
             if method=='eth_getBlockByNumber':return Response({'hash':archive_hash if 'archive.invalid' in req.full_url and archive_hash else hash_,'timestamp':hex(10000)})
             if method=='eth_chainId':return Response(archive_chain if 'archive.invalid' in req.full_url else '0x1')
-            if method=='eth_getLogs':return Response(logs or [])
+            if method=='eth_getLogs':
+                if fail_logs:raise RuntimeError('event_range_unavailable')
+                return Response(logs or [])
             if method=='eth_call':return Response('0x')
             raise AssertionError(method)
         class Opener:
@@ -62,6 +64,15 @@ class TwapIndex(unittest.TestCase):
         with patch.object(twap,'fetch_candidates',return_value=api or {'records':[],'status':'unavailable'},side_effect=api if isinstance(api,Exception) else None),patch.object(twap,'endpoint',return_value='http://unused.invalid'),patch.object(twap.urllib.request,'build_opener',return_value=Opener()),patch.object(twap,'decode',side_effect=lambda _,n:[(True,b'\x55'*32)]*n):
             result=twap.collect_twap_schedules({},head,hash_,root/'work',root/'cache')
         return result,seen
+    def test_event_source_failure_keeps_active_recent_parents(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            first,_=self.collect(root,logs=[event(block=4999)])
+            self.assertEqual(first['coverage']['indexed_parents'],1)
+            second,_=self.collect(root,head=5010,fail_logs=True)
+            self.assertEqual(second['coverage']['indexed_parents'],1)
+            self.assertTrue(second['coverage']['gaps'])
+
     def test_bootstrap_and_long_downtime_never_backfill_production_node(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);first,seen=self.collect(root)

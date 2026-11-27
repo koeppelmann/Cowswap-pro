@@ -5,7 +5,7 @@ from allocator import ETH,WETH,USDC,text
 
 
 def quote_rate(token,metadata,prices,usdc=USDC,weth=WETH):
-    priced=weth if token==ETH else token
+    priced=token if prices.get(token) else weth if token==ETH else token
     if not prices.get(priced) or not prices.get(usdc) or token not in metadata:return None
     return Fraction(int(prices[priced])*10**metadata[token]['decimals'],int(prices[usdc])*10**6)
 
@@ -43,6 +43,7 @@ def attach_schedules(pairs,collection,metadata,prices,stable_tokens,family_rates
         for asset,quote in [(sell,buy),(buy,sell)]:
             if asset in covered or asset in stable_tokens or asset not in metadata or quote_rate(quote,metadata,prices,usdc,weth) is None:continue
             symbol=metadata[asset]['symbol'];slug=re.sub('[^a-z0-9]+','',symbol.lower()) or 'token'
+            if slug=='eth' and not family_rates:slug+='-'+asset[2:8]
             if slug in ids:slug+='-'+asset[2:8]
             ref=quote_rate(asset,metadata,prices,usdc,weth)
             p={'id':slug,'label':symbol,'base_symbol':symbol,'base_decimals':metadata[asset]['decimals'],'base_token':asset,'reference_available':ref is not None,'reference_usdc_equivalent':text(ref) if ref is not None else '1','order_count':0,'modes':{'enriched':empty_mode(asset,False)},'quote_modes':{},'twap_only':True,'default_quote':quote,'amm_marker':{'status':'unavailable','reason':'TWAP-only asset; no AMM survey configured'}}

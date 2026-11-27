@@ -76,7 +76,7 @@ CoW may hold internally.
 ```sh
 python -m unittest discover -s tests -v
 python -m unittest test_source test_funding -v
-node --test take-tests/take-model.test.cjs terminal-tests/book-model.test.cjs
+node --test take-tests/take-model.test.cjs terminal-tests/book-model.test.cjs tests/test_network_ui.cjs
 ```
 
 Node 18+ is needed only for the JavaScript checks. Tests use local fixtures and

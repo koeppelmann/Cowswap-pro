@@ -185,6 +185,7 @@ def collect_twap_schedules(metadata,block_number,block_hash,workdir,cache_root=N
                 # record the unscanned range as a gap and continue from the API candidates. Later
                 # incremental scans (~64 blocks) fit the node's limit.
                 logs=[];gaps.append({'from_block':start,'to_block':block_number})
+                retained=list(index['records']) if index else []
             records,invalid_events,invalid_api=merge_candidates(retained,logs,api.get('records',[]),chain_id)
             index={'schema':1,'from_block':index['from_block'] if index else start,'through_block':block_number,'through_hash':block_hash,'gaps':gaps,'records':records}
             end=rpc(url,'eth_getBlockByNumber',[hex(block_number),False])

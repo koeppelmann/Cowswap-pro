@@ -5,7 +5,7 @@
 # 127.0.0.1 only; nothing public reaches it except the Next proxy.
 #
 # Usage: ./run-prod.sh   (from this directory)
-# Stop:  pkill -f "run.py --bind 127.0.0.1 --port ${OB_PORT:-8137}"
+# Stop: kill the launcher PID printed below (it stops its own children).
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -29,4 +29,4 @@ fi
 
 LOG="${OB_LOG:-/tmp/orderbook-viewer.log}"
 setsid .venv/bin/python run.py --bind 127.0.0.1 --port "${OB_PORT}" > "${LOG}" 2>&1 < /dev/null &
-echo "order-book viewer launched on 127.0.0.1:${OB_PORT} (log: ${LOG})"
+echo "order-book viewer PID $! launched on 127.0.0.1:${OB_PORT} (log: ${LOG})"

@@ -109,7 +109,7 @@ def read_funding(source_dir,outdir,network='mainnet'):
     source_dir=Path(source_dir);outdir=Path(outdir);outdir.mkdir(parents=True,exist_ok=True)
     source_path=source_dir/'sanitized-orders.json';source=json.loads(source_path.read_bytes())
     competition=json.loads((source_dir/'competition.private.json').read_bytes())
-    selected={o['uid']:o for o in source['orders']if o['strict_limit_order']is True};assert selected
+    selected={o['uid']:o for o in source['orders']if o['strict_limit_order']is True}
     evidence=[];url=primary_endpoint(network);endpoint_kind='own_node'
     header=rpc(url,'eth_getBlockByNumber',[hex(competition['auctionStartBlock']),False],evidence)
     assert header and int(header['number'],16)==competition['auctionStartBlock']
@@ -134,6 +134,7 @@ def read_funding(source_dir,outdir,network='mainnet'):
     assert len(orders)==len(selected) and {o['uid']for o in orders}==set(selected)
     keys=sorted({(o['owner'],o['sellToken'].lower())for o in orders if o['sellToken'].lower()!=NATIVE})
     tokens=sorted({o[k].lower()for o in orders for k in ('sellToken','buyToken')}-{NATIVE})
+    if network!='mainnet':tokens=sorted(set(tokens)|{cfg['usdc'].lower()})
     calls=[(SETTLEMENT,selector('vaultRelayer()'))];labels=[('relayer',None)]
     for o in orders:calls.append((SETTLEMENT,selector('filledAmount(bytes)')+word(32)+blob(bytes.fromhex(o['uid'][2:]))));labels.append(('fill',o['uid']))
     for owner,token in keys:
