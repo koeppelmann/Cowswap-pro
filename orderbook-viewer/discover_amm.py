@@ -5,7 +5,7 @@ from datetime import datetime,timezone
 import json
 from pathlib import Path
 import urllib.request
-from amm import EXTERNAL_ORACLE_POOLS
+from amm import EXTERNAL_ORACLE_POOLS, CATALOG
 
 
 def discover(book):
@@ -41,6 +41,15 @@ def catalog_from_discovery(discovery,discovered_at):
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--book',type=Path,default=Path(__file__).with_name('config-book.json'));parser.add_argument('--output',type=Path,required=True);args=parser.parse_args()
     value=discover(json.loads(args.book.read_bytes()))
+    if CATALOG.exists():
+        prior=json.loads(CATALOG.read_bytes())
+        value['quote_references']=prior.get('quote_references',[])
+        for name,candidates in prior.get('pairs',{}).items():
+            retained=[{**c,'observed_at':c.get('observed_at',prior['discovered_at'])} for c in candidates if c['kind'] in ('v4','weighted-v3')]
+            if not retained:continue
+            value['pairs'].setdefault(name,[]).extend(retained)
+            value['survey'].setdefault(name,{})['retained_verified_candidates']=len(retained)
+        value['selection']+=' Retained manually verified hookless v4, Balancer v3 and quote-reference configurations require onchain revalidation.'
     with args.output.open('x') as stream:json.dump(value,stream,indent=2);stream.write('\n')
     print('Wrote frozen Ethereum pool survey; review and verify onchain before packaging')
 

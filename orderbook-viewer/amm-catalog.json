@@ -1,14 +1,14 @@
 {
-  "discovered_at": "2026-11-27T12:34:52.392727+00:00",
-  "selection": "Up to six supported address-based Ethereum pools per token by surveyed 24h volume plus retained stUSDS Curve pool. Verify live state; rank by surveyed activity, live spread then inventories. Known external-oracle delivery pools excluded. V4 and unrecognized venues excluded. A supplemental discovery may add coverage provenance.",
+  "discovered_at": "2026-11-27T15:25:57.896632+00:00",
+  "selection": "Surveyed Ethereum AMM candidates ranked by activity. Supplementary GeckoTerminal candidates include exact-key-verified hookless static-fee v4 and STANDARD-token hook-free Balancer v3 weighted pools. Verify all candidates at the snapshot block. Missing quote references can use configured verified apxUSD/USDC v4 spot.",
   "pairs": {
     "eth": [
       {
         "address": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 69684972.22,
-        "volume_24h_usd": 46199690.51,
+        "discovery_liquidity_usd": 67732324.6,
+        "volume_24h_usd": 55714554.54,
         "tokens": [
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -19,8 +19,8 @@
         "address": "0xe0554a476a092703abdb3ef35c80e0d76d32939f",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 4656771.34,
-        "volume_24h_usd": 15256382.52,
+        "discovery_liquidity_usd": 4597342.33,
+        "volume_24h_usd": 16705928.45,
         "tokens": [
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -31,8 +31,8 @@
         "address": "0x11b815efb8f581194ae79006d24e0d814b7697f6",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 10170164.61,
-        "volume_24h_usd": 12123931.33,
+        "discovery_liquidity_usd": 11722757.35,
+        "volume_24h_usd": 13856264.15,
         "tokens": [
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -43,8 +43,8 @@
         "address": "0x4e68ccd3e89f51c3074ca5072bbac773960dfa36",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 61108920.62,
-        "volume_24h_usd": 10848273.07,
+        "discovery_liquidity_usd": 59064747.26,
+        "volume_24h_usd": 13083450.51,
         "tokens": [
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -55,8 +55,8 @@
         "address": "0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 46391483.02,
-        "volume_24h_usd": 5756916.73,
+        "discovery_liquidity_usd": 45198193.92,
+        "volume_24h_usd": 7887300.95,
         "tokens": [
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -67,8 +67,8 @@
         "address": "0xc7bbec68d12a0d1830360f8ec58fa599ba1b0e9b",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 2283301.27,
-        "volume_24h_usd": 5189543.36,
+        "discovery_liquidity_usd": 2221939.3,
+        "volume_24h_usd": 5372916.45,
         "tokens": [
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -81,8 +81,8 @@
         "address": "0x56534741cd8b152df6d48adf7ac51f75169a83b2",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 30354446.24,
-        "volume_24h_usd": 35654053.41,
+        "discovery_liquidity_usd": 29778989.99,
+        "volume_24h_usd": 49629862.9,
         "tokens": [
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -93,8 +93,8 @@
         "address": "0x4585fe77225b41b697c938b018e2ac67ac5a20c0",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 26645436.16,
-        "volume_24h_usd": 8409180.65,
+        "discovery_liquidity_usd": 25832781.48,
+        "volume_24h_usd": 13035849.02,
         "tokens": [
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -105,8 +105,8 @@
         "address": "0x99ac8ca7087fa4a2a1fb6357269965a2014abc35",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 19074287.76,
-        "volume_24h_usd": 1296711.1,
+        "discovery_liquidity_usd": 18681379.04,
+        "volume_24h_usd": 2261801.18,
         "tokens": [
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -117,8 +117,8 @@
         "address": "0x9db9e0e53058c89e5b94e29621a205198648425b",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 19012584.36,
-        "volume_24h_usd": 833857.65,
+        "discovery_liquidity_usd": 18688814.69,
+        "volume_24h_usd": 1310104.61,
         "tokens": [
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -129,8 +129,8 @@
         "address": "0xe6ff8b9a37b0fab776134636d9981aa778c4e718",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 296488.12,
-        "volume_24h_usd": 638312.33,
+        "discovery_liquidity_usd": 287228.62,
+        "volume_24h_usd": 670958.88,
         "tokens": [
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -141,8 +141,8 @@
         "address": "0xcbcdf9626bc03e24f779434178a73a0b4bad62ed",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 28350379.05,
-        "volume_24h_usd": 421986.91,
+        "discovery_liquidity_usd": 27389635.11,
+        "volume_24h_usd": 487450.62,
         "tokens": [
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -152,11 +152,11 @@
     ],
     "usdc": [
       {
-        "address": "0x4f493b7de8aac7d55f71853688b1f7c8f0243c85",
-        "venue": "Curve",
-        "kind": "curve",
-        "discovery_liquidity_usd": 9372125,
-        "volume_24h_usd": 7223553.98,
+        "address": "0x3416cf6c708da44db2624d63ea0aaef7113527c6",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 33138451.35,
+        "volume_24h_usd": 7574370.96,
         "tokens": [
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -164,11 +164,11 @@
         "source": "Dexscreener token-pairs Ethereum"
       },
       {
-        "address": "0x3416cf6c708da44db2624d63ea0aaef7113527c6",
-        "venue": "Uniswap v3",
-        "kind": "v3",
-        "discovery_liquidity_usd": 33137011.63,
-        "volume_24h_usd": 6997885.3,
+        "address": "0x4f493b7de8aac7d55f71853688b1f7c8f0243c85",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 9377113.32,
+        "volume_24h_usd": 5751520.12,
         "tokens": [
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -179,8 +179,8 @@
         "address": "0x04c8577958ccc170eb3d2cca76f9d51bc6e42d8f",
         "venue": "pancakeswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 17635266.41,
-        "volume_24h_usd": 430983.75,
+        "discovery_liquidity_usd": 17634657.35,
+        "volume_24h_usd": 453904.81,
         "tokens": [
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -191,8 +191,8 @@
         "address": "0x7858e59e0c01ea06df3af3d20ac7b0003275d4bf",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 505437.28,
-        "volume_24h_usd": 12180.06,
+        "discovery_liquidity_usd": 505510.98,
+        "volume_24h_usd": 59492.37,
         "tokens": [
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -204,7 +204,7 @@
         "venue": "SushiSwap v3",
         "kind": "v3",
         "discovery_liquidity_usd": 1204.67,
-        "volume_24h_usd": 2306.84,
+        "volume_24h_usd": 2312.72,
         "tokens": [
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -215,8 +215,8 @@
         "address": "0x3041cbd36888becc7bbcbc0045e3b1f144466f5f",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 3023079.82,
-        "volume_24h_usd": 778.3,
+        "discovery_liquidity_usd": 3023052.78,
+        "volume_24h_usd": 792.97,
         "tokens": [
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -229,8 +229,8 @@
         "address": "0xa6cc3c2531fdaa6ae1a3ca84c2855806728693e8",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 11136320.79,
-        "volume_24h_usd": 1147222.08,
+        "discovery_liquidity_usd": 10685058.87,
+        "volume_24h_usd": 1367694.18,
         "tokens": [
           "0x514910771af9ca656af840dff83e8264ecf986ca",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -241,8 +241,8 @@
         "address": "0x5d4f3c6fa16908609bac31ff148bd002aa6b8c83",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 375418.61,
-        "volume_24h_usd": 451226.39,
+        "discovery_liquidity_usd": 363864.92,
+        "volume_24h_usd": 466199.9,
         "tokens": [
           "0x514910771af9ca656af840dff83e8264ecf986ca",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -253,8 +253,8 @@
         "address": "0xfad57d2039c21811c8f2b5d5b65308aa99d31559",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 922503.8,
-        "volume_24h_usd": 57347.56,
+        "discovery_liquidity_usd": 950845.05,
+        "volume_24h_usd": 97842.99,
         "tokens": [
           "0x514910771af9ca656af840dff83e8264ecf986ca",
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -265,8 +265,8 @@
         "address": "0xac5a2c404ebba22a869998089ac7893ff4e1f0a7",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 104565.25,
-        "volume_24h_usd": 32042.11,
+        "discovery_liquidity_usd": 102242.52,
+        "volume_24h_usd": 38153.55,
         "tokens": [
           "0x514910771af9ca656af840dff83e8264ecf986ca",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -277,8 +277,8 @@
         "address": "0xa2107fa5b38d9bbd2c461d6edf11b11a50f6b974",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 1048947.89,
-        "volume_24h_usd": 12844.09,
+        "discovery_liquidity_usd": 997949.15,
+        "volume_24h_usd": 15284.18,
         "tokens": [
           "0x514910771af9ca656af840dff83e8264ecf986ca",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -289,8 +289,8 @@
         "address": "0xa5f43b0ebaefbed5b1f1bfc809af15254ea1e9c4",
         "venue": "SushiSwap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 19414.34,
-        "volume_24h_usd": 804.3,
+        "discovery_liquidity_usd": 18475.36,
+        "volume_24h_usd": 924.04,
         "tokens": [
           "0x514910771af9ca656af840dff83e8264ecf986ca",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -304,22 +304,10 @@
         "venue": "Curve",
         "kind": "curve",
         "discovery_liquidity_usd": 0,
-        "volume_24h_usd": 880057.97,
+        "volume_24h_usd": 225759.72,
         "tokens": [
           "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
           "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9"
-        ],
-        "source": "Dexscreener token-pairs Ethereum"
-      },
-      {
-        "address": "0x34cfc4f67be9c6b95567c80b94c2ec9477496443",
-        "venue": "Uniswap v3",
-        "kind": "v3",
-        "discovery_liquidity_usd": 161923.41,
-        "volume_24h_usd": 138301.1,
-        "tokens": [
-          "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
-          "0xdc035d45d973e3ec169d2276ddab16f1e407384f"
         ],
         "source": "Dexscreener token-pairs Ethereum"
       },
@@ -328,7 +316,7 @@
         "venue": "Uniswap v3",
         "kind": "v3",
         "discovery_liquidity_usd": 114.35,
-        "volume_24h_usd": 44706.03,
+        "volume_24h_usd": 17954.54,
         "tokens": [
           "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
           "0x56072c95faa701256059aa122697b133aded9279"
@@ -339,8 +327,8 @@
         "address": "0xbea2b678960ba37e69e20a0bc8d2f158df790364",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 13670.62,
-        "volume_24h_usd": 9119.66,
+        "discovery_liquidity_usd": 13659.39,
+        "volume_24h_usd": 11289.14,
         "tokens": [
           "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
           "0xdc035d45d973e3ec169d2276ddab16f1e407384f"
@@ -348,14 +336,14 @@
         "source": "Dexscreener token-pairs Ethereum"
       },
       {
-        "address": "0xb0cefac820228827a3f40deedbca88d5de44bca9",
-        "venue": "Curve",
-        "kind": "curve",
-        "discovery_liquidity_usd": 216.2,
-        "volume_24h_usd": 4.46,
+        "address": "0x34cfc4f67be9c6b95567c80b94c2ec9477496443",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 161923.41,
+        "volume_24h_usd": 5372.15,
         "tokens": [
           "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
-          "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+          "0xdc035d45d973e3ec169d2276ddab16f1e407384f"
         ],
         "source": "Dexscreener token-pairs Ethereum"
       }
@@ -365,8 +353,8 @@
         "address": "0x4674abc5796e1334b5075326b39b748bee9eaa34",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 636048.57,
-        "volume_24h_usd": 1795312.06,
+        "discovery_liquidity_usd": 614561.83,
+        "volume_24h_usd": 1677983.67,
         "tokens": [
           "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -377,8 +365,8 @@
         "address": "0x5ab53ee1d50eef2c1dd3d5402789cd27bb52c1bb",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 5182876.56,
-        "volume_24h_usd": 1072972.1,
+        "discovery_liquidity_usd": 5033575.55,
+        "volume_24h_usd": 1103761.47,
         "tokens": [
           "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -389,8 +377,8 @@
         "address": "0xf1cc73197824e2bf8d945627934e65495ebc52c8",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 191242.46,
-        "volume_24h_usd": 150732.22,
+        "discovery_liquidity_usd": 186132.22,
+        "volume_24h_usd": 110243.5,
         "tokens": [
           "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
           "0x56072c95faa701256059aa122697b133aded9279"
@@ -401,8 +389,8 @@
         "address": "0x59c38b6775ded821f010dbd30ecabdcf84e04756",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 685987.55,
-        "volume_24h_usd": 100636.17,
+        "discovery_liquidity_usd": 682907.17,
+        "volume_24h_usd": 100022.77,
         "tokens": [
           "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
           "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984"
@@ -413,8 +401,8 @@
         "address": "0x14243ea6bb3d64c8d54a1f47b077e23394d6528a",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 194831.78,
-        "volume_24h_usd": 27170.31,
+        "discovery_liquidity_usd": 185806.5,
+        "volume_24h_usd": 26813.88,
         "tokens": [
           "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
           "0x514910771af9ca656af840dff83e8264ecf986ca"
@@ -425,8 +413,8 @@
         "address": "0xdceaf5d0e5e0db9596a47c0c4120654e80b1d706",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 113770.65,
-        "volume_24h_usd": 19173.26,
+        "discovery_liquidity_usd": 110894.47,
+        "volume_24h_usd": 21902.5,
         "tokens": [
           "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -439,8 +427,8 @@
         "address": "0xa1bf0e900fb272089c9fd299ea14bfccb1d1c2c0",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 1046839.9,
-        "volume_24h_usd": 54746.8,
+        "discovery_liquidity_usd": 1019757.02,
+        "volume_24h_usd": 38996.13,
         "tokens": [
           "0x68bbed6a47194eff1cf514b50ea91895597fc91e",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -452,7 +440,7 @@
         "venue": "Uniswap v3",
         "kind": "v3",
         "discovery_liquidity_usd": 5366.13,
-        "volume_24h_usd": 484.74,
+        "volume_24h_usd": 236.44,
         "tokens": [
           "0x68bbed6a47194eff1cf514b50ea91895597fc91e",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -465,8 +453,8 @@
         "address": "0xe8f7c89c5efa061e340f2d2f206ec78fd8f7e124",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 9057789.8,
-        "volume_24h_usd": 4035636.58,
+        "discovery_liquidity_usd": 8784899.12,
+        "volume_24h_usd": 4027223.7,
         "tokens": [
           "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
@@ -477,8 +465,8 @@
         "address": "0xbb0e3525d6d5e1a7ecc627a82a44019b48cf84b3",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 2423557.95,
-        "volume_24h_usd": 1462503.8,
+        "discovery_liquidity_usd": 2415656.79,
+        "volume_24h_usd": 1876780.17,
         "tokens": [
           "0x8236a87084f8b84306f72007f36f2618a5634494",
           "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
@@ -489,8 +477,8 @@
         "address": "0xae6ee608b297305abf3eb609b81febbb8f6a0bb3",
         "venue": "Curve",
         "kind": "curve",
-        "discovery_liquidity_usd": 1771098.41,
-        "volume_24h_usd": 567724.7,
+        "discovery_liquidity_usd": 1703235.2,
+        "volume_24h_usd": 707533.96,
         "tokens": [
           "0x18084fba666a33d37592fa2633fd49a74dd93a88",
           "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
@@ -501,8 +489,8 @@
         "address": "0x83f24023d15d835a213df24fd309c47dab5beb32",
         "venue": "Curve",
         "kind": "curve",
-        "discovery_liquidity_usd": 16721467.53,
-        "volume_24h_usd": 126426.29,
+        "discovery_liquidity_usd": 16072222.71,
+        "volume_24h_usd": 355199.53,
         "tokens": [
           "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
           "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
@@ -513,8 +501,8 @@
         "address": "0x15aa01580ae866f9ff4dbe45e06e307941d90c7b",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 180425.53,
-        "volume_24h_usd": 12802.8,
+        "discovery_liquidity_usd": 174081.19,
+        "volume_24h_usd": 25187.4,
         "tokens": [
           "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -525,8 +513,8 @@
         "address": "0x4548280ac92507c9092a511c7396cbea78fa9e49",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 205786.42,
-        "volume_24h_usd": 7199.69,
+        "discovery_liquidity_usd": 199801.91,
+        "volume_24h_usd": 8751.35,
         "tokens": [
           "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -539,8 +527,8 @@
         "address": "0xd3e9895230e8fb1460852f6cda3c4b926fbc29d8",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 63664.52,
-        "volume_24h_usd": 1625.66,
+        "discovery_liquidity_usd": 62107.99,
+        "volume_24h_usd": 2004.79,
         "tokens": [
           "0x9ce84f6a69986a83d92c324df10bc8e64771030f",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -553,8 +541,8 @@
         "address": "0xfbb81382cce6b9ce58f8645353f70d9db1bb69af",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 304163.02,
-        "volume_24h_usd": 18943.12,
+        "discovery_liquidity_usd": 294696.77,
+        "volume_24h_usd": 20608.92,
         "tokens": [
           "0xdef1ca1fb7fbcdc777520aa7f396b4e015f497ab",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -565,8 +553,8 @@
         "address": "0xfcfdfc98062d13a11cec48c44e4613eb26a34293",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 251401.52,
-        "volume_24h_usd": 5804.66,
+        "discovery_liquidity_usd": 239055.15,
+        "volume_24h_usd": 8453.31,
         "tokens": [
           "0xdef1ca1fb7fbcdc777520aa7f396b4e015f497ab",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -577,8 +565,8 @@
         "address": "0xc07044d4b947e7c5701f1922db048c6b47799b84",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 1667.73,
-        "volume_24h_usd": 75.77,
+        "discovery_liquidity_usd": 1652.21,
+        "volume_24h_usd": 89.53,
         "tokens": [
           "0xdef1ca1fb7fbcdc777520aa7f396b4e015f497ab",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -588,25 +576,25 @@
     ],
     "crv": [
       {
-        "address": "0x971add32ea87f10bd192671630be3be8a11b8623",
+        "address": "0xca0253a98d16e9c1e3614cafda19318ee69772d0",
         "venue": "Curve",
         "kind": "curve",
-        "discovery_liquidity_usd": 4619190.31,
-        "volume_24h_usd": 22037.69,
+        "discovery_liquidity_usd": 773964.76,
+        "volume_24h_usd": 23097.01,
         "tokens": [
-          "0x62b9c7356a2dc64a1969e19c23e4f579f9810aa7",
+          "0xd1b5651e55d4ceed36251c61c50c889b36f6abb5",
           "0xd533a949740bb3306d119cc777fa900ba034cd52"
         ],
         "source": "Dexscreener token-pairs Ethereum"
       },
       {
-        "address": "0xca0253a98d16e9c1e3614cafda19318ee69772d0",
+        "address": "0x971add32ea87f10bd192671630be3be8a11b8623",
         "venue": "Curve",
         "kind": "curve",
-        "discovery_liquidity_usd": 788728.37,
-        "volume_24h_usd": 19537.53,
+        "discovery_liquidity_usd": 4549422.16,
+        "volume_24h_usd": 21255.99,
         "tokens": [
-          "0xd1b5651e55d4ceed36251c61c50c889b36f6abb5",
+          "0x62b9c7356a2dc64a1969e19c23e4f579f9810aa7",
           "0xd533a949740bb3306d119cc777fa900ba034cd52"
         ],
         "source": "Dexscreener token-pairs Ethereum"
@@ -615,8 +603,8 @@
         "address": "0x3bff1d56992702ecf7acb0d2a7f23eec459e8587",
         "venue": "SushiSwap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 96028.56,
-        "volume_24h_usd": 13966.37,
+        "discovery_liquidity_usd": 91179.04,
+        "volume_24h_usd": 15358.9,
         "tokens": [
           "0xd533a949740bb3306d119cc777fa900ba034cd52",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -624,25 +612,25 @@
         "source": "Dexscreener token-pairs Ethereum"
       },
       {
-        "address": "0x645c3a387b8633df1d4d71ca4b50d27233bcb887",
-        "venue": "Uniswap v3",
-        "kind": "v3",
-        "discovery_liquidity_usd": 124344.69,
-        "volume_24h_usd": 9706.51,
+        "address": "0x99f5acc8ec2da2bc0771c32814eff52b712de1e5",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 837893.67,
+        "volume_24h_usd": 7411.76,
         "tokens": [
-          "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b",
+          "0xfcc5c47be19d06bf83eb04298b026f81069ff65b",
           "0xd533a949740bb3306d119cc777fa900ba034cd52"
         ],
         "source": "Dexscreener token-pairs Ethereum"
       },
       {
-        "address": "0x99f5acc8ec2da2bc0771c32814eff52b712de1e5",
-        "venue": "Curve",
-        "kind": "curve",
-        "discovery_liquidity_usd": 847182.68,
-        "volume_24h_usd": 6535.99,
+        "address": "0x645c3a387b8633df1d4d71ca4b50d27233bcb887",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 122345.52,
+        "volume_24h_usd": 7230.51,
         "tokens": [
-          "0xfcc5c47be19d06bf83eb04298b026f81069ff65b",
+          "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b",
           "0xd533a949740bb3306d119cc777fa900ba034cd52"
         ],
         "source": "Dexscreener token-pairs Ethereum"
@@ -651,8 +639,8 @@
         "address": "0x3da1313ae46132a397d90d95b1424a9a7e3e0fce",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 66553.87,
-        "volume_24h_usd": 1971.79,
+        "discovery_liquidity_usd": 63606.93,
+        "volume_24h_usd": 1885.81,
         "tokens": [
           "0xd533a949740bb3306d119cc777fa900ba034cd52",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -665,8 +653,8 @@
         "address": "0xb576491f1e6e5e62f1d8f26062ee822b40b0e0d4",
         "venue": "Curve",
         "kind": "curve",
-        "discovery_liquidity_usd": 3764872.81,
-        "volume_24h_usd": 166546.9,
+        "discovery_liquidity_usd": 3583599.13,
+        "volume_24h_usd": 130246.92,
         "tokens": [
           "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -677,8 +665,8 @@
         "address": "0x47d5e1679fe5f0d9f0a657c6715924e33ce05093",
         "venue": "Curve",
         "kind": "curve",
-        "discovery_liquidity_usd": 1085685.86,
-        "volume_24h_usd": 39017.33,
+        "discovery_liquidity_usd": 1085593.72,
+        "volume_24h_usd": 36585.43,
         "tokens": [
           "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b",
           "0x5e8422345238f34275888049021821e8e08caa1f"
@@ -689,8 +677,8 @@
         "address": "0x645c3a387b8633df1d4d71ca4b50d27233bcb887",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 124344.69,
-        "volume_24h_usd": 9706.51,
+        "discovery_liquidity_usd": 122345.52,
+        "volume_24h_usd": 7230.51,
         "tokens": [
           "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b",
           "0xd533a949740bb3306d119cc777fa900ba034cd52"
@@ -701,8 +689,8 @@
         "address": "0x05767d9ef41dc40689678ffca0608878fb3de906",
         "venue": "SushiSwap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 120198.67,
-        "volume_24h_usd": 5439.49,
+        "discovery_liquidity_usd": 114948.8,
+        "volume_24h_usd": 4928.41,
         "tokens": [
           "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -713,8 +701,8 @@
         "address": "0x2e4784446a0a06df3d1a040b03e1680ee266c35a",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 54793.07,
-        "volume_24h_usd": 625.13,
+        "discovery_liquidity_usd": 52570.6,
+        "volume_24h_usd": 470.7,
         "tokens": [
           "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -725,8 +713,8 @@
         "address": "0x7cdd3ff1a38266c48e16cdb0ab79125ee315f0c4",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 3776.25,
-        "volume_24h_usd": 269.75,
+        "discovery_liquidity_usd": 3847.28,
+        "volume_24h_usd": 230.03,
         "tokens": [
           "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b",
           "0xd533a949740bb3306d119cc777fa900ba034cd52"
@@ -739,8 +727,8 @@
         "address": "0x55d5c232d921b9eaa6b37b5845e439acd04b4dba",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 258912.15,
-        "volume_24h_usd": 29060.63,
+        "discovery_liquidity_usd": 251358.4,
+        "volume_24h_usd": 29908.95,
         "tokens": [
           "0x2b591e99afe9f32eaa6214f7b7629768c40eeb39",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -751,8 +739,8 @@
         "address": "0x9e0905249ceefffb9605e034b534544684a58be6",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 82089.67,
-        "volume_24h_usd": 9559.43,
+        "discovery_liquidity_usd": 79618.78,
+        "volume_24h_usd": 10107.26,
         "tokens": [
           "0x2b591e99afe9f32eaa6214f7b7629768c40eeb39",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -763,8 +751,8 @@
         "address": "0xf6dcdce0ac3001b2f67f750bc64ea5beb37b5824",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 56324.16,
-        "volume_24h_usd": 7127.97,
+        "discovery_liquidity_usd": 55577.65,
+        "volume_24h_usd": 7733.43,
         "tokens": [
           "0x2b591e99afe9f32eaa6214f7b7629768c40eeb39",
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -813,8 +801,8 @@
         "address": "0xa3f558aebaecaf0e11ca4b2199cc5ed341edfd74",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 933556.04,
-        "volume_24h_usd": 137911.02,
+        "discovery_liquidity_usd": 897052.45,
+        "volume_24h_usd": 142470.93,
         "tokens": [
           "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -825,8 +813,8 @@
         "address": "0xcfecc1c9f3cb6190cb1ff7f65a130bfbe5107d38",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 23694.56,
-        "volume_24h_usd": 11042.1,
+        "discovery_liquidity_usd": 22685.1,
+        "volume_24h_usd": 10952.83,
         "tokens": [
           "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -838,7 +826,7 @@
         "venue": "Uniswap v3",
         "kind": "v3",
         "discovery_liquidity_usd": 12959.43,
-        "volume_24h_usd": 723.74,
+        "volume_24h_usd": 643.81,
         "tokens": [
           "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
           "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9"
@@ -849,8 +837,8 @@
         "address": "0x9409280dc1e6d33ab7a8c6ec03e5763fb61772b5",
         "venue": "Curve",
         "kind": "curve",
-        "discovery_liquidity_usd": 18525.11,
-        "volume_24h_usd": 527.42,
+        "discovery_liquidity_usd": 18550.55,
+        "volume_24h_usd": 543.02,
         "tokens": [
           "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -861,8 +849,8 @@
         "address": "0x78235d08b2ae7a3e00184329212a4d7acd2f9985",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 58136.19,
-        "volume_24h_usd": 326.32,
+        "discovery_liquidity_usd": 56284.86,
+        "volume_24h_usd": 523.63,
         "tokens": [
           "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -873,8 +861,8 @@
         "address": "0xc558f600b34a5f69dd2f0d06cb8a88d829b7420a",
         "venue": "SushiSwap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 20358.5,
-        "volume_24h_usd": 248.95,
+        "discovery_liquidity_usd": 19862.14,
+        "volume_24h_usd": 221.45,
         "tokens": [
           "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -887,8 +875,8 @@
         "address": "0x06cd6245156c3608ae67d690c125e86a8bc6a88c",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 389334.27,
-        "volume_24h_usd": 2514.8,
+        "discovery_liquidity_usd": 388096.86,
+        "volume_24h_usd": 3183.92,
         "tokens": [
           "0x9e18d5bab2fa94a6a95f509ecb38f8f68322abd3",
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -913,8 +901,8 @@
         "address": "0x7b1e5d984a43ee732de195628d20d05cfabc3cc7",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 1368811.71,
-        "volume_24h_usd": 334560.09,
+        "discovery_liquidity_usd": 1326366.61,
+        "volume_24h_usd": 350516.29,
         "tokens": [
           "0xfaba6f8e4a5e8ab82f62fe7c39859fa577269be3",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -925,8 +913,8 @@
         "address": "0x39f9ff86479579952e7218c27ab9d2a9ff9bfe3e",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 6191.48,
-        "volume_24h_usd": 160.99,
+        "discovery_liquidity_usd": 6032.96,
+        "volume_24h_usd": 241.47,
         "tokens": [
           "0xfaba6f8e4a5e8ab82f62fe7c39859fa577269be3",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -987,8 +975,8 @@
         "address": "0xc756bba710d45647715079ce50aa16aab36ded42",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 5765085.4,
-        "volume_24h_usd": 1741880.05,
+        "discovery_liquidity_usd": 5715607.81,
+        "volume_24h_usd": 1682838.83,
         "tokens": [
           "0x68749665ff8d2d112fa859aa293f07a622782f38",
           "0x45804880de22913dafe09f4980848ece6ecbaf78"
@@ -999,8 +987,8 @@
         "address": "0x5ae13baaef0620fdae1d355495dc51a17adb4082",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 2229308.75,
-        "volume_24h_usd": 536497.77,
+        "discovery_liquidity_usd": 2212277.11,
+        "volume_24h_usd": 569833.84,
         "tokens": [
           "0x45804880de22913dafe09f4980848ece6ecbaf78",
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -1011,8 +999,8 @@
         "address": "0x9c4fe5ffd9a9fc5678cfbd93aa2d4fd684b67c4c",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 12142791.74,
-        "volume_24h_usd": 324092.22,
+        "discovery_liquidity_usd": 11885623.33,
+        "volume_24h_usd": 455400.41,
         "tokens": [
           "0x45804880de22913dafe09f4980848ece6ecbaf78",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1024,7 +1012,7 @@
         "venue": "Curve",
         "kind": "curve",
         "discovery_liquidity_usd": 267850.57,
-        "volume_24h_usd": 59319.38,
+        "volume_24h_usd": 54781.29,
         "tokens": [
           "0x45804880de22913dafe09f4980848ece6ecbaf78",
           "0x68749665ff8d2d112fa859aa293f07a622782f38"
@@ -1035,8 +1023,8 @@
         "address": "0xb431c70f800100d87554ac1142c4a94c5fe4c0c4",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 746757.22,
-        "volume_24h_usd": 45596.25,
+        "discovery_liquidity_usd": 739399.7,
+        "volume_24h_usd": 53333.64,
         "tokens": [
           "0x45804880de22913dafe09f4980848ece6ecbaf78",
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -1044,14 +1032,14 @@
         "source": "Dexscreener token-pairs Ethereum"
       },
       {
-        "address": "0xed7ef9a9a05a48858a507c080def0405ad1eaa3e",
+        "address": "0x7cb85f75e61226060453a997a7733f76707df337",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 2765223.97,
-        "volume_24h_usd": 34498.04,
+        "discovery_liquidity_usd": 116568.89,
+        "volume_24h_usd": 33528.64,
         "tokens": [
-          "0x68749665ff8d2d112fa859aa293f07a622782f38",
-          "0x45804880de22913dafe09f4980848ece6ecbaf78"
+          "0x45804880de22913dafe09f4980848ece6ecbaf78",
+          "0xdac17f958d2ee523a2206206994597c13d831ec7"
         ],
         "source": "Dexscreener token-pairs Ethereum"
       }
@@ -1061,8 +1049,8 @@
         "address": "0x57af956d3e2cca3b86f3d8c6772c03ddca3eaacb",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 474884.46,
-        "volume_24h_usd": 94575.08,
+        "discovery_liquidity_usd": 457888.39,
+        "volume_24h_usd": 104615.79,
         "tokens": [
           "0x808507121b80c02388fad14726482e061b8da827",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1073,8 +1061,8 @@
         "address": "0x7b15b17969b58679a37ce62ee382fc6fd9ce6f5a",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 18092.83,
-        "volume_24h_usd": 3791.34,
+        "discovery_liquidity_usd": 17776.97,
+        "volume_24h_usd": 3385.2,
         "tokens": [
           "0x808507121b80c02388fad14726482e061b8da827",
           "0xc00e94cb662c3520282e6f5717214004a7f26888"
@@ -1085,8 +1073,8 @@
         "address": "0x37922c69b08babcceae735a31235c81f1d1e8e43",
         "venue": "SushiSwap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 46422.34,
-        "volume_24h_usd": 1082.56,
+        "discovery_liquidity_usd": 44541.9,
+        "volume_24h_usd": 1000.35,
         "tokens": [
           "0x808507121b80c02388fad14726482e061b8da827",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1122,7 +1110,7 @@
         "venue": "pancakeswap v3",
         "kind": "v3",
         "discovery_liquidity_usd": 217.42,
-        "volume_24h_usd": 5.91,
+        "volume_24h_usd": 1.61,
         "tokens": [
           "0x808507121b80c02388fad14726482e061b8da827",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1135,8 +1123,8 @@
         "address": "0x24ee2c6b9597f035088cda8575e9d5e15a84b9df",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 523441.07,
-        "volume_24h_usd": 84108.17,
+        "discovery_liquidity_usd": 502825.77,
+        "volume_24h_usd": 186979.55,
         "tokens": [
           "0x4a220e6096b25eadb88358cb44068a3248254675",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1147,8 +1135,8 @@
         "address": "0x0c4a68cf6857cc76fe946d04fe85fac5fae9625e",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 87096.77,
-        "volume_24h_usd": 3076.89,
+        "discovery_liquidity_usd": 82875.97,
+        "volume_24h_usd": 4765.83,
         "tokens": [
           "0x4a220e6096b25eadb88358cb44068a3248254675",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1160,7 +1148,7 @@
         "venue": "Uniswap v3",
         "kind": "v3",
         "discovery_liquidity_usd": 2196.74,
-        "volume_24h_usd": 20.29,
+        "volume_24h_usd": 7.84,
         "tokens": [
           "0x4a220e6096b25eadb88358cb44068a3248254675",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1168,14 +1156,14 @@
         "source": "Dexscreener token-pairs Ethereum"
       },
       {
-        "address": "0x07e43b28640e30a60bffcc885f2d7ae5fb6251c2",
-        "venue": "Uniswap v3",
-        "kind": "v3",
-        "discovery_liquidity_usd": 112.27,
-        "volume_24h_usd": 2.06,
+        "address": "0x9c0976c41e6e163f6086377247caa70af55cdeaa",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 311.97,
+        "volume_24h_usd": 2.62,
         "tokens": [
-          "0x4a220e6096b25eadb88358cb44068a3248254675",
-          "0x6b175474e89094c44da98b954eedeac495271d0f"
+          "0xd0a69fd9da28840603fbd76a8a0bccf0adb979e8",
+          "0x4a220e6096b25eadb88358cb44068a3248254675"
         ],
         "source": "Dexscreener token-pairs Ethereum"
       },
@@ -1194,11 +1182,23 @@
     ],
     "rail": [
       {
+        "address": "0x2837809fd68e4a4104af76bbec5b622b6146b2cb",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 3980716.54,
+        "volume_24h_usd": 55492.61,
+        "tokens": [
+          "0xe76c6c83af64e4c60245d8c7de953df673a7a33d",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
         "address": "0xac86903cdda380f20a06cc8a2dea7749f1558c68",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 1093102.89,
-        "volume_24h_usd": 32873.92,
+        "discovery_liquidity_usd": 1038178.67,
+        "volume_24h_usd": 38807.64,
         "tokens": [
           "0xe76c6c83af64e4c60245d8c7de953df673a7a33d",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1209,20 +1209,8 @@
         "address": "0x7cf6a842e72c4bd7bc92e0c17ebdaa95ac1e7825",
         "venue": "SushiSwap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 735149.42,
-        "volume_24h_usd": 21124.31,
-        "tokens": [
-          "0xe76c6c83af64e4c60245d8c7de953df673a7a33d",
-          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
-        ],
-        "source": "Dexscreener token-pairs Ethereum"
-      },
-      {
-        "address": "0x2837809fd68e4a4104af76bbec5b622b6146b2cb",
-        "venue": "Uniswap v3",
-        "kind": "v3",
-        "discovery_liquidity_usd": 4022945.58,
-        "volume_24h_usd": 20969.8,
+        "discovery_liquidity_usd": 696646.13,
+        "volume_24h_usd": 24795.25,
         "tokens": [
           "0xe76c6c83af64e4c60245d8c7de953df673a7a33d",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1233,8 +1221,8 @@
         "address": "0x7f517657496c09c43cc28d0ca131e35dcd557e02",
         "venue": "SushiSwap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 167498.34,
-        "volume_24h_usd": 6256.73,
+        "discovery_liquidity_usd": 162006.42,
+        "volume_24h_usd": 7463.8,
         "tokens": [
           "0xe76c6c83af64e4c60245d8c7de953df673a7a33d",
           "0x6b175474e89094c44da98b954eedeac495271d0f"
@@ -1245,8 +1233,8 @@
         "address": "0x519854dd32b4f34f9a407874b0b69218465972d6",
         "venue": "SushiSwap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 79991.44,
-        "volume_24h_usd": 850,
+        "discovery_liquidity_usd": 79152.82,
+        "volume_24h_usd": 1238.39,
         "tokens": [
           "0xeb4c2781e4eba804ce9a9803c67d0893436bb27d",
           "0xe76c6c83af64e4c60245d8c7de953df673a7a33d"
@@ -1259,8 +1247,8 @@
         "address": "0x68e78497a7b0db7718ccc833c164a18d8e626816",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 205566.35,
-        "volume_24h_usd": 4707.75,
+        "discovery_liquidity_usd": 198759.57,
+        "volume_24h_usd": 4120.47,
         "tokens": [
           "0xca530408c3e552b020a2300debc7bd18820fb42f",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1273,8 +1261,8 @@
         "address": "0xcf6daab95c476106eca715d48de4b13287ffdeaa",
         "venue": "ShibaSwap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 2008879.09,
-        "volume_24h_usd": 35311.05,
+        "discovery_liquidity_usd": 1928953.44,
+        "volume_24h_usd": 38896.36,
         "tokens": [
           "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1285,8 +1273,8 @@
         "address": "0x2f62f2b4c5fcd7570a709dec05d68ea19c82a9ec",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 210660.33,
-        "volume_24h_usd": 10383.53,
+        "discovery_liquidity_usd": 203073.14,
+        "volume_24h_usd": 10620.18,
         "tokens": [
           "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1297,8 +1285,8 @@
         "address": "0x811beed0119b4afce20d2583eb608c6f7af1954f",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 385707.05,
-        "volume_24h_usd": 6672.23,
+        "discovery_liquidity_usd": 372785.96,
+        "volume_24h_usd": 7463.37,
         "tokens": [
           "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1306,23 +1294,11 @@
         "source": "Dexscreener token-pairs Ethereum"
       },
       {
-        "address": "0xff64cb7ba5717a10dabc4be3a41acd2c2f95ee22",
-        "venue": "ShibaSwap v2",
-        "kind": "v2",
-        "discovery_liquidity_usd": 168630.99,
-        "volume_24h_usd": 975.53,
-        "tokens": [
-          "0x9813037ee2218799597d83d4a5b6f3b6778218d9",
-          "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce"
-        ],
-        "source": "Dexscreener token-pairs Ethereum"
-      },
-      {
         "address": "0x98c2b0681d8bf07767826ea8bd3b11b0ca421631",
         "venue": "ShibaSwap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 31945.15,
-        "volume_24h_usd": 699.08,
+        "discovery_liquidity_usd": 31483.79,
+        "volume_24h_usd": 1035.23,
         "tokens": [
           "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -1330,11 +1306,23 @@
         "source": "Dexscreener token-pairs Ethereum"
       },
       {
+        "address": "0xff64cb7ba5717a10dabc4be3a41acd2c2f95ee22",
+        "venue": "ShibaSwap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 166719.93,
+        "volume_24h_usd": 977.4,
+        "tokens": [
+          "0x9813037ee2218799597d83d4a5b6f3b6778218d9",
+          "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
         "address": "0x9379f5e035cf6148c6bbee1d6415795cc773b0a4",
         "venue": "ShibaSwap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 19347.09,
-        "volume_24h_usd": 416.06,
+        "discovery_liquidity_usd": 19132.5,
+        "volume_24h_usd": 491.74,
         "tokens": [
           "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
           "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -1347,8 +1335,8 @@
         "address": "0x2621cc0b3f3c079c1db0e80794aa24976f0b9e3c",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 7549852.96,
-        "volume_24h_usd": 2481976.89,
+        "discovery_liquidity_usd": 7483954.22,
+        "volume_24h_usd": 2019009.55,
         "tokens": [
           "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
           "0x56072c95faa701256059aa122697b133aded9279"
@@ -1359,8 +1347,8 @@
         "address": "0x764510ab1d39cf300e7abe8f5b8977d18f290628",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 964917.89,
-        "volume_24h_usd": 1216330.88,
+        "discovery_liquidity_usd": 943783.32,
+        "volume_24h_usd": 922711.54,
         "tokens": [
           "0x56072c95faa701256059aa122697b133aded9279",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1371,8 +1359,8 @@
         "address": "0xf1cc73197824e2bf8d945627934e65495ebc52c8",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 191242.46,
-        "volume_24h_usd": 150213.16,
+        "discovery_liquidity_usd": 186132.22,
+        "volume_24h_usd": 110243.5,
         "tokens": [
           "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
           "0x56072c95faa701256059aa122697b133aded9279"
@@ -1383,8 +1371,8 @@
         "address": "0x881e1bd47e50a3ad8e4bb8668f726a87ce31db86",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 33309.37,
-        "volume_24h_usd": 63393.19,
+        "discovery_liquidity_usd": 32592.16,
+        "volume_24h_usd": 58454.53,
         "tokens": [
           "0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2",
           "0x56072c95faa701256059aa122697b133aded9279"
@@ -1396,7 +1384,7 @@
         "venue": "Uniswap v3",
         "kind": "v3",
         "discovery_liquidity_usd": 114.35,
-        "volume_24h_usd": 44706.03,
+        "volume_24h_usd": 17954.54,
         "tokens": [
           "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
           "0x56072c95faa701256059aa122697b133aded9279"
@@ -1407,8 +1395,8 @@
         "address": "0xdebfbe846255a0397bd54ce93d365604f57f3d98",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 25196.26,
-        "volume_24h_usd": 7457.41,
+        "discovery_liquidity_usd": 24707.67,
+        "volume_24h_usd": 7186.68,
         "tokens": [
           "0x56072c95faa701256059aa122697b133aded9279",
           "0x6b175474e89094c44da98b954eedeac495271d0f"
@@ -1416,14 +1404,30 @@
         "source": "Dexscreener token-pairs Ethereum"
       }
     ],
-    "slvx": [],
+    "slvx": [
+      {
+        "address": "0x68f7fa3802d629b1e64e37dd9818c69d0f669a24d870e78c0a87141aeab712c9",
+        "kind": "v4",
+        "venue": "Uniswap v4",
+        "tokens": [
+          "0x4833e7f4f0460f4b72a3a5879a6c9841bcc5b58b",
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        ],
+        "hooks": "0x0000000000000000000000000000000000000000",
+        "fee": 880000,
+        "tick_spacing": 17600,
+        "source": "GeckoTerminal Ethereum token pools; exact hookless PoolKey reconstructed and hash verified",
+        "volume_24h_usd": 0.0,
+        "discovery_liquidity_usd": 114.8795
+      }
+    ],
     "sushi": [
       {
         "address": "0x87c7056bbe6084f03304196be51c6b90b6d85aa2",
         "venue": "SushiSwap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 709067.25,
-        "volume_24h_usd": 12374.95,
+        "discovery_liquidity_usd": 682070.11,
+        "volume_24h_usd": 15131.42,
         "tokens": [
           "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1434,8 +1438,8 @@
         "address": "0x795065dcc9f64b5614c407a6efdc400da6221fb0",
         "venue": "SushiSwap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 178916.44,
-        "volume_24h_usd": 2449.23,
+        "discovery_liquidity_usd": 172034.45,
+        "volume_24h_usd": 2925.37,
         "tokens": [
           "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1446,8 +1450,8 @@
         "address": "0xce84867c3c02b05dc570d0135103d3fb9cc19433",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 87767.19,
-        "volume_24h_usd": 1136.31,
+        "discovery_liquidity_usd": 84546.32,
+        "volume_24h_usd": 1305.63,
         "tokens": [
           "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1458,8 +1462,8 @@
         "address": "0x73a6a761fe483ba19debb8f56ac5bbf14c0cdad1",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 14084.83,
-        "volume_24h_usd": 661.76,
+        "discovery_liquidity_usd": 14060.88,
+        "volume_24h_usd": 624.87,
         "tokens": [
           "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1470,8 +1474,8 @@
         "address": "0xe06f8d30ac334c857fc8c380c85969c150f38a6a",
         "venue": "SushiSwap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 20143.12,
-        "volume_24h_usd": 166.17,
+        "discovery_liquidity_usd": 19792.63,
+        "volume_24h_usd": 301.29,
         "tokens": [
           "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
           "0x853d955acef822db058eb8505911ed77f175b99e"
@@ -1479,14 +1483,14 @@
         "source": "Dexscreener token-pairs Ethereum"
       },
       {
-        "address": "0x12c58d2e979956c18185222eb551df4325f4af66",
-        "venue": "SushiSwap v3",
-        "kind": "v3",
-        "discovery_liquidity_usd": 233.04,
-        "volume_24h_usd": 21.31,
+        "address": "0x6cbefa95e42960e579c2a3058c05c6a08e2498e9",
+        "venue": "ShibaSwap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 4463.55,
+        "volume_24h_usd": 20.53,
         "tokens": [
-          "0xe5acbb03d73267c03349c76ead672ee4d941f499",
-          "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2"
+          "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
         ],
         "source": "Dexscreener token-pairs Ethereum"
       }
@@ -1496,8 +1500,8 @@
         "address": "0xb7ecb2aa52aa64a717180e030241bc75cd946726",
         "venue": "Curve",
         "kind": "curve",
-        "discovery_liquidity_usd": 8911091.35,
-        "volume_24h_usd": 1304799.42,
+        "discovery_liquidity_usd": 8820304.76,
+        "volume_24h_usd": 1728742.45,
         "tokens": [
           "0x18084fba666a33d37592fa2633fd49a74dd93a88",
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
@@ -1508,8 +1512,8 @@
         "address": "0x73a38006d23517a1d383c88929b2014f8835b38b",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 6082661.89,
-        "volume_24h_usd": 1173103.78,
+        "discovery_liquidity_usd": 5899052.31,
+        "volume_24h_usd": 1404768.19,
         "tokens": [
           "0x18084fba666a33d37592fa2633fd49a74dd93a88",
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
@@ -1520,8 +1524,8 @@
         "address": "0xae6ee608b297305abf3eb609b81febbb8f6a0bb3",
         "venue": "Curve",
         "kind": "curve",
-        "discovery_liquidity_usd": 1771098.41,
-        "volume_24h_usd": 567724.7,
+        "discovery_liquidity_usd": 1703235.2,
+        "volume_24h_usd": 707533.96,
         "tokens": [
           "0x18084fba666a33d37592fa2633fd49a74dd93a88",
           "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
@@ -1532,8 +1536,8 @@
         "address": "0xf1f435b05d255a5dbde37333c0f61da6f69c6127",
         "venue": "Curve",
         "kind": "curve",
-        "discovery_liquidity_usd": 592363.52,
-        "volume_24h_usd": 54465.71,
+        "discovery_liquidity_usd": 580884.01,
+        "volume_24h_usd": 86865.53,
         "tokens": [
           "0x18084fba666a33d37592fa2633fd49a74dd93a88",
           "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
@@ -1544,8 +1548,8 @@
         "address": "0xdbac78be00503d10ae0074e5e5873a61fc56647c",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 1384933.78,
-        "volume_24h_usd": 28199.44,
+        "discovery_liquidity_usd": 1322406.11,
+        "volume_24h_usd": 84963.1,
         "tokens": [
           "0x18084fba666a33d37592fa2633fd49a74dd93a88",
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
@@ -1556,8 +1560,8 @@
         "address": "0x97944213d2caeea773da1c9b11b0525f25b749cc",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 227026.02,
-        "volume_24h_usd": 8265.29,
+        "discovery_liquidity_usd": 218885.59,
+        "volume_24h_usd": 9756.93,
         "tokens": [
           "0x18084fba666a33d37592fa2633fd49a74dd93a88",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1570,8 +1574,8 @@
         "address": "0xfaa318479b7755b2dbfdd34dc306cb28b420ad12",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 1490071.11,
-        "volume_24h_usd": 2068258.44,
+        "discovery_liquidity_usd": 1448251.89,
+        "volume_24h_usd": 2204773.32,
         "tokens": [
           "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1582,8 +1586,8 @@
         "address": "0x1d42064fc4beb5f8aaf85f4617ae8b3b5b8bd801",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 10852187.38,
-        "volume_24h_usd": 1385272.13,
+        "discovery_liquidity_usd": 10502447.07,
+        "volume_24h_usd": 1336469.46,
         "tokens": [
           "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1594,8 +1598,8 @@
         "address": "0x3470447f3cecffac709d3e783a307790b0208d60",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 1015853.51,
-        "volume_24h_usd": 186900.03,
+        "discovery_liquidity_usd": 997957.42,
+        "volume_24h_usd": 212221.74,
         "tokens": [
           "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
           "0xdac17f958d2ee523a2206206994597c13d831ec7"
@@ -1606,8 +1610,8 @@
         "address": "0xd3d2e2692501a5c9ca623199d38826e513033a17",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 2633215.35,
-        "volume_24h_usd": 92952.77,
+        "discovery_liquidity_usd": 2536877.16,
+        "volume_24h_usd": 88363.86,
         "tokens": [
           "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1618,8 +1622,8 @@
         "address": "0x8f0cb37cdff37e004e0088f563e5fe39e05ccc5b",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 293697.16,
-        "volume_24h_usd": 44858.97,
+        "discovery_liquidity_usd": 284424.75,
+        "volume_24h_usd": 41920.12,
         "tokens": [
           "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
@@ -1630,8 +1634,8 @@
         "address": "0x9f178e86e42ddf2379cb3d2acf9ed67a1ed2550a",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 75978.44,
-        "volume_24h_usd": 11422.19,
+        "discovery_liquidity_usd": 72451.93,
+        "volume_24h_usd": 11215.93,
         "tokens": [
           "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
           "0x514910771af9ca656af840dff83e8264ecf986ca"
@@ -1645,7 +1649,7 @@
         "venue": "Uniswap v2",
         "kind": "v2",
         "discovery_liquidity_usd": 90.2,
-        "volume_24h_usd": 107.67,
+        "volume_24h_usd": 97.57,
         "tokens": [
           "0x7f792db54b0e580cdc755178443f0430cf799aca",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1672,8 +1676,8 @@
         "address": "0x464bd7e6718a815c20a5ad529003d7a93a9676b3",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 76574,
-        "volume_24h_usd": 9964.52,
+        "discovery_liquidity_usd": 76351.47,
+        "volume_24h_usd": 12329.69,
         "tokens": [
           "0xd7efb00d12c2c13131fd319336fdf952525da2af",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1710,8 +1714,8 @@
         "address": "0xc26b89a667578ec7b3f11b2f98d6fd15c07c54ba",
         "venue": "Curve",
         "kind": "curve",
-        "discovery_liquidity_usd": 414370.56,
-        "volume_24h_usd": 21411.78,
+        "discovery_liquidity_usd": 396966.45,
+        "volume_24h_usd": 31655.25,
         "tokens": [
           "0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1722,20 +1726,8 @@
         "address": "0x2fdbadf3c4d5a8666bc06645b8358ab803996e28",
         "venue": "Uniswap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 101548.29,
-        "volume_24h_usd": 2129.8,
-        "tokens": [
-          "0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e",
-          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
-        ],
-        "source": "Dexscreener token-pairs Ethereum"
-      },
-      {
-        "address": "0x78efa58c897b8ea9bce4ec910c381e0be25aad47",
-        "venue": "SushiSwap v3",
-        "kind": "v3",
-        "discovery_liquidity_usd": 84489.83,
-        "volume_24h_usd": 1885.7,
+        "discovery_liquidity_usd": 98069.71,
+        "volume_24h_usd": 2611.15,
         "tokens": [
           "0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1746,8 +1738,20 @@
         "address": "0x088ee5007c98a9677165d78dd2109ae4a3d04d0c",
         "venue": "SushiSwap v2",
         "kind": "v2",
-        "discovery_liquidity_usd": 90292.99,
-        "volume_24h_usd": 1743.66,
+        "discovery_liquidity_usd": 87037.62,
+        "volume_24h_usd": 2268.68,
+        "tokens": [
+          "0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x78efa58c897b8ea9bce4ec910c381e0be25aad47",
+        "venue": "SushiSwap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 80012.03,
+        "volume_24h_usd": 2025.57,
         "tokens": [
           "0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1758,8 +1762,8 @@
         "address": "0x04916039b1f59d9745bf6e0a21f191d1e0a84287",
         "venue": "Uniswap v3",
         "kind": "v3",
-        "discovery_liquidity_usd": 15563.37,
-        "volume_24h_usd": 133.69,
+        "discovery_liquidity_usd": 14949,
+        "volume_24h_usd": 193.54,
         "tokens": [
           "0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e",
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -1775,6 +1779,120 @@
         "tokens": [
           "0xbcda9e0658f4eecf56a0bd099e6dbc0c91f6a8c2",
           "0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      }
+    ],
+    "hyper": [
+      {
+        "address": "0x96d26bd94618b3c7648574ae778e942abbcda698",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 114006.33,
+        "volume_24h_usd": 185120.52,
+        "tokens": [
+          "0xa86c39fa8341adc5219f355468fc78cec7e8702b",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      }
+    ],
+    "ethfi": [
+      {
+        "address": "0x06f00544c0bc62e6db10f46d370dfccdc23d8189",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 421394.29,
+        "volume_24h_usd": 196607.86,
+        "tokens": [
+          "0xfe0c30065b384f05761f15d0cc899d4f9f9cc0eb",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x80fa4c1fd0fbb9a4f071999af69531dee1016644",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 57347.82,
+        "volume_24h_usd": 5601.79,
+        "tokens": [
+          "0xfe0c30065b384f05761f15d0cc899d4f9f9cc0eb",
+          "0xdac17f958d2ee523a2206206994597c13d831ec7"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xdefdac77a9a767a2c4eed826e1aead2dace53e1c",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 9500.39,
+        "volume_24h_usd": 303.4,
+        "tokens": [
+          "0xfe0c30065b384f05761f15d0cc899d4f9f9cc0eb",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xd0412ea5ae20b0eec447c6ceda209a324da39970",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 139.8,
+        "volume_24h_usd": 2.14,
+        "tokens": [
+          "0x88888805e7e3d5c7fb002ad98f08250e79c298dc",
+          "0xfe0c30065b384f05761f15d0cc899d4f9f9cc0eb"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x880f31c24316aaa1af0f7c3089894d53206493ca",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2.51,
+        "volume_24h_usd": 0.7,
+        "tokens": [
+          "0xd0b520304dc2df26c8c73294901220d549217aac",
+          "0xfe0c30065b384f05761f15d0cc899d4f9f9cc0eb"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      }
+    ],
+    "morpho": [
+      {
+        "address": "0xc8219b876753a85025156b22176c2edea17aac53",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 79693.63,
+        "volume_24h_usd": 5347.87,
+        "tokens": [
+          "0x58d97b57bb95320f9a05dc918aef65434969c2b2",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x25b96761e765b9ac20db18fa57fa91e3b617ec6f",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 41869.62,
+        "volume_24h_usd": 1730.3,
+        "tokens": [
+          "0x58d97b57bb95320f9a05dc918aef65434969c2b2",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xb78b0fc546fe2a55fb5299d9f046efa2762d0693",
+        "venue": "ShibaSwap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 4.26,
+        "volume_24h_usd": 0.25,
+        "tokens": [
+          "0x5de869e3e62b0fb2c15573246ba3bb3fd97a2275",
+          "0x58d97b57bb95320f9a05dc918aef65434969c2b2"
         ],
         "source": "Dexscreener token-pairs Ethereum"
       }
@@ -1816,6 +1934,569 @@
         ],
         "source": "Dexscreener token-pairs Ethereum"
       }
+    ],
+    "solx": [
+      {
+        "address": "0x7e75b6876a9fee811ec67b55385ba5a1491d11f3",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 142742.42,
+        "volume_24h_usd": 4209.15,
+        "tokens": [
+          "0xe0b7ad7f8f26e2b00c8b47b5df370f15f90fcf48",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      }
+    ],
+    "woo": [
+      {
+        "address": "0x6ada49aeccf6e556bb7a35ef0119cc8ca795294a",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 436250.72,
+        "volume_24h_usd": 5972.67,
+        "tokens": [
+          "0x4691937a7508860f876c9c0a2a617e7d9e945d4b",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xf5ca27927ffb16bd8c870dcb49750146cce8217c",
+        "venue": "SushiSwap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 1152.12,
+        "volume_24h_usd": 12.55,
+        "tokens": [
+          "0x4691937a7508860f876c9c0a2a617e7d9e945d4b",
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x122e55503a0b2e5cd528effa44d0b2fea300f24b",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 3529.84,
+        "volume_24h_usd": 4.13,
+        "tokens": [
+          "0x4691937a7508860f876c9c0a2a617e7d9e945d4b",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      }
+    ],
+    "fxusd": [
+      {
+        "address": "0x5018be882dcce5e3f2f3b0913ae2096b9b3fb61f",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 6798608.65,
+        "volume_24h_usd": 9479333.72,
+        "tokens": [
+          "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x74345504eaea3d9408fc69ae7eb2d14095643c5b",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 91992.14,
+        "volume_24h_usd": 118001.98,
+        "tokens": [
+          "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+          "0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x851907cac684797eee43669798d78004e269cb5e",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 159647.4,
+        "volume_24h_usd": 56977.29,
+        "tokens": [
+          "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+          "0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xb2ee8f9622c5a480928836c0575df7d150f72d98",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 125623.23,
+        "volume_24h_usd": 8541.3,
+        "tokens": [
+          "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xb0ef04ace97d350e24efa5139d2590d26a61a8dc",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 656669.36,
+        "volume_24h_usd": 4233.32,
+        "tokens": [
+          "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+          "0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x138bb0f3208bd729a561f3786ddb97bbc69e6628",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 186813.64,
+        "volume_24h_usd": 427.6,
+        "tokens": [
+          "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+          "0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      }
+    ],
+    "horizon": [
+      {
+        "address": "0x171341533191f09a2535601da5ce5def5f13ac6b",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 42052.85,
+        "volume_24h_usd": 5964.81,
+        "tokens": [
+          "0x1d3d7eef805eb51b6b6cbe146e3c1f3de6f590c3",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x9dc41356d7076b554606bf47d42897bb57cf05bd",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 71861.26,
+        "volume_24h_usd": 4144.8,
+        "tokens": [
+          "0x1d3d7eef805eb51b6b6cbe146e3c1f3de6f590c3",
+          "0x5c47902c8c80779cb99235e42c354e53f38c3b0d"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xdbbdd48cc6769a69ece39e9f588d51c88bac7827",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 58934.33,
+        "volume_24h_usd": 4054.52,
+        "tokens": [
+          "0xddf73eacb2218377fc38679ad14dfce51b651dd1",
+          "0x1d3d7eef805eb51b6b6cbe146e3c1f3de6f590c3"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xbff34a35680bf2c0c016f98213eba5aa723acf72",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 24568.39,
+        "volume_24h_usd": 2905.3,
+        "tokens": [
+          "0x1d3d7eef805eb51b6b6cbe146e3c1f3de6f590c3",
+          "0xf19308f923582a6f7c465e5ce7a9dc1bec6665b1"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      }
+    ],
+    "spyx": [
+      {
+        "address": "0xafdd3bdc20a31652e48b56b73952ca324f544575",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 23.04,
+        "volume_24h_usd": 2.81,
+        "tokens": [
+          "0x90a2a4c76b5d8c0bc892a69ea28aa775a8f2dd48",
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      }
+    ],
+    "kbtc": [
+      {
+        "address": "0x64869c8d4b7c5a6a2f102c9fceea7f7de846b672",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 12422160.25,
+        "volume_24h_usd": 3250371.93,
+        "tokens": [
+          "0x73e0c0d45e048d25fc26fa3159b0aa04bfa4db98",
+          "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      }
+    ],
+    "susds": [
+      {
+        "address": "0x3cef1afc0e8324b57293a6e7ce663781bbefbb79",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 108803,
+        "volume_24h_usd": 28545.73,
+        "tokens": [
+          "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+          "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xd80e75faf4cc02f6447287d5b1ef195eac19ffd9",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 807699.81,
+        "volume_24h_usd": 28113.41,
+        "tokens": [
+          "0x1db1591540d7a6062be0837ca3c808add28844f6",
+          "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xfd1627e3f3469c8392c8c3a261d8f0677586e5e1",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 11670.31,
+        "volume_24h_usd": 17186.2,
+        "tokens": [
+          "0x0655977feb2f289a4ab78af67bab0d17aab84367",
+          "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x81a2612f6dea269a6dd1f6deab45c5424ee2c4b7",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 940677.94,
+        "volume_24h_usd": 6260.72,
+        "tokens": [
+          "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+          "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x00836fe54625be242bcfa286207795405ca4fd10",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 1228.38,
+        "volume_24h_usd": 726.81,
+        "tokens": [
+          "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "0xdac17f958d2ee523a2206206994597c13d831ec7"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x36f931bb1843a76e03c01341d1d0ce5589955c75",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 35337.49,
+        "volume_24h_usd": 294.72,
+        "tokens": [
+          "0x23f3d4625aef6f0b84d50db1d53516e6015c0c9b",
+          "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      }
+    ],
+    "prl": [
+      {
+        "address": "0x1846c6cbe0d433e152fa358e5ff27968e18bce7c",
+        "kind": "weighted-v3",
+        "venue": "Balancer v3 weighted",
+        "tokens": [
+          "0x6c0aeceedc55c9d55d8b99216a670d85330941c3",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "GeckoTerminal Ethereum token pools; onchain vault and pool getters",
+        "volume_24h_usd": 0.0,
+        "discovery_liquidity_usd": 43197.4155
+      }
+    ],
+    "pmusd": [
+      {
+        "address": "0xecb0f0d68c19bdaadaebe24f6752a4db34e2c2cb",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 1467503.68,
+        "volume_24h_usd": 937.6,
+        "tokens": [
+          "0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf",
+          "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xbf5047039f2980c21eb5692c790bad8a9533b900",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 1366032.86,
+        "volume_24h_usd": 809.74,
+        "tokens": [
+          "0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf",
+          "0xcacd6fd266af91b8aed52accc382b4e165586e29"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x950e0dae8795a4365c3dcacbe398968841df2161",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 5800.02,
+        "volume_24h_usd": 26.08,
+        "tokens": [
+          "0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf",
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      }
+    ],
+    "apyusd": [
+      {
+        "address": "0xe41be7b340f7c2eda4da1e99b42ee1b228b526b7",
+        "venue": "Curve",
+        "kind": "curve",
+        "discovery_liquidity_usd": 15114073.92,
+        "volume_24h_usd": 390936.74,
+        "tokens": [
+          "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+          "0x98a878b1cd98131b271883b390f68d2c90674665"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x7413522ca4b846ff826e6d757af70a2cb4083065",
+        "venue": "pancakeswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 0,
+        "volume_24h_usd": 0,
+        "tokens": [
+          "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+          "0x98a878b1cd98131b271883b390f68d2c90674665"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x568c6092f152c6ae2e1563750a32d6f921fdfd9e73584865a2c588850e2031bd",
+        "kind": "v4",
+        "venue": "Uniswap v4",
+        "tokens": [
+          "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+          "0xdac17f958d2ee523a2206206994597c13d831ec7"
+        ],
+        "hooks": "0x0000000000000000000000000000000000000000",
+        "fee": 100,
+        "tick_spacing": 1,
+        "source": "GeckoTerminal Ethereum token pools; exact hookless PoolKey reconstructed and hash verified",
+        "volume_24h_usd": 0.0,
+        "discovery_liquidity_usd": 137123.565
+      },
+      {
+        "address": "0x6a38ff314c36cf9f7c9bf8747acf03b29694eb5f28e471310a1e9af3e1f709c2",
+        "kind": "v4",
+        "venue": "Uniswap v4",
+        "tokens": [
+          "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        ],
+        "hooks": "0x0000000000000000000000000000000000000000",
+        "fee": 15500,
+        "tick_spacing": 1,
+        "source": "GeckoTerminal Ethereum token pools; exact hookless PoolKey reconstructed and hash verified",
+        "volume_24h_usd": 0.0,
+        "discovery_liquidity_usd": 36435.7482
+      },
+      {
+        "address": "0x056c64dd943bb375083b25c8ce999944da344e46c04d10bc217d72112a87663f",
+        "kind": "v4",
+        "venue": "Uniswap v4",
+        "tokens": [
+          "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        ],
+        "hooks": "0x0000000000000000000000000000000000000000",
+        "fee": 15000,
+        "tick_spacing": 300,
+        "source": "GeckoTerminal Ethereum token pools; exact hookless PoolKey reconstructed and hash verified",
+        "volume_24h_usd": 0.0,
+        "discovery_liquidity_usd": 16632.0223
+      }
+    ],
+    "xaut": [
+      {
+        "address": "0xc756bba710d45647715079ce50aa16aab36ded42",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 5715607.81,
+        "volume_24h_usd": 1682838.83,
+        "tokens": [
+          "0x68749665ff8d2d112fa859aa293f07a622782f38",
+          "0x45804880de22913dafe09f4980848ece6ecbaf78"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xc5c7c21f4e60770ca5991a8832127a40f5236f73",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1866355.36,
+        "volume_24h_usd": 555500.91,
+        "tokens": [
+          "0x68749665ff8d2d112fa859aa293f07a622782f38",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x6546055f46e866a4b9a4a13e81273e3152bae5da",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2439257.14,
+        "volume_24h_usd": 306436.79,
+        "tokens": [
+          "0x68749665ff8d2d112fa859aa293f07a622782f38",
+          "0xdac17f958d2ee523a2206206994597c13d831ec7"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xa91f80380d9cc9c86eb98d2965a0ded9e2000791",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1268833.8,
+        "volume_24h_usd": 116895.92,
+        "tokens": [
+          "0x68749665ff8d2d112fa859aa293f07a622782f38",
+          "0xdac17f958d2ee523a2206206994597c13d831ec7"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xe8a1f39c16eea2844e98f951d711bb4bb31557ad",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 791099.77,
+        "volume_24h_usd": 87448.87,
+        "tokens": [
+          "0x68749665ff8d2d112fa859aa293f07a622782f38",
+          "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0xed7ef9a9a05a48858a507c080def0405ad1eaa3e",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2738216.1,
+        "volume_24h_usd": 34545.92,
+        "tokens": [
+          "0x68749665ff8d2d112fa859aa293f07a622782f38",
+          "0x45804880de22913dafe09f4980848ece6ecbaf78"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      }
+    ],
+    "spk": [
+      {
+        "address": "0xea6553121fc63a482b8056155afa9c7115c34e18",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 4214.44,
+        "volume_24h_usd": 5094.3,
+        "tokens": [
+          "0xc20059e0317de91738d13af027dfc4a50781b066",
+          "0x6b175474e89094c44da98b954eedeac495271d0f"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x116e5d9f2cc7be903e4a21d4d98bc404017ffa5a",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 129.26,
+        "volume_24h_usd": 5.06,
+        "tokens": [
+          "0x88888805e7e3d5c7fb002ad98f08250e79c298dc",
+          "0xc20059e0317de91738d13af027dfc4a50781b066"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      }
+    ],
+    "grove": [
+      {
+        "address": "0x0196d365448c076bec48dbf99a5575c1f081ae89a23de1fdaee1d5934c0b9699",
+        "kind": "v4",
+        "venue": "Uniswap v4",
+        "tokens": [
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "0xb30fe1cf884b48a22a50d22a9282004f2c5e9406"
+        ],
+        "hooks": "0x0000000000000000000000000000000000000000",
+        "fee": 3000,
+        "tick_spacing": 100,
+        "source": "GeckoTerminal Ethereum token pools; exact hookless PoolKey reconstructed and hash verified",
+        "volume_24h_usd": 33850.9114519127,
+        "discovery_liquidity_usd": 81030.8914
+      },
+      {
+        "address": "0x2897b6ccd757711791a90b723df4f89567568859d040ff97d25cc4a5cb93ea03",
+        "kind": "v4",
+        "venue": "Uniswap v4",
+        "tokens": [
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "0xb30fe1cf884b48a22a50d22a9282004f2c5e9406"
+        ],
+        "hooks": "0x0000000000000000000000000000000000000000",
+        "fee": 10000,
+        "tick_spacing": 200,
+        "source": "GeckoTerminal Ethereum token pools; exact hookless PoolKey reconstructed and hash verified",
+        "volume_24h_usd": 0.0,
+        "discovery_liquidity_usd": 3357.8165
+      },
+      {
+        "address": "0x9d286709a1673bd582f9ce47ee0686bc867ff704ce2c950e36d097fc94c3a4be",
+        "kind": "v4",
+        "venue": "Uniswap v4",
+        "tokens": [
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "0xb30fe1cf884b48a22a50d22a9282004f2c5e9406"
+        ],
+        "hooks": "0x0000000000000000000000000000000000000000",
+        "fee": 20000,
+        "tick_spacing": 400,
+        "source": "GeckoTerminal Ethereum token pools; exact hookless PoolKey reconstructed and hash verified",
+        "volume_24h_usd": 0.0,
+        "discovery_liquidity_usd": 341.6447
+      },
+      {
+        "address": "0x33702c8e4fb2d517d371f7eb19209c23ca55711b8540c55e1a6421faa6f12db0",
+        "kind": "v4",
+        "venue": "Uniswap v4",
+        "tokens": [
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "0xb30fe1cf884b48a22a50d22a9282004f2c5e9406"
+        ],
+        "hooks": "0x0000000000000000000000000000000000000000",
+        "fee": 50000,
+        "tick_spacing": 1000,
+        "source": "GeckoTerminal Ethereum token pools; exact hookless PoolKey reconstructed and hash verified",
+        "volume_24h_usd": 0.0,
+        "discovery_liquidity_usd": 163.8198
+      }
     ]
   },
   "survey": {
@@ -1824,7 +2505,7 @@
       "most_active_discovered_pool": {
         "address": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
         "venue": "uniswap",
-        "volume_24h_usd": 46199690.51
+        "volume_24h_usd": 55714554.54
       },
       "excluded_external_oracle_pools": []
     },
@@ -1833,7 +2514,7 @@
       "most_active_discovered_pool": {
         "address": "0x56534741cd8b152df6d48adf7ac51f75169a83b2",
         "venue": "uniswap",
-        "volume_24h_usd": 35654053.41
+        "volume_24h_usd": 49629862.9
       },
       "excluded_external_oracle_pools": [
         "0x313698667d7fdd6789a9bc70821309ff891e729a"
@@ -1844,7 +2525,7 @@
       "most_active_discovered_pool": {
         "address": "0x2b21c65d9a7dc6926ee330a1c6e5a8037fd81774f3dc066536f800128e39f634",
         "venue": "uniswap",
-        "volume_24h_usd": 57485836.61
+        "volume_24h_usd": 62476460.66
       },
       "excluded_external_oracle_pools": []
     },
@@ -1853,16 +2534,16 @@
       "most_active_discovered_pool": {
         "address": "0xa6cc3c2531fdaa6ae1a3ca84c2855806728693e8",
         "venue": "uniswap",
-        "volume_24h_usd": 1147222.08
+        "volume_24h_usd": 1367694.18
       },
       "excluded_external_oracle_pools": []
     },
     "stusds": {
-      "candidate_count": 12,
+      "candidate_count": 9,
       "most_active_discovered_pool": {
         "address": "0x2c7c98a3b1582d83c43987202aeff638312478ae",
         "venue": "curve",
-        "volume_24h_usd": 880057.97
+        "volume_24h_usd": 225759.72
       },
       "excluded_external_oracle_pools": []
     },
@@ -1871,7 +2552,7 @@
       "most_active_discovered_pool": {
         "address": "0x4674abc5796e1334b5075326b39b748bee9eaa34",
         "venue": "uniswap",
-        "volume_24h_usd": 1795312.06
+        "volume_24h_usd": 1677983.67
       },
       "excluded_external_oracle_pools": []
     },
@@ -1880,7 +2561,7 @@
       "most_active_discovered_pool": {
         "address": "0xa1bf0e900fb272089c9fd299ea14bfccb1d1c2c0",
         "venue": "uniswap",
-        "volume_24h_usd": 54746.8
+        "volume_24h_usd": 38996.13
       },
       "excluded_external_oracle_pools": []
     },
@@ -1889,7 +2570,7 @@
       "most_active_discovered_pool": {
         "address": "0xbf8fc52a30d6500e86c681f082d3524e35fb4ceb21ded8c13c6ce3968690adc6",
         "venue": "uniswap",
-        "volume_24h_usd": 5016312.57
+        "volume_24h_usd": 5080200.97
       },
       "excluded_external_oracle_pools": [
         "0x862cb4e988fb66e72f128d1183829f8c05b6c6a0"
@@ -1900,7 +2581,7 @@
       "most_active_discovered_pool": {
         "address": "0x927cde5478886598e354768eec9d4e9238a08cc24f87f1438a2b42cf1bdca748",
         "venue": "uniswap",
-        "volume_24h_usd": 3827.96
+        "volume_24h_usd": 5235.68
       },
       "excluded_external_oracle_pools": []
     },
@@ -1909,7 +2590,7 @@
       "most_active_discovered_pool": {
         "address": "0xfbb81382cce6b9ce58f8645353f70d9db1bb69af",
         "venue": "uniswap",
-        "volume_24h_usd": 18943.12
+        "volume_24h_usd": 20608.92
       },
       "excluded_external_oracle_pools": []
     },
@@ -1918,16 +2599,16 @@
       "most_active_discovered_pool": {
         "address": "0x4ebdf703948ddcea3b11f675b4d1fba9d2414a14-0xf939e0a03fb07f59a73314e73794be0e57ac1b4e-0xd533a949740bb3306d119cc777fa900ba034cd52",
         "venue": "curve",
-        "volume_24h_usd": 314522.36
+        "volume_24h_usd": 323435.08
       },
       "excluded_external_oracle_pools": []
     },
     "cvx": {
-      "candidate_count": 15,
+      "candidate_count": 14,
       "most_active_discovered_pool": {
         "address": "0xb576491f1e6e5e62f1d8f26062ee822b40b0e0d4",
         "venue": "curve",
-        "volume_24h_usd": 166546.9
+        "volume_24h_usd": 130246.92
       },
       "excluded_external_oracle_pools": []
     },
@@ -1936,7 +2617,7 @@
       "most_active_discovered_pool": {
         "address": "0x55d5c232d921b9eaa6b37b5845e439acd04b4dba",
         "venue": "uniswap",
-        "volume_24h_usd": 29060.63
+        "volume_24h_usd": 29908.95
       },
       "excluded_external_oracle_pools": []
     },
@@ -1945,7 +2626,7 @@
       "most_active_discovered_pool": {
         "address": "0xa3f558aebaecaf0e11ca4b2199cc5ed341edfd74",
         "venue": "uniswap",
-        "volume_24h_usd": 137911.02
+        "volume_24h_usd": 142470.93
       },
       "excluded_external_oracle_pools": []
     },
@@ -1954,16 +2635,16 @@
       "most_active_discovered_pool": {
         "address": "0x06cd6245156c3608ae67d690c125e86a8bc6a88c",
         "venue": "uniswap",
-        "volume_24h_usd": 2514.8
+        "volume_24h_usd": 3183.92
       },
       "excluded_external_oracle_pools": []
     },
     "ondo": {
-      "candidate_count": 21,
+      "candidate_count": 20,
       "most_active_discovered_pool": {
         "address": "0x8d37caecae9c5aa116f29269728253a494cc2947",
         "venue": "metric",
-        "volume_24h_usd": 1315415.31
+        "volume_24h_usd": 1316589.23
       },
       "excluded_external_oracle_pools": []
     },
@@ -1972,34 +2653,34 @@
       "most_active_discovered_pool": {
         "address": "0xc756bba710d45647715079ce50aa16aab36ded42",
         "venue": "uniswap",
-        "volume_24h_usd": 1741880.05
+        "volume_24h_usd": 1682838.83
       },
       "excluded_external_oracle_pools": []
     },
     "pendle": {
-      "candidate_count": 18,
+      "candidate_count": 17,
       "most_active_discovered_pool": {
         "address": "0x57af956d3e2cca3b86f3d8c6772c03ddca3eaacb",
         "venue": "uniswap",
-        "volume_24h_usd": 94575.08
+        "volume_24h_usd": 104615.79
       },
       "excluded_external_oracle_pools": []
     },
     "qnt": {
-      "candidate_count": 12,
+      "candidate_count": 10,
       "most_active_discovered_pool": {
         "address": "0x8a6f55e8dab9cc15f6e1b9b1c33b4b999784e60e",
         "venue": "metric",
-        "volume_24h_usd": 1692585.04
+        "volume_24h_usd": 1788888.33
       },
       "excluded_external_oracle_pools": []
     },
     "rail": {
       "candidate_count": 8,
       "most_active_discovered_pool": {
-        "address": "0xac86903cdda380f20a06cc8a2dea7749f1558c68",
+        "address": "0x2837809fd68e4a4104af76bbec5b622b6146b2cb",
         "venue": "uniswap",
-        "volume_24h_usd": 32873.92
+        "volume_24h_usd": 55492.61
       },
       "excluded_external_oracle_pools": []
     },
@@ -2008,7 +2689,7 @@
       "most_active_discovered_pool": {
         "address": "0x68e78497a7b0db7718ccc833c164a18d8e626816",
         "venue": "uniswap",
-        "volume_24h_usd": 4707.75
+        "volume_24h_usd": 4120.47
       },
       "excluded_external_oracle_pools": []
     },
@@ -2017,35 +2698,31 @@
       "most_active_discovered_pool": {
         "address": "0xcf6daab95c476106eca715d48de4b13287ffdeaa",
         "venue": "shibaswap",
-        "volume_24h_usd": 35311.05
+        "volume_24h_usd": 38896.36
       },
       "excluded_external_oracle_pools": []
     },
     "sky": {
-      "candidate_count": 25,
+      "candidate_count": 23,
       "most_active_discovered_pool": {
         "address": "0x2621cc0b3f3c079c1db0e80794aa24976f0b9e3c",
         "venue": "uniswap",
-        "volume_24h_usd": 2481976.89
+        "volume_24h_usd": 2019009.55
       },
       "excluded_external_oracle_pools": []
     },
     "slvx": {
-      "candidate_count": 1,
-      "largest_discovered_pool": {
-        "address": "0x68f7fa3802d629b1e64e37dd9818c69d0f669a24d870e78c0a87141aeab712c9",
-        "venue": "uniswap-v4",
-        "liquidity_usd": "114.88"
-      },
-      "source": "GeckoTerminal Ethereum token pools supplemental discovery",
-      "unavailable_reason": "Only unsupported Uniswap v4 pool found"
+      "candidate_count": 0,
+      "most_active_discovered_pool": null,
+      "excluded_external_oracle_pools": [],
+      "supplemental_source": "GeckoTerminal Ethereum token pools"
     },
     "sushi": {
       "candidate_count": 19,
       "most_active_discovered_pool": {
         "address": "0x87c7056bbe6084f03304196be51c6b90b6d85aa2",
         "venue": "sushiswap",
-        "volume_24h_usd": 12374.95
+        "volume_24h_usd": 15131.42
       },
       "excluded_external_oracle_pools": []
     },
@@ -2054,7 +2731,7 @@
       "most_active_discovered_pool": {
         "address": "0xb7ecb2aa52aa64a717180e030241bc75cd946726",
         "venue": "curve",
-        "volume_24h_usd": 1304799.42
+        "volume_24h_usd": 1728742.45
       },
       "excluded_external_oracle_pools": [
         "0x4f52c3a81e33521e5a9a47fd9d3be475d2279c2e"
@@ -2065,7 +2742,7 @@
       "most_active_discovered_pool": {
         "address": "0xfaa318479b7755b2dbfdd34dc306cb28b420ad12",
         "venue": "uniswap",
-        "volume_24h_usd": 2068258.44
+        "volume_24h_usd": 2204773.32
       },
       "excluded_external_oracle_pools": []
     },
@@ -2074,7 +2751,7 @@
       "most_active_discovered_pool": {
         "address": "0xc5b89e2b3280c464b790b2bcabb6013e4636581b45db76d0b4580df04b2619c0",
         "venue": "uniswap",
-        "volume_24h_usd": 113.64
+        "volume_24h_usd": 112.05
       },
       "excluded_external_oracle_pools": []
     },
@@ -2083,7 +2760,7 @@
       "most_active_discovered_pool": {
         "address": "0xaa75ef32980beb40b449dd7c9d1dce046a1d293702111af02f112b68564dee64",
         "venue": "uniswap",
-        "volume_24h_usd": 3823.56
+        "volume_24h_usd": 4063.6
       },
       "excluded_external_oracle_pools": []
     },
@@ -2092,16 +2769,43 @@
       "most_active_discovered_pool": {
         "address": "0x464bd7e6718a815c20a5ad529003d7a93a9676b3",
         "venue": "uniswap",
-        "volume_24h_usd": 9964.52
+        "volume_24h_usd": 12329.69
       },
       "excluded_external_oracle_pools": []
     },
     "yfi": {
-      "candidate_count": 13,
+      "candidate_count": 12,
       "most_active_discovered_pool": {
         "address": "0xc26b89a667578ec7b3f11b2f98d6fd15c07c54ba",
         "venue": "curve",
-        "volume_24h_usd": 21411.78
+        "volume_24h_usd": 31655.25
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "hyper": {
+      "candidate_count": 3,
+      "most_active_discovered_pool": {
+        "address": "0x96d26bd94618b3c7648574ae778e942abbcda698",
+        "venue": "uniswap",
+        "volume_24h_usd": 185120.52
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "ethfi": {
+      "candidate_count": 9,
+      "most_active_discovered_pool": {
+        "address": "0x553f5e94603f1fcdaa08eb22499d59e4a39e2f8d071c3c6946c27e5e38754ffc",
+        "venue": "uniswap",
+        "volume_24h_usd": 288572.38
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "morpho": {
+      "candidate_count": 10,
+      "most_active_discovered_pool": {
+        "address": "0xe28c18965ab110e9db39242566a754b7abbc425e",
+        "venue": "metric",
+        "volume_24h_usd": 28732.48
       },
       "excluded_external_oracle_pools": []
     },
@@ -2110,11 +2814,140 @@
       "most_active_discovered_pool": {
         "address": "0x0112df46117acf06ac4cfff94a0c250f2bbe0cfe4c83a69815eed28536d5f428",
         "venue": "uniswap",
-        "volume_24h_usd": 215452.64
+        "volume_24h_usd": 220254.09
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "solx": {
+      "candidate_count": 3,
+      "most_active_discovered_pool": {
+        "address": "0x7e75b6876a9fee811ec67b55385ba5a1491d11f3",
+        "venue": "uniswap",
+        "volume_24h_usd": 4209.15
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "woo": {
+      "candidate_count": 4,
+      "most_active_discovered_pool": {
+        "address": "0x8ff6c1e698799b6cdc4e556f18ce6f2f0bd24e9f607d2266207aa2be8640760d",
+        "venue": "uniswap",
+        "volume_24h_usd": 12359.08
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "fxusd": {
+      "candidate_count": 15,
+      "most_active_discovered_pool": {
+        "address": "0x5018be882dcce5e3f2f3b0913ae2096b9b3fb61f",
+        "venue": "curve",
+        "volume_24h_usd": 9479333.72
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "horizon": {
+      "candidate_count": 5,
+      "most_active_discovered_pool": {
+        "address": "0x171341533191f09a2535601da5ce5def5f13ac6b",
+        "venue": "uniswap",
+        "volume_24h_usd": 5964.81
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "spyx": {
+      "candidate_count": 1,
+      "most_active_discovered_pool": {
+        "address": "0xafdd3bdc20a31652e48b56b73952ca324f544575",
+        "venue": "uniswap",
+        "volume_24h_usd": 2.81
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "kbtc": {
+      "candidate_count": 2,
+      "most_active_discovered_pool": {
+        "address": "0x64869c8d4b7c5a6a2f102c9fceea7f7de846b672",
+        "venue": "uniswap",
+        "volume_24h_usd": 3250371.93
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "susds": {
+      "candidate_count": 13,
+      "most_active_discovered_pool": {
+        "address": "0x3cef1afc0e8324b57293a6e7ce663781bbefbb79",
+        "venue": "curve",
+        "volume_24h_usd": 28545.73
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "prl": {
+      "candidate_count": 0,
+      "most_active_discovered_pool": null,
+      "excluded_external_oracle_pools": [],
+      "supplemental_source": "GeckoTerminal Ethereum token pools"
+    },
+    "pmusd": {
+      "candidate_count": 3,
+      "most_active_discovered_pool": {
+        "address": "0xecb0f0d68c19bdaadaebe24f6752a4db34e2c2cb",
+        "venue": "curve",
+        "volume_24h_usd": 937.6
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "apyusd": {
+      "candidate_count": 5,
+      "most_active_discovered_pool": {
+        "address": "0xe41be7b340f7c2eda4da1e99b42ee1b228b526b7",
+        "venue": "curve",
+        "volume_24h_usd": 390936.74
       },
       "excluded_external_oracle_pools": [],
-      "observed_at": "2026-11-27T15:15:09.958842+00:00"
+      "supplemental_source": "GeckoTerminal Ethereum token pools"
+    },
+    "xaut": {
+      "candidate_count": 30,
+      "most_active_discovered_pool": {
+        "address": "0xc756bba710d45647715079ce50aa16aab36ded42",
+        "venue": "uniswap",
+        "volume_24h_usd": 1682838.83
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "spk": {
+      "candidate_count": 9,
+      "most_active_discovered_pool": {
+        "address": "0xda43487bb19a0e66e64a06ca178c42b420a2ae7656b1ab81bc549e5306ca7d35",
+        "venue": "uniswap",
+        "volume_24h_usd": 10232.93
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "grove": {
+      "candidate_count": 4,
+      "most_active_discovered_pool": {
+        "address": "0x0196d365448c076bec48dbf99a5575c1f081ae89a23de1fdaee1d5934c0b9699",
+        "venue": "uniswap",
+        "volume_24h_usd": 33104.08
+      },
+      "excluded_external_oracle_pools": [],
+      "supplemental_source": "GeckoTerminal Ethereum token pools"
     }
   },
-  "selection_updated_at": "2026-11-27T13:05:56.529425+00:00"
+  "quote_references": [
+    {
+      "address": "0x9f2d9491277a9f2551c1f7533c1789aa6023bba0c5e9397e8a019cac5c10fe7f",
+      "kind": "v4",
+      "tokens": [
+        "0x98a878b1cd98131b271883b390f68d2c90674665",
+        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      ],
+      "hooks": "0x0000000000000000000000000000000000000000",
+      "fee": 500,
+      "tick_spacing": 10,
+      "base_token": "0x98a878b1cd98131b271883b390f68d2c90674665",
+      "source": "GeckoTerminal Ethereum pool; exact hookless PoolKey verified"
+    }
+  ]
 }

@@ -29,7 +29,6 @@ def schedule_state(schedule, now, *, authorized=True, effective_start=None, curr
         result['status']='invalid_schedule';return result
     if start==0 and effective_start is None:return result
     width=span or interval
-    end=start+(n-1)*interval+width
     # GPv2 validTo is uint32 even if a parent advertises more future parts.
     last_usable=min(n-1,(MAX_VALID_TO-start-width+1)//interval)
     eligible=max(0,last_usable+1)
@@ -71,7 +70,7 @@ def decode_created(log):
     if sell==buy or int(sell,16)==0 or int(buy,16)==0 or sell==NATIVE:raise ValueError('invalid_twap_tokens')
     if not (number(3)>0 and number(4)>0 and number(5)<MAX_VALID_TO and 1<number(6)<=MAX_VALID_TO and 0<number(7)<=365*86400 and number(8)<=number(7)):raise ValueError('invalid_twap_parameters')
     owner='0x'+log['topics'][1][-40:];digest='0x'+keccak256(raw).hex()
-    return {'id':owner+':'+digest,'owner':owner,'schedule_hash':digest,'handler':handler,'sell_token':address(0),'buy_token':address(1),'receiver':address(2),'part_sell_atoms':str(number(3)),'min_buy_atoms':str(number(4)),'start_time':number(5),'total_parts':number(6),'interval_seconds':number(7),'span_seconds':number(8),'creation_tx':log['transactionHash'],'creation_block':int(log['blockNumber'],16),'event_index':int(log['logIndex'],16),'_app_data':'0x'+words[9].hex(),'_event_data':log['data']}
+    return {'id':owner+':'+digest,'owner':owner,'schedule_hash':digest,'handler':handler,'sell_token':address(0),'buy_token':address(1),'receiver':address(2),'part_sell_atoms':str(number(3)),'min_buy_atoms':str(number(4)),'start_time':number(5),'total_parts':number(6),'interval_seconds':number(7),'span_seconds':number(8),'creation_tx':log['transactionHash'],'creation_block':int(log['blockNumber'],16),'event_index':int(log['logIndex'],16),'_app_data':'0x'+words[9].hex()}
 
 
 def decode_api_parent(record):

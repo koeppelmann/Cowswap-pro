@@ -118,3 +118,20 @@ quote budgets normalized to USDC; sells use allocated base inventory at the CoW
 reference price. This avoids treating extreme signed limits as available dollar
 liquidity. TWAP counts remain separate. Search accepts token labels or addresses;
 ranking can switch to order count, TWAP count or alphabetical order.
+
+AMM coverage includes surveyed v2/v3, Curve, hookless static-fee Uniswap v4
+(with directional protocol fees), and hook-free Balancer v3 weighted pools with
+STANDARD tokens. V4 pool IDs must match the configured PoolKey hash. V4 inventory
+is active virtual reserves, not total deposits. An unpriced base token can use
+the verified pool spot for inventory valuation without inventing a CoW reference.
+apyUSD quotes use same-block apxUSD/USDC pool spot normalization.
+
+Verify all currently listed assets against a proposed catalog (configured `RPC_ETH`):
+
+```sh
+python audit_amm.py --snapshot .cache/public/dfusion-eth-book.json --catalog amm-catalog.json --output /tmp/dfusion-amm-coverage.json
+```
+
+The audit writes the coverage report once, retains hashed RPC evidence, and exits
+nonzero for missing markers. Candidate discovery is public; marker state and fees
+are verified on our node at the snapshot block.
