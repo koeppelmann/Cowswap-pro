@@ -1778,6 +1778,44 @@
         ],
         "source": "Dexscreener token-pairs Ethereum"
       }
+    ],
+    "lit": [
+      {
+        "address": "0xcd4abaf39691dcbb877165b7ba6d04ec6436c22a",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 315745.67,
+        "volume_24h_usd": 124888.42,
+        "tokens": [
+          "0x232ce3bd40fcd6f80f3d55a522d03f25df784ee2",
+          "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x25d47a28c0274a5609df6cf8d32728670e0c3bdd",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1461.63,
+        "volume_24h_usd": 186.78,
+        "tokens": [
+          "0x232ce3bd40fcd6f80f3d55a522d03f25df784ee2",
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      },
+      {
+        "address": "0x1a080ba7156834fe1ae264e5341ae5ce1a53d50c",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 129.72,
+        "volume_24h_usd": 1.72,
+        "tokens": [
+          "0x88888805e7e3d5c7fb002ad98f08250e79c298dc",
+          "0x232ce3bd40fcd6f80f3d55a522d03f25df784ee2"
+        ],
+        "source": "Dexscreener token-pairs Ethereum"
+      }
     ]
   },
   "survey": {
@@ -2066,6 +2104,16 @@
         "volume_24h_usd": 21411.78
       },
       "excluded_external_oracle_pools": []
+    },
+    "lit": {
+      "candidate_count": 13,
+      "most_active_discovered_pool": {
+        "address": "0x0112df46117acf06ac4cfff94a0c250f2bbe0cfe4c83a69815eed28536d5f428",
+        "venue": "uniswap",
+        "volume_24h_usd": 215452.64
+      },
+      "excluded_external_oracle_pools": [],
+      "observed_at": "2026-11-27T15:15:09.958842+00:00"
     }
   },
   "selection_updated_at": "2026-11-27T13:05:56.529425+00:00"

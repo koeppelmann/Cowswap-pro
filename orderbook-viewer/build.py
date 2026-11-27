@@ -62,14 +62,14 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None):
         if family:p['conversions']=details
         pairs.append(p)
     assert pairs and pairs[0]['id']=='eth'
+    stable_tokens=set(json.loads((Path(__file__).parent/'config-catalog.json').read_bytes())['stable_tokens'])
+    twap_coverage=attach_schedules(pairs,twaps,metadata,prices,stable_tokens,rates,lambda base,family:mode([],base,family))
     try:
         markers=collect_markers(metadata,prices,pairs,state['reference_state']['block_number'],state['block_hash'],work/'amm')
     except Exception:
         markers={}
     for pair in pairs:
         pair['amm_marker']=markers.get(pair['id'],{'status':'unavailable','reason':'AMM snapshot unavailable','block':state['reference_state']['block_number'],'block_hash':state['block_hash']})
-    stable_tokens=set(json.loads((Path(__file__).parent/'config-catalog.json').read_bytes())['stable_tokens'])
-    twap_coverage=attach_schedules(pairs,twaps,metadata,prices,stable_tokens,rates,lambda base,family:mode([],base,family))
     ref=state['reference_state'];assert -60<=time.time()-ref['timestamp']<=900
     evidence=dict(auction_id=state['auction_id'],block=ref['block_number'],block_hash=state['block_hash'],source_sha256=digest(source_dir/'sanitized-orders.json'),funding_sha256=digest(funding_dir/'funding-state.json'),conversions_sha256=digest(funding_dir/'eth-conversions.json'))
     return dict(schema='dfusion_live_depth_v1',auction_id=state['auction_id'],block=ref['block_number'],block_hash=state['block_hash'],as_of_timestamp=ref['timestamp'],native_eth=ETH,metadata=metadata,verified_limit_orders=len(orders),classification_excluded=sum(source.get('classification_summary',{}).get('excluded_candidates',{}).values()),pairs=pairs,twap_coverage=twap_coverage,modes=pairs[0]['modes'],scope='Live cached auction limits; canonical same-block wallet/approval budgets allocated once per view. Hook-conditional funding excluded. ETH conversion provenance in asset details. TWAP overlays are scheduled flow, not funded executable depth. No full settlement guarantee.',snapshot_evidence=evidence,generated_at=time.time(),refresh_seconds=300)
