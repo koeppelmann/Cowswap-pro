@@ -1,0 +1,2864 @@
+{
+  "discovered_at": "2026-11-27T20:59:19.395944+00:00",
+  "selection": "Up to six supported address-based pools per token by surveyed 24h volume. Verify live state; rank by surveyed activity, live spread then inventories. Known external-oracle delivery pools excluded. slot0-bearing concentrated-liquidity pools (Uniswap v3, Aerodrome Slipstream, Pancake v3) map to the v3 path. A supplemental discovery may add coverage provenance.",
+  "pairs": {
+    "mog": [
+      {
+        "address": "0xc5c5f65927a4011864fcb261d7499267e101118f",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2164.18,
+        "volume_24h_usd": 398.04,
+        "tokens": [
+          "0x2da56acb9ea78330f947bd57c54119debda7af71",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xa6d44d25f22115e7b88646c5acaf0370753eb1e9",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 27871.17,
+        "volume_24h_usd": 183.45,
+        "tokens": [
+          "0x2da56acb9ea78330f947bd57c54119debda7af71",
+          "0x50da645f148798f68ef2d7db7c1cb22a6819bb2c"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xe0762ad040bb6f8b22ec4a20fd1a1c7e74c6ac6e",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 560.67,
+        "volume_24h_usd": 20.23,
+        "tokens": [
+          "0x2da56acb9ea78330f947bd57c54119debda7af71",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x208d5c6f0ca82a0d210368eee3dba5ac6c9b85fe",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 58.81,
+        "volume_24h_usd": 11.21,
+        "tokens": [
+          "0x0a14ef61afb32e5ca672e021784f71705ac14908",
+          "0x2da56acb9ea78330f947bd57c54119debda7af71"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x2f471ae86d35ffbd9bf9c87eef97a89dbf157d8a",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 49.15,
+        "volume_24h_usd": 0.47,
+        "tokens": [
+          "0x2da56acb9ea78330f947bd57c54119debda7af71",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x3cae00a395684a86f3d488404597cbdb7e684e2b",
+        "venue": "0xE82Fa4d4Ff25bad8B07c4d1ebd50e83180DD5eB8 v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2.6,
+        "volume_24h_usd": 0.05,
+        "tokens": [
+          "0x2da56acb9ea78330f947bd57c54119debda7af71",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "surplus": [
+      {
+        "address": "0xbcf23f30a90f6d7c288facdc932ff8f8b68b0f30",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 50955.56,
+        "volume_24h_usd": 87827.08,
+        "tokens": [
+          "0xc52aedec3374422d7510e294cfaa90799595cba3",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xbe581ad823cff18f91fd8b1d22131f45b8fd1622",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 9.91,
+        "volume_24h_usd": 1.7,
+        "tokens": [
+          "0xc52aedec3374422d7510e294cfaa90799595cba3",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xf4601f1a9df7aa9136af5d73e825866680f671a9",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 82.47,
+        "volume_24h_usd": 0.71,
+        "tokens": [
+          "0xc52aedec3374422d7510e294cfaa90799595cba3",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "ratspeak": [],
+    "brett": [
+      {
+        "address": "0xfa9c1d85b8a9879b2cfe0153e9d25aecaf6e6e2f",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 24717.23,
+        "volume_24h_usd": 21234.48,
+        "tokens": [
+          "0x532f27101965dd16442e59d40670faf5ebb142e4",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x4e829f8a5213c42535ab84aa40bd4adcce9cba02",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 477506.32,
+        "volume_24h_usd": 10805.04,
+        "tokens": [
+          "0x532f27101965dd16442e59d40670faf5ebb142e4",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x76bf0abd20f1e0155ce40a62615a90a709a6c3d8",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 68382.68,
+        "volume_24h_usd": 4610.86,
+        "tokens": [
+          "0x532f27101965dd16442e59d40670faf5ebb142e4",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xba3f945812a83471d709bce9c3ca699a19fb46f7",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 767615.78,
+        "volume_24h_usd": 927.54,
+        "tokens": [
+          "0x532f27101965dd16442e59d40670faf5ebb142e4",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xb34380ba6a17b022782c7fc91e319c10c168fb98",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 464.83,
+        "volume_24h_usd": 28.63,
+        "tokens": [
+          "0x532f27101965dd16442e59d40670faf5ebb142e4",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x36a46dff597c5a444bbc521d26787f57867d2214",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1268.15,
+        "volume_24h_usd": 15.96,
+        "tokens": [
+          "0x532f27101965dd16442e59d40670faf5ebb142e4",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "rush": [],
+    "0xerik": [],
+    "weth": [
+      {
+        "address": "0x4a7af46bc8abc00048c6c7920a1488daf568366c",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 9191302.42,
+        "volume_24h_usd": 82159553.12,
+        "tokens": [
+          "0x4200000000000000000000000000000000000006",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x6c561b446416e1a00e8e93e221854d6ea4171372",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 95100731.83,
+        "volume_24h_usd": 81358653.2,
+        "tokens": [
+          "0x4200000000000000000000000000000000000006",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x72ab388e2e2f6facef59e3c3fa2c4e29011c2d38",
+        "venue": "PancakeSwap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2951065.91,
+        "volume_24h_usd": 26020875.68,
+        "tokens": [
+          "0x4200000000000000000000000000000000000006",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xd0b53d9277642d899df5c87a3966a349a798f224",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 7050816.78,
+        "volume_24h_usd": 20256492.67,
+        "tokens": [
+          "0x4200000000000000000000000000000000000006",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xb4cb800910b228ed3d0834cf79d697127bbb00e5",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 596236.75,
+        "volume_24h_usd": 11594214.18,
+        "tokens": [
+          "0x4200000000000000000000000000000000000006",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x2a430bebd2082d8e05d56d64dede8944279bbc24",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1162121.02,
+        "volume_24h_usd": 8383893.4,
+        "tokens": [
+          "0x4200000000000000000000000000000000000006",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "cbbtc": [
+      {
+        "address": "0xec3c3755b9ded4a2960ef50c9b48c1694ce274c2",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 4976996.35,
+        "volume_24h_usd": 169804719.94,
+        "tokens": [
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x7aea2e8a3843516afa07293a10ac8e49906dabd1",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 22738262.04,
+        "volume_24h_usd": 61012475.7,
+        "tokens": [
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x42609aa1e58c5dd7e5a012dc74118fff975f0eac",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 4960361.48,
+        "volume_24h_usd": 41858155.46,
+        "tokens": [
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xc211e1f853a898bd1302385ccde55f33a8c4b3f3",
+        "venue": "PancakeSwap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 4020467.31,
+        "volume_24h_usd": 40097784.76,
+        "tokens": [
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xbb5507daae822ba89c4da61bbfdf4b49a1666bac",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 4048956.33,
+        "volume_24h_usd": 17843450.45,
+        "tokens": [
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x784e539f15ca2d19449a6311c5dab6cf37d8f1ba",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 5181458.97,
+        "volume_24h_usd": 17219052.94,
+        "tokens": [
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "vpay": [
+      {
+        "address": "0xdeb75b16307e4c3ddb6f6731c303e15cc16a8e82",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 36793.85,
+        "volume_24h_usd": 221.88,
+        "tokens": [
+          "0x98ac5b33a4ef1151f138941c979211599c2ff953",
+          "0x0b3e328455c4059eeb9e3f84b5543f74e24e7e1b"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "flies": [
+      {
+        "address": "0xb87d3cb5e3fafecd35b7c63e7c74441d8151dfb4",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 3884.07,
+        "volume_24h_usd": 40.3,
+        "tokens": [
+          "0x8b67f2e56139ca052a7ec49cbcd1aa9c83f2752a",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "nock": [
+      {
+        "address": "0x71a4a6f6ea5c26ce486b7ed0d8723a897ef5ad9a",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 7195.06,
+        "volume_24h_usd": 965.22,
+        "tokens": [
+          "0x9b5e262cf9bb04869ab40b19af91d2dc85761722",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x957256c98d61a714081de2ee70ae3a96c9b40874",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1922.67,
+        "volume_24h_usd": 575.33,
+        "tokens": [
+          "0x9b5e262cf9bb04869ab40b19af91d2dc85761722",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "birb": [],
+    "spectra": [
+      {
+        "address": "0xf702a670851d5f7ba86aec2bfb07a338fb17cd2d",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2008.96,
+        "volume_24h_usd": 9.51,
+        "tokens": [
+          "0x64fcc3a02eeeba05ef701b7eed066c6ebd5d4e51",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "rei": [
+      {
+        "address": "0x8ea1727d4ede95a7eb006a97aa315f122fe0af5b",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 946196.69,
+        "volume_24h_usd": 192583.78,
+        "tokens": [
+          "0x6b2504a03ca4d43d0d73776f6ad46dab2f2a4cfd",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xa213c82265cd3d94f972f735a4f5130e34df81bc",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 82595.27,
+        "volume_24h_usd": 14274.19,
+        "tokens": [
+          "0x6b2504a03ca4d43d0d73776f6ad46dab2f2a4cfd",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x34e3334e845d101205394e0bd8821fddc7cd5559",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2807.18,
+        "volume_24h_usd": 68.06,
+        "tokens": [
+          "0x6b2504a03ca4d43d0d73776f6ad46dab2f2a4cfd",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x54cdd0222df6b3bc17754c2c1b3d7d4203fe3d89",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1147.95,
+        "volume_24h_usd": 3.88,
+        "tokens": [
+          "0x6b2504a03ca4d43d0d73776f6ad46dab2f2a4cfd",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x4b087223bc28cdcb8a19e4184b08224762d0d5c0",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 878.17,
+        "volume_24h_usd": 0.74,
+        "tokens": [
+          "0x6b2504a03ca4d43d0d73776f6ad46dab2f2a4cfd",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "cbzec": [
+      {
+        "address": "0xe7030be388b8e247abe0c9fa876673e83fbcbd3c",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 735354.5,
+        "volume_24h_usd": 2670793.91,
+        "tokens": [
+          "0xb2000000000000000000008501b13360000cb2ec",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x00278697f1264852ef465b6cac9183639db22aa7",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 325228.17,
+        "volume_24h_usd": 199934.54,
+        "tokens": [
+          "0xb2000000000000000000008501b13360000cb2ec",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x824ed9d2f9ca65636eba5a89d3bc3c9fe7cc3f9a",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 100441.67,
+        "volume_24h_usd": 43571.45,
+        "tokens": [
+          "0xb2000000000000000000008501b13360000cb2ec",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x0fc47c17af86078d809358db1b4db2debc988566",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 32134.79,
+        "volume_24h_usd": 251.01,
+        "tokens": [
+          "0xb2000000000000000000008501b13360000cb2ec",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xf981555b33900fe4ed744fb52f9e675aaacd344e",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 721.99,
+        "volume_24h_usd": 21.44,
+        "tokens": [
+          "0x328f20857c19cc72b5aed37b301c129fc2cd8f0a",
+          "0xb2000000000000000000008501b13360000cb2ec"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x7117f379a613cfa7ccbe3225b57af3ed2d498825",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 590.28,
+        "volume_24h_usd": 18.9,
+        "tokens": [
+          "0xc3de830ea07524a0761646a6a4e4be0e114a3c83",
+          "0xb2000000000000000000008501b13360000cb2ec"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "vvv": [
+      {
+        "address": "0xdebaebe5b2729f7d62072b2ea40472d78d2c1626",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2556863.59,
+        "volume_24h_usd": 4453395.61,
+        "tokens": [
+          "0xacfe6019ed1a7dc6f7b508c02d1b04ec88cc21bf",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xc5de7f0514e7531dea5d71a30597c4cf131f533a",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 454823.27,
+        "volume_24h_usd": 2216818.7,
+        "tokens": [
+          "0xacfe6019ed1a7dc6f7b508c02d1b04ec88cc21bf",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x67a11022b7b6ed66f81233f6c8ed6e48f7826530",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1101724.98,
+        "volume_24h_usd": 1247704.35,
+        "tokens": [
+          "0xacfe6019ed1a7dc6f7b508c02d1b04ec88cc21bf",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x7ec6c9d993d9832aa654593f2dbc21303650bc6c",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 321696.91,
+        "volume_24h_usd": 539278.55,
+        "tokens": [
+          "0xacfe6019ed1a7dc6f7b508c02d1b04ec88cc21bf",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x1d2bdb7117a5a7d7fe4c1d95681a92e4df13bb69",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1022867.47,
+        "volume_24h_usd": 372098.04,
+        "tokens": [
+          "0xacfe6019ed1a7dc6f7b508c02d1b04ec88cc21bf",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x9f11c9e86ef74dd8bc6b3eefa9ff20a96b7f3ffe",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 198089.69,
+        "volume_24h_usd": 149436.42,
+        "tokens": [
+          "0xacfe6019ed1a7dc6f7b508c02d1b04ec88cc21bf",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "pod": [
+      {
+        "address": "0xc4d5e62261648a3ceb127924f741c0929f040f13",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 33599.29,
+        "volume_24h_usd": 30606.39,
+        "tokens": [
+          "0xed664536023d8e4b1640c394777d34abaff1df8f",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xafb8cd4afd7d9a086cb2faf3c5f467643978d1ed",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1997.14,
+        "volume_24h_usd": 5112.71,
+        "tokens": [
+          "0xed664536023d8e4b1640c394777d34abaff1df8f",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x68013974c830f22d9752aaf69eba79baa121db22",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1916.5,
+        "volume_24h_usd": 20.58,
+        "tokens": [
+          "0xed664536023d8e4b1640c394777d34abaff1df8f",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x48c5d4a6677ed59646a9c6465db2562be4a20aec",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 18971.39,
+        "volume_24h_usd": 18.29,
+        "tokens": [
+          "0xed664536023d8e4b1640c394777d34abaff1df8f",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xb8f457cb1dd5f2d0f15d48faa18123a3ea75ecf0",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 10.76,
+        "volume_24h_usd": 0.15,
+        "tokens": [
+          "0xf11d5ad2d7a8261e72e549ed0971c5207c049bc6",
+          "0xed664536023d8e4b1640c394777d34abaff1df8f"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xa107da2fe1e8e745b0c08b44d66b37d217f6c8f6",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 8.32,
+        "volume_24h_usd": 0.08,
+        "tokens": [
+          "0xed664536023d8e4b1640c394777d34abaff1df8f",
+          "0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "st": [
+      {
+        "address": "0x01e15e0b744b6d875c5081ae92f620f8223d6800",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 91931.36,
+        "volume_24h_usd": 464.71,
+        "tokens": [
+          "0x214419f6fdd2b23bf6a32f33cf95186d188b784b",
+          "0x0b3e328455c4059eeb9e3f84b5543f74e24e7e1b"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "hno": [
+      {
+        "address": "0xc9a4e1101c517b496009465797b91114619dcc3f",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 4648.69,
+        "volume_24h_usd": 772.8,
+        "tokens": [
+          "0xc60e167e52ce50a46d7cd57c65e180115c012c43",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "wire": [
+      {
+        "address": "0x8ffd336d457ada04a2d5112f8f0c1f1a84577f2f",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 117606.65,
+        "volume_24h_usd": 13350.38,
+        "tokens": [
+          "0x0b3ae50babe7ffa4e1a50569cee6bdefd4ccaee0",
+          "0x0b3e328455c4059eeb9e3f84b5543f74e24e7e1b"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "lilpepe": [],
+    "tibbir": [
+      {
+        "address": "0x361fe0318ac98f15720021cb8924b727c3e57d6f",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 67519.92,
+        "volume_24h_usd": 114830.7,
+        "tokens": [
+          "0xa4a2e2ca3fbfe21aed83471d28b6f65a233c6e00",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x0f664affb82f074937d5cfcd61b97f3f32d5dc50",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 95267.85,
+        "volume_24h_usd": 80938.35,
+        "tokens": [
+          "0xa4a2e2ca3fbfe21aed83471d28b6f65a233c6e00",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x0c3b466104545efa096b8f944c1e524e1d0d4888",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 1813665.69,
+        "volume_24h_usd": 60828.33,
+        "tokens": [
+          "0xa4a2e2ca3fbfe21aed83471d28b6f65a233c6e00",
+          "0x0b3e328455c4059eeb9e3f84b5543f74e24e7e1b"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x0e4409f7a8eba3213f336daf608985302e79328c",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 48738.89,
+        "volume_24h_usd": 25791.12,
+        "tokens": [
+          "0xa4a2e2ca3fbfe21aed83471d28b6f65a233c6e00",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xb08a32fb67f910fcfe5dc9561a6ea4a159bd9908",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2707.69,
+        "volume_24h_usd": 615.57,
+        "tokens": [
+          "0xa4a2e2ca3fbfe21aed83471d28b6f65a233c6e00",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x38981c23364db3a50a6b2dd0196a22842788527c",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 108.03,
+        "volume_24h_usd": 36.97,
+        "tokens": [
+          "0xa4a2e2ca3fbfe21aed83471d28b6f65a233c6e00",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "1000x": [
+      {
+        "address": "0xc4bb445227c34ceb0a0ff970a3e501bbeee8b68e",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 73223.59,
+        "volume_24h_usd": 1122.73,
+        "tokens": [
+          "0x352b850b733ab8bab50aed1dab5d22e3186ce984",
+          "0x0b3e328455c4059eeb9e3f84b5543f74e24e7e1b"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "zen": [
+      {
+        "address": "0x5ca1da1ed90a6cf15974c0a0d2808bfde76314c1",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 519004.62,
+        "volume_24h_usd": 272080.51,
+        "tokens": [
+          "0xf43eb8de897fbc7f2502483b2bef7bb9ea179229",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x0392b12a1ceb0cd13af5ea448cf5586ea609852d",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 995473.83,
+        "volume_24h_usd": 81044.44,
+        "tokens": [
+          "0xf43eb8de897fbc7f2502483b2bef7bb9ea179229",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x47f9e291bb766fc307ad7bba4f29f3eab6a97101",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 970646.75,
+        "volume_24h_usd": 44575.02,
+        "tokens": [
+          "0xf43eb8de897fbc7f2502483b2bef7bb9ea179229",
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x8e1917c82d73d9b1f65c66cc6bf7f6e85f47cf79",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 345911.04,
+        "volume_24h_usd": 8819.89,
+        "tokens": [
+          "0xa749de6c28262b7ffbc5de27dc845dd7ecd2b358",
+          "0xf43eb8de897fbc7f2502483b2bef7bb9ea179229"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x91a6e9dc63cab9e52f29f712d688e845dd01a5fe",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 6239.61,
+        "volume_24h_usd": 155.97,
+        "tokens": [
+          "0xf43eb8de897fbc7f2502483b2bef7bb9ea179229",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xca05ffe354ff8bf97400ab8cff6fd77b2aa76303",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 62.71,
+        "volume_24h_usd": 15.13,
+        "tokens": [
+          "0xf43eb8de897fbc7f2502483b2bef7bb9ea179229",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "eurc": [
+      {
+        "address": "0x6eaec4f69c92bd16a4b018ceb6fe7a446a113598",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 238674.6,
+        "volume_24h_usd": 3574110.92,
+        "tokens": [
+          "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xc5e51044eb7318950b1afb044fccfb25782c48c1",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 171054.36,
+        "volume_24h_usd": 1191445.34,
+        "tokens": [
+          "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x4dbdcb087992404ea9b14fa83cc695b02797f39a",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 452842.53,
+        "volume_24h_usd": 778915.66,
+        "tokens": [
+          "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xdc65a7a69e1d647b12e87de6c1c7a84db80c0703",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 491045.94,
+        "volume_24h_usd": 617051.2,
+        "tokens": [
+          "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xcc8c6092fb6aeddad8d55b95655a91c6c4cdc90c",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 121136.76,
+        "volume_24h_usd": 218428.87,
+        "tokens": [
+          "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x7279c08a36333e12c3fc81747963264c100d66fb",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 123176.7,
+        "volume_24h_usd": 136788.4,
+        "tokens": [
+          "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "etheeee": [],
+    "aero": [
+      {
+        "address": "0xc85d5cb72d1aad6f152a8decad228ae4a59ac9b3",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1716443.79,
+        "volume_24h_usd": 6682371.68,
+        "tokens": [
+          "0x3f5bf3edac59d650d8fdf9657a71f2f904a3a4ee",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x422df9aa896e883c9cdcbad309c0785b7364a1cf",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 824349.58,
+        "volume_24h_usd": 5564834.14,
+        "tokens": [
+          "0x3f5bf3edac59d650d8fdf9657a71f2f904a3a4ee",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xe6a7317df4a9a7540663b99a07d1e019caa8afa4",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 473261.26,
+        "volume_24h_usd": 512935.2,
+        "tokens": [
+          "0x3f5bf3edac59d650d8fdf9657a71f2f904a3a4ee",
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xd0acf293547457fb4fe9ee32ca93e89497626816",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2661605.57,
+        "volume_24h_usd": 462643.66,
+        "tokens": [
+          "0x3f5bf3edac59d650d8fdf9657a71f2f904a3a4ee",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xb26e90167a83a4c2eadfac22876e109aaea5f887",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 150642.61,
+        "volume_24h_usd": 259473.53,
+        "tokens": [
+          "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+          "0x3f5bf3edac59d650d8fdf9657a71f2f904a3a4ee"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xb2b6aa256594546d4c43f984f4202c7d1e08b41e",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 65004,
+        "volume_24h_usd": 39314.11,
+        "tokens": [
+          "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+          "0x3f5bf3edac59d650d8fdf9657a71f2f904a3a4ee"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "meat": [],
+    "keycat": [
+      {
+        "address": "0x377feeed4820b3b28d1ab429509e7a0789824fca",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 551179.16,
+        "volume_24h_usd": 16394.28,
+        "tokens": [
+          "0x9a26f5433671751c3276a065f57e5a02d2817973",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x3b9ddad7459fdfcfdb7117d53301182dd46b7042",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 12387.96,
+        "volume_24h_usd": 334.58,
+        "tokens": [
+          "0x9a26f5433671751c3276a065f57e5a02d2817973",
+          "0x0b3e328455c4059eeb9e3f84b5543f74e24e7e1b"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xb211a9ddff3a10806c8fdb92dbc4c34596a23f84",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2801.11,
+        "volume_24h_usd": 80.46,
+        "tokens": [
+          "0x9a26f5433671751c3276a065f57e5a02d2817973",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xd82403772cb858219cfb58bfab46ba7a31073474",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 13634.04,
+        "volume_24h_usd": 49.77,
+        "tokens": [
+          "0x9a26f5433671751c3276a065f57e5a02d2817973",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x5a7b904b5effc2e581685838a92d34d4a12139d9",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1327.82,
+        "volume_24h_usd": 11.79,
+        "tokens": [
+          "0xb9926b3fbc5873db0182016d55727d5ae89e5efd",
+          "0x9a26f5433671751c3276a065f57e5a02d2817973"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xfd2e70ef7cef4d917ef41f27e284dc9e9930aa98",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 34.52,
+        "volume_24h_usd": 6.63,
+        "tokens": [
+          "0x0a14ef61afb32e5ca672e021784f71705ac14908",
+          "0x9a26f5433671751c3276a065f57e5a02d2817973"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "true": [
+      {
+        "address": "0x1fae246b1b2d0ce47126bbb109850da355352d77",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 272436.77,
+        "volume_24h_usd": 186396.49,
+        "tokens": [
+          "0x21cfcfc3d8f98fc728f48341d10ad8283f6eb7ab",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x61e715f97a76e3ebe2282a309a4ffeb61ea22971",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 10142.59,
+        "volume_24h_usd": 6050.58,
+        "tokens": [
+          "0x21cfcfc3d8f98fc728f48341d10ad8283f6eb7ab",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x1431f2362772872d9fb54393bec8ed2c50589510",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1382.19,
+        "volume_24h_usd": 898.1,
+        "tokens": [
+          "0xd98b11d2b6012509fada6daea61b383cfa8e2db3",
+          "0x21cfcfc3d8f98fc728f48341d10ad8283f6eb7ab"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "frok": [],
+    "edel": [
+      {
+        "address": "0x6249af7ca9887b98cf7f2d9d42e8486fa3acfa37",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 767.85,
+        "volume_24h_usd": 2473.89,
+        "tokens": [
+          "0xfb31f85a8367210b2e4ed2360d2da9dc2d2ccc95",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x3e31de9d23a1c923e3b60b45c0a30d172f01b659",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1722.21,
+        "volume_24h_usd": 4.18,
+        "tokens": [
+          "0xfb31f85a8367210b2e4ed2360d2da9dc2d2ccc95",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xe2b182796518e76845f46ccdc522495d81630d14",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 3177.53,
+        "volume_24h_usd": 1.18,
+        "tokens": [
+          "0xfb31f85a8367210b2e4ed2360d2da9dc2d2ccc95",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xc3c35f6e04499bcd92bfd02a49d2b1e7a9936366",
+        "venue": "PancakeSwap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 130.8,
+        "volume_24h_usd": 0.07,
+        "tokens": [
+          "0xfb31f85a8367210b2e4ed2360d2da9dc2d2ccc95",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "realgarrytan": [],
+    "fun": [
+      {
+        "address": "0x659be70647b0f63217d60e077f4417b1ecc65064",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 142845.3,
+        "volume_24h_usd": 41056.13,
+        "tokens": [
+          "0x16ee7ecac70d1028e7712751e2ee6ba808a7dd92",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xc2bb4fd5648856c73f8b81156c9b52fe173085ed",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 438.26,
+        "volume_24h_usd": 136.7,
+        "tokens": [
+          "0x16ee7ecac70d1028e7712751e2ee6ba808a7dd92",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xaa94109f741b15fa39839a60fc9a29e5ba9e3db8",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 5.41,
+        "volume_24h_usd": 3.33,
+        "tokens": [
+          "0x16ee7ecac70d1028e7712751e2ee6ba808a7dd92",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "aura": [],
+    "x420": [],
+    "dogl": [],
+    "rawr": [],
+    "fair": [
+      {
+        "address": "0xfc01837343cfc2a9ddca9e8a0a19825f6b2f0460",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 85887.92,
+        "volume_24h_usd": 124.62,
+        "tokens": [
+          "0x7d928816cc9c462dd7adef911de41535e444cb07",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "aero9401": [
+      {
+        "address": "0xdfe5f275020def30993f042174fc2d335678b626",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 414039.7,
+        "volume_24h_usd": 406564.05,
+        "tokens": [
+          "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xb26e90167a83a4c2eadfac22876e109aaea5f887",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 150642.65,
+        "volume_24h_usd": 259466.23,
+        "tokens": [
+          "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+          "0x3f5bf3edac59d650d8fdf9657a71f2f904a3a4ee"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x3d5d143381916280ff91407febeb52f2b60f33cf",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 926734.69,
+        "volume_24h_usd": 176654.79,
+        "tokens": [
+          "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x4e506648d493c8870f55e870480f92f2f33ece51",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 385844.82,
+        "volume_24h_usd": 115745.92,
+        "tokens": [
+          "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xe5b5f522e98b5a2baae212d4da66b865b781db97",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 130318.24,
+        "volume_24h_usd": 105105.65,
+        "tokens": [
+          "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x20cb8f872ae894f7c9e32e621c186e5afce82fd0",
+        "venue": "PancakeSwap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 74608.33,
+        "volume_24h_usd": 75530.26,
+        "tokens": [
+          "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "kellyclaude": [
+      {
+        "address": "0xfc37c5ccdf712c54f21973f77799739225071704",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 169.81,
+        "volume_24h_usd": 12.54,
+        "tokens": [
+          "0x50d2280441372486beecdd328c1854743ebacb07",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "wsteth": [
+      {
+        "address": "0x20e068d76f9e90b90604500b84c7e19dcb923e7e",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 55055.99,
+        "volume_24h_usd": 574585.02,
+        "tokens": [
+          "0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x7f5964d8130d4f0c2ed9e7a4d6516bddc218ce95",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 26960.98,
+        "volume_24h_usd": 66365.66,
+        "tokens": [
+          "0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x861a2922be165a5bd41b1e482b49216b465e1b5f",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 24202.01,
+        "volume_24h_usd": 6133.22,
+        "tokens": [
+          "0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x656485a0ce4c7c8275c751f6aafbf60f658c552c",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 76587.04,
+        "volume_24h_usd": 3739.15,
+        "tokens": [
+          "0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452",
+          "0x3f5bf3edac59d650d8fdf9657a71f2f904a3a4ee"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x7c92c51b962263de6449e11b59415c058980f455",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 609.38,
+        "volume_24h_usd": 386.16,
+        "tokens": [
+          "0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452",
+          "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x45837e65e4c44ca260ab40e6dc30ff1b466a00ca",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 956.29,
+        "volume_24h_usd": 385.59,
+        "tokens": [
+          "0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "drv": [
+      {
+        "address": "0xa75f386c129f0478d61d1692ee7cc71beb468d92",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1451083.13,
+        "volume_24h_usd": 297226.91,
+        "tokens": [
+          "0x9d0e8f5b25384c7310cb8c6ae32c8fbeb645d083",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x2e8b5774887b71e4f806b6d4d9e6eb26cc4d17da",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 787165.74,
+        "volume_24h_usd": 282143.29,
+        "tokens": [
+          "0x9d0e8f5b25384c7310cb8c6ae32c8fbeb645d083",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x9011cbf8d2900908286c9bf4d5d1644ece7b684a",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 105616.87,
+        "volume_24h_usd": 273332.03,
+        "tokens": [
+          "0x9d0e8f5b25384c7310cb8c6ae32c8fbeb645d083",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xef7e596aef9e4c6301b4d1f1e88f8ffe8c306222",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 224614.31,
+        "volume_24h_usd": 145647.7,
+        "tokens": [
+          "0x9d0e8f5b25384c7310cb8c6ae32c8fbeb645d083",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xf0b593cc024bd446d11c24570b4866a704c138be",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 12888.41,
+        "volume_24h_usd": 8438.11,
+        "tokens": [
+          "0x9d0e8f5b25384c7310cb8c6ae32c8fbeb645d083",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xa0e2bac96ab51c92d3284781aee1eec817f6f9c2",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 85297.72,
+        "volume_24h_usd": 316.19,
+        "tokens": [
+          "0x9d0e8f5b25384c7310cb8c6ae32c8fbeb645d083",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "bstonk": [],
+    "tao": [
+      {
+        "address": "0x82dd34c6631c286cdd1db16f2c232f60e402dd5a",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 235484.96,
+        "volume_24h_usd": 127013.83,
+        "tokens": [
+          "0xf3081494b87e8d5fb7960f066e931d1d0e6e3d67",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x0b4bdb67d9e755bd8d15328ef809edf03c28adb8",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 44620.9,
+        "volume_24h_usd": 23232.1,
+        "tokens": [
+          "0xf3081494b87e8d5fb7960f066e931d1d0e6e3d67",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x99f0364e162a36a77e5d77b5eeb56539563735a3",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 182121.35,
+        "volume_24h_usd": 5757.97,
+        "tokens": [
+          "0xf3081494b87e8d5fb7960f066e931d1d0e6e3d67",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x6691f5ed3dd56d28ea7738ef9636556cb79e6c95",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 13405.5,
+        "volume_24h_usd": 1350.96,
+        "tokens": [
+          "0xddde5965d49e69b6362bd8743e139a45dbfeb7b3",
+          "0xf3081494b87e8d5fb7960f066e931d1d0e6e3d67"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x2292233d308188fcb3775f63a20f31dff6db02d9",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 12255.29,
+        "volume_24h_usd": 1241.41,
+        "tokens": [
+          "0x6f63d869011f95274498023b4abfc00b30c34378",
+          "0xf3081494b87e8d5fb7960f066e931d1d0e6e3d67"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "kta": [
+      {
+        "address": "0xc4adb83a1c6322dda47256f48ce667f96dacd11f",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 10659.59,
+        "volume_24h_usd": 5601.17,
+        "tokens": [
+          "0xc0634090f2fe6c6d75e61be2b949464abb498973",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x8d421b0d641193d67dd1aa024dab17fcde0bfc89",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 27163.7,
+        "volume_24h_usd": 3468.07,
+        "tokens": [
+          "0xc0634090f2fe6c6d75e61be2b949464abb498973",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x46d710c35bdfb800a18a820712310048ef8b5256",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 11881.75,
+        "volume_24h_usd": 1131.77,
+        "tokens": [
+          "0xc0634090f2fe6c6d75e61be2b949464abb498973",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x07a1362d0d0b221c21ca4f2cbd83eb58b1ec81c9",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 4231.42,
+        "volume_24h_usd": 3.04,
+        "tokens": [
+          "0xc0634090f2fe6c6d75e61be2b949464abb498973",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x9268158e040dd20e4d8967c0493963db30a17979",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 400.67,
+        "volume_24h_usd": 1.86,
+        "tokens": [
+          "0xc0634090f2fe6c6d75e61be2b949464abb498973",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x5ba5ed44d7262c5a0021fd5fba621c9ccea0ddab",
+        "venue": "PancakeSwap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 43.55,
+        "volume_24h_usd": 0.1,
+        "tokens": [
+          "0xc0634090f2fe6c6d75e61be2b949464abb498973",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "check": [
+      {
+        "address": "0x3c4384f3664b37a3cb5a5cb3452b4b4a3aa1256f",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 492500.57,
+        "volume_24h_usd": 10829.27,
+        "tokens": [
+          "0x9126236476efba9ad8ab77855c60eb5bf37586eb",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x5a7b4970b2610aee4776a6944d9f2171ee6060b0",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 8641.75,
+        "volume_24h_usd": 357.94,
+        "tokens": [
+          "0x9126236476efba9ad8ab77855c60eb5bf37586eb",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xac2733cbba38dff6fd94c7a751f3c26a3f10b1bc",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 7484.54,
+        "volume_24h_usd": 22.31,
+        "tokens": [
+          "0x9126236476efba9ad8ab77855c60eb5bf37586eb",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x0bf576e74d6caf885a392e7062a8796caec0cb13",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2.41,
+        "volume_24h_usd": 9.98,
+        "tokens": [
+          "0x9126236476efba9ad8ab77855c60eb5bf37586eb",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xb5a64b150730b6c475cdc9c40632ce1d1ebf3cec",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 836.58,
+        "volume_24h_usd": 7.61,
+        "tokens": [
+          "0xf7c1cefcf7e1dd8161e00099facd3e1db9e528ee",
+          "0x9126236476efba9ad8ab77855c60eb5bf37586eb"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xf8437eb78cf351060c23cec52ae5fc8b603f4428",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 21.45,
+        "volume_24h_usd": 0.25,
+        "tokens": [
+          "0x9126236476efba9ad8ab77855c60eb5bf37586eb",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "russell": [
+      {
+        "address": "0xea8b7ed6170e0ea3703dde6b496b065a8ececd7b",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 193201.17,
+        "volume_24h_usd": 12429.89,
+        "tokens": [
+          "0x0c5142bc58f9a61ab8c3d2085dd2f4e550c5ce0b",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x403b1ecac8d7ac35dbfb8efae59f440a6f3beb84",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 6358.46,
+        "volume_24h_usd": 307.37,
+        "tokens": [
+          "0x0c5142bc58f9a61ab8c3d2085dd2f4e550c5ce0b",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x6bce1aaa2efe9de37bec193f3499484082b261c2",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1471.82,
+        "volume_24h_usd": 1.51,
+        "tokens": [
+          "0x0c5142bc58f9a61ab8c3d2085dd2f4e550c5ce0b",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "auki": [
+      {
+        "address": "0xf9d4c71782ca272c20593f4ceb557e3b863aff4f",
+        "venue": "PancakeSwap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 76108.02,
+        "volume_24h_usd": 20030.56,
+        "tokens": [
+          "0xf9569cfb8fd265e91aa478d86ae8c78b8af55df4",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x2fa9d6085c91151200e61a3e627d35001772c0d1",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 255753.71,
+        "volume_24h_usd": 13875.81,
+        "tokens": [
+          "0xf9569cfb8fd265e91aa478d86ae8c78b8af55df4",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "rsc": [
+      {
+        "address": "0x5f829d89c86c47e53d5fa99224af8bd24f80c53f",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 126744.19,
+        "volume_24h_usd": 13662.55,
+        "tokens": [
+          "0xfbb75a59193a3525a8825bebe7d4b56899e2f7e1",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x6cca90e732942d73c276f73b805ca2948f6b3018",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2099.94,
+        "volume_24h_usd": 305.52,
+        "tokens": [
+          "0xfbb75a59193a3525a8825bebe7d4b56899e2f7e1",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x6cda37ddb9e099bb49495a9ca7df9cd445a6965f",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 5099.86,
+        "volume_24h_usd": 206.28,
+        "tokens": [
+          "0xfbb75a59193a3525a8825bebe7d4b56899e2f7e1",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xe7f850731fed6af4c36cce93eccfbcda0634a030",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 8638.11,
+        "volume_24h_usd": 197.78,
+        "tokens": [
+          "0xfbb75a59193a3525a8825bebe7d4b56899e2f7e1",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x29f9877d4189df251ec9890486ec361191bb50c1",
+        "venue": "SushiSwap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 8.44,
+        "volume_24h_usd": 0.01,
+        "tokens": [
+          "0x05e3d6741e4ea10f73e2c7d7d5bc40bcd6c4e5a0",
+          "0xfbb75a59193a3525a8825bebe7d4b56899e2f7e1"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "kntq": [
+      {
+        "address": "0x2acfe5952ea0e78c73ea7ca5d709c3c1c13ab661",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 516156.53,
+        "volume_24h_usd": 5188528.49,
+        "tokens": [
+          "0xb80194e3868511b8f43e1d5d6e255cd9e7c3e7dd",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x0b03322af0a3c834881704712d07b0defd8e03c3",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 3380.41,
+        "volume_24h_usd": 116501.91,
+        "tokens": [
+          "0xb80194e3868511b8f43e1d5d6e255cd9e7c3e7dd",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xc5fdf10b332fa1268c3b3779290e9d6c77fc9e1a",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 0.09,
+        "volume_24h_usd": 15.76,
+        "tokens": [
+          "0xb80194e3868511b8f43e1d5d6e255cd9e7c3e7dd",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "llyc": [
+      {
+        "address": "0x2b7ee4623ec6afbc1e587b2668c0ed8f3ff44949",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 224179.13,
+        "volume_24h_usd": 33599.69,
+        "tokens": [
+          "0xb200000000000000000000f1a0f91e34892e4718",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x7785f63cddbd3ace1458643561bf99beb4902db8",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2870.09,
+        "volume_24h_usd": 373.89,
+        "tokens": [
+          "0xb200000000000000000000f1a0f91e34892e4718",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "portal": [
+      {
+        "address": "0x428233329c654a21130b66d93074dbf742e7d709",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 103659.94,
+        "volume_24h_usd": 238153.82,
+        "tokens": [
+          "0x0ffebc403f2d3dd9ea5501ca03916e98967acb2d",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x6133d984a2ea4d20c56db083fb0b0d093a9f5b42",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 20626.68,
+        "volume_24h_usd": 108522.2,
+        "tokens": [
+          "0x0ffebc403f2d3dd9ea5501ca03916e98967acb2d",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xfe8513f8aa444faabb1c35e1e0f24d08c4c9be15",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1099.57,
+        "volume_24h_usd": 536.11,
+        "tokens": [
+          "0x0ffebc403f2d3dd9ea5501ca03916e98967acb2d",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "intcc": [
+      {
+        "address": "0x3d384288fa79b51de882b06b617ab7989ccad4f3",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 229122.49,
+        "volume_24h_usd": 184576.16,
+        "tokens": [
+          "0xb2000000000000000000004aff16039ba04bdfbc",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "cookie": [
+      {
+        "address": "0x1c75709e20d203e8de915d0a1ac8dc4e40fe3d29",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 40420.53,
+        "volume_24h_usd": 155109.62,
+        "tokens": [
+          "0xc0041ef357b183448b235a8ea73ce4e4ec8c265f",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x17ea71d7e2dfb58f6b7e95c2dddad863e225091c",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 41816.12,
+        "volume_24h_usd": 152162.09,
+        "tokens": [
+          "0xc0041ef357b183448b235a8ea73ce4e4ec8c265f",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x97f0470819080e85724d42ba4325c56698c3b387",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 3575.74,
+        "volume_24h_usd": 9792.73,
+        "tokens": [
+          "0xc0041ef357b183448b235a8ea73ce4e4ec8c265f",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xe8833415bd6aee9c0c7b6aad7dc80421c3f28ca1",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 8026.25,
+        "volume_24h_usd": 2774.29,
+        "tokens": [
+          "0xc0041ef357b183448b235a8ea73ce4e4ec8c265f",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x24fd1a1a604d6cfda234e5cb091c2c16501814d7",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1534.43,
+        "volume_24h_usd": 573.21,
+        "tokens": [
+          "0xc0041ef357b183448b235a8ea73ce4e4ec8c265f",
+          "0x0b3e328455c4059eeb9e3f84b5543f74e24e7e1b"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x1b3a07515800e8b16a46f67a6bab3d4e74148db0",
+        "venue": "PancakeSwap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 0.67,
+        "volume_24h_usd": 0.04,
+        "tokens": [
+          "0xc0041ef357b183448b235a8ea73ce4e4ec8c265f",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "ethfi": [
+      {
+        "address": "0x448134560a0f4eb18e1a794e4984a895fad35454",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 12096.79,
+        "volume_24h_usd": 7087.8,
+        "tokens": [
+          "0x6c240dda6b5c336df09a4d011139beaaa1ea2aa2",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xfefe4e80f2d747a484154f7ae18b20d478e49d40",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1190.84,
+        "volume_24h_usd": 118.98,
+        "tokens": [
+          "0x6c240dda6b5c336df09a4d011139beaaa1ea2aa2",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "slc": [
+      {
+        "address": "0x26147962b87574617bbb5780c76b103f11c06e93",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 46987.91,
+        "volume_24h_usd": 8546.5,
+        "tokens": [
+          "0x6bd83abc39391af1e24826e90237c4bd3468b5d2",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "mezo": [
+      {
+        "address": "0x7507518c567c185632e95ca80114ce9a660b6943",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 5644.81,
+        "volume_24h_usd": 13284.94,
+        "tokens": [
+          "0x8e4cbbcc33db6c0a18561fde1f6ba35906d4848b",
+          "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xef458a3263d2a8c7f3ed9e949ae2f9b345d08b1f",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1365.63,
+        "volume_24h_usd": 8.11,
+        "tokens": [
+          "0x8e4cbbcc33db6c0a18561fde1f6ba35906d4848b",
+          "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "cbeth": [
+      {
+        "address": "0x5e3c5083f27654fac92126cb3fbd8773306cd90d",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 535242.84,
+        "volume_24h_usd": 1592227.35,
+        "tokens": [
+          "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x03bf20662f76312aec31ef28d4a024e1eca108af",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1129924.86,
+        "volume_24h_usd": 1460857.56,
+        "tokens": [
+          "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x8bb9eaf3c5a906d20c4cc10ea2f73a3ac2d5d41a",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 211432.97,
+        "volume_24h_usd": 807773.86,
+        "tokens": [
+          "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
+          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x74ad64bac8df96af2b63ea50c3d8840b79aa7a3b",
+        "venue": "solidlycom v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 52749.77,
+        "volume_24h_usd": 436258.89,
+        "tokens": [
+          "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x47ca96ea59c13f72745928887f84c9f52c3d7348",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 218778.52,
+        "volume_24h_usd": 113382.89,
+        "tokens": [
+          "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xa9dafa443a02fbc907cb0093276b3e6f4ef02a46",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 33544.49,
+        "volume_24h_usd": 27660.65,
+        "tokens": [
+          "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "openx": [
+      {
+        "address": "0x7ad1db1b8a8ce3040bc1807d7af6a8bc88584600",
+        "venue": "Uniswap v2",
+        "kind": "v2",
+        "discovery_liquidity_usd": 3775.63,
+        "volume_24h_usd": 894.98,
+        "tokens": [
+          "0xa66b448f97cbf58d12f00711c02bac2d9eac6f7f",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "avnt": [
+      {
+        "address": "0x67b3cf9f0b878eac7aa6cc118cd17f4fce7bceac",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 496279.1,
+        "volume_24h_usd": 292248.17,
+        "tokens": [
+          "0x696f9436b67233384889472cd7cd58a6fb5df4f1",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xc4ed25e61cbde561c982789f740e3e9a8c317100",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 18550.76,
+        "volume_24h_usd": 6668.64,
+        "tokens": [
+          "0x696f9436b67233384889472cd7cd58a6fb5df4f1",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x9144a6e8ad6f56db96dac444eb173831660ba3e5",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 24055.47,
+        "volume_24h_usd": 1969.96,
+        "tokens": [
+          "0x696f9436b67233384889472cd7cd58a6fb5df4f1",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xe30d5bf485f7476ac15884a28ffb3c9cea635dcb",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 2359.82,
+        "volume_24h_usd": 1055.75,
+        "tokens": [
+          "0x696f9436b67233384889472cd7cd58a6fb5df4f1",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x04f0c5d0e2fc9329f08e0112a37d7d9b7cff1043",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 17228.31,
+        "volume_24h_usd": 509.52,
+        "tokens": [
+          "0x696f9436b67233384889472cd7cd58a6fb5df4f1",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0xe371bd344739a7dbe25a3cf6dc36176f9a735025",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1439.12,
+        "volume_24h_usd": 123.77,
+        "tokens": [
+          "0x696f9436b67233384889472cd7cd58a6fb5df4f1",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "litkey": [
+      {
+        "address": "0xcd1f9777571493aeacb7eae45cd30a226d3e612d",
+        "venue": "Aerodrome v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1977.89,
+        "volume_24h_usd": 14.05,
+        "tokens": [
+          "0xf732a566121fa6362e9e0fbdd6d66e5c8c925e49",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "riz": [
+      {
+        "address": "0x6ab2e91b763f50ae3d313b311a417b50cbec08f7",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 8403.21,
+        "volume_24h_usd": 1445.49,
+        "tokens": [
+          "0x67543cf0304c19ca62ac95ba82fd4f4b40788dc1",
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        ],
+        "source": "Dexscreener token-pairs base"
+      },
+      {
+        "address": "0x7775ea89598afe2ac228c835bf92ccdb02bcd080",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 1018.67,
+        "volume_24h_usd": 175.24,
+        "tokens": [
+          "0x67543cf0304c19ca62ac95ba82fd4f4b40788dc1",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "zfi": [
+      {
+        "address": "0xc6f63e4bea6682aa502ed94c1301b56230fc03d2",
+        "venue": "Uniswap v3",
+        "kind": "v3",
+        "discovery_liquidity_usd": 232327.69,
+        "volume_24h_usd": 7332.3,
+        "tokens": [
+          "0xd080ed3c74a20250a2c9821885203034acd2d5ae",
+          "0x4200000000000000000000000000000000000006"
+        ],
+        "source": "Dexscreener token-pairs base"
+      }
+    ],
+    "imgn": []
+  },
+  "survey": {
+    "mog": {
+      "candidate_count": 8,
+      "most_active_discovered_pool": {
+        "address": "0xc5c5f65927a4011864fcb261d7499267e101118f",
+        "venue": "uniswap",
+        "volume_24h_usd": 398.04
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "surplus": {
+      "candidate_count": 14,
+      "most_active_discovered_pool": {
+        "address": "0xfc25fdd217e288d03a877f0b7d49e0bbe52b2288c88de929125062569fc7eb2a",
+        "venue": "uniswap",
+        "volume_24h_usd": 347991.68
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "ratspeak": {
+      "candidate_count": 7,
+      "most_active_discovered_pool": {
+        "address": "0x5e9782079683037fc8bb57625683359d9efaef80f2b829c4bb5b1896c6bb40b6",
+        "venue": "uniswap",
+        "volume_24h_usd": 28304.25
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "brett": {
+      "candidate_count": 30,
+      "most_active_discovered_pool": {
+        "address": "0xfa9c1d85b8a9879b2cfe0153e9d25aecaf6e6e2f",
+        "venue": "aero",
+        "volume_24h_usd": 21234.48
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "rush": {
+      "candidate_count": 0,
+      "most_active_discovered_pool": null,
+      "excluded_external_oracle_pools": []
+    },
+    "0xerik": {
+      "candidate_count": 0,
+      "most_active_discovered_pool": null,
+      "excluded_external_oracle_pools": []
+    },
+    "weth": {
+      "candidate_count": 30,
+      "most_active_discovered_pool": {
+        "address": "0x4a7af46bc8abc00048c6c7920a1488daf568366c",
+        "venue": "aero",
+        "volume_24h_usd": 82159553.12
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "cbbtc": {
+      "candidate_count": 30,
+      "most_active_discovered_pool": {
+        "address": "0xec3c3755b9ded4a2960ef50c9b48c1694ce274c2",
+        "venue": "aero",
+        "volume_24h_usd": 169804719.94
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "vpay": {
+      "candidate_count": 1,
+      "most_active_discovered_pool": {
+        "address": "0xdeb75b16307e4c3ddb6f6731c303e15cc16a8e82",
+        "venue": "uniswap",
+        "volume_24h_usd": 221.88
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "flies": {
+      "candidate_count": 2,
+      "most_active_discovered_pool": {
+        "address": "0xb87d3cb5e3fafecd35b7c63e7c74441d8151dfb4",
+        "venue": "uniswap",
+        "volume_24h_usd": 40.3
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "nock": {
+      "candidate_count": 10,
+      "most_active_discovered_pool": {
+        "address": "0x85f1aa3a70fedd1c52705c15baed143e675cd626",
+        "venue": "aerodrome",
+        "volume_24h_usd": 70134.17
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "birb": {
+      "candidate_count": 0,
+      "most_active_discovered_pool": null,
+      "excluded_external_oracle_pools": []
+    },
+    "spectra": {
+      "candidate_count": 7,
+      "most_active_discovered_pool": {
+        "address": "0xef70044c0249a07234e07d673606e09b364dc977",
+        "venue": "aerodrome",
+        "volume_24h_usd": 2165.4
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "rei": {
+      "candidate_count": 6,
+      "most_active_discovered_pool": {
+        "address": "0x8ea1727d4ede95a7eb006a97aa315f122fe0af5b",
+        "venue": "aero",
+        "volume_24h_usd": 192583.78
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "cbzec": {
+      "candidate_count": 21,
+      "most_active_discovered_pool": {
+        "address": "0xe7030be388b8e247abe0c9fa876673e83fbcbd3c",
+        "venue": "aero",
+        "volume_24h_usd": 2670793.91
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "vvv": {
+      "candidate_count": 30,
+      "most_active_discovered_pool": {
+        "address": "0xdebaebe5b2729f7d62072b2ea40472d78d2c1626",
+        "venue": "aero",
+        "volume_24h_usd": 4453395.61
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "pod": {
+      "candidate_count": 11,
+      "most_active_discovered_pool": {
+        "address": "0x7c84276e317f128b55bd270dbfba3ef94c84b984c124a1de7c4f72da90bfba45",
+        "venue": "uniswap",
+        "volume_24h_usd": 112340.67
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "st": {
+      "candidate_count": 1,
+      "most_active_discovered_pool": {
+        "address": "0x01e15e0b744b6d875c5081ae92f620f8223d6800",
+        "venue": "uniswap",
+        "volume_24h_usd": 464.71
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "hno": {
+      "candidate_count": 3,
+      "most_active_discovered_pool": {
+        "address": "0xc9a4e1101c517b496009465797b91114619dcc3f",
+        "venue": "uniswap",
+        "volume_24h_usd": 772.8
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "wire": {
+      "candidate_count": 2,
+      "most_active_discovered_pool": {
+        "address": "0x8ffd336d457ada04a2d5112f8f0c1f1a84577f2f",
+        "venue": "uniswap",
+        "volume_24h_usd": 13350.38
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "lilpepe": {
+      "candidate_count": 0,
+      "most_active_discovered_pool": null,
+      "excluded_external_oracle_pools": []
+    },
+    "tibbir": {
+      "candidate_count": 14,
+      "most_active_discovered_pool": {
+        "address": "0x361fe0318ac98f15720021cb8924b727c3e57d6f",
+        "venue": "aero",
+        "volume_24h_usd": 114830.7
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "1000x": {
+      "candidate_count": 2,
+      "most_active_discovered_pool": {
+        "address": "0xc4bb445227c34ceb0a0ff970a3e501bbeee8b68e",
+        "venue": "uniswap",
+        "volume_24h_usd": 1122.73
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "zen": {
+      "candidate_count": 15,
+      "most_active_discovered_pool": {
+        "address": "0x5ca1da1ed90a6cf15974c0a0d2808bfde76314c1",
+        "venue": "aero",
+        "volume_24h_usd": 272080.51
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "eurc": {
+      "candidate_count": 30,
+      "most_active_discovered_pool": {
+        "address": "0x6eaec4f69c92bd16a4b018ceb6fe7a446a113598",
+        "venue": "aero",
+        "volume_24h_usd": 3574110.92
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "etheeee": {
+      "candidate_count": 0,
+      "most_active_discovered_pool": null,
+      "excluded_external_oracle_pools": []
+    },
+    "aero": {
+      "candidate_count": 21,
+      "most_active_discovered_pool": {
+        "address": "0xc85d5cb72d1aad6f152a8decad228ae4a59ac9b3",
+        "venue": "aero",
+        "volume_24h_usd": 6682371.68
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "meat": {
+      "candidate_count": 0,
+      "most_active_discovered_pool": null,
+      "excluded_external_oracle_pools": []
+    },
+    "keycat": {
+      "candidate_count": 15,
+      "most_active_discovered_pool": {
+        "address": "0x377feeed4820b3b28d1ab429509e7a0789824fca",
+        "venue": "uniswap",
+        "volume_24h_usd": 16394.28
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "true": {
+      "candidate_count": 6,
+      "most_active_discovered_pool": {
+        "address": "0x1fae246b1b2d0ce47126bbb109850da355352d77",
+        "venue": "uniswap",
+        "volume_24h_usd": 186396.49
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "frok": {
+      "candidate_count": 0,
+      "most_active_discovered_pool": null,
+      "excluded_external_oracle_pools": []
+    },
+    "edel": {
+      "candidate_count": 12,
+      "most_active_discovered_pool": {
+        "address": "0x6249af7ca9887b98cf7f2d9d42e8486fa3acfa37",
+        "venue": "aero",
+        "volume_24h_usd": 2473.89
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "realgarrytan": {
+      "candidate_count": 1,
+      "most_active_discovered_pool": {
+        "address": "0xe31ea079c119539e1daa923a4cc95e14e7b6ab62e40f5e0079292955a3af3280",
+        "venue": "uniswap",
+        "volume_24h_usd": 0.09
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "fun": {
+      "candidate_count": 5,
+      "most_active_discovered_pool": {
+        "address": "0x659be70647b0f63217d60e077f4417b1ecc65064",
+        "venue": "aerodrome",
+        "volume_24h_usd": 41056.13
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "aura": {
+      "candidate_count": 0,
+      "most_active_discovered_pool": null,
+      "excluded_external_oracle_pools": []
+    },
+    "x420": {
+      "candidate_count": 1,
+      "most_active_discovered_pool": {
+        "address": "0x9461ebccb508dcde49e54073bb587fb78e44ccdbcdbfe113c7c77d112e12c370",
+        "venue": "uniswap",
+        "volume_24h_usd": 5.36
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "dogl": {
+      "candidate_count": 0,
+      "most_active_discovered_pool": null,
+      "excluded_external_oracle_pools": []
+    },
+    "rawr": {
+      "candidate_count": 1,
+      "most_active_discovered_pool": {
+        "address": "0x69bbadafdb28b6952c2910bed1d49fb1b11a222cbf36143fc1aca3c26b35c28e",
+        "venue": "uniswap",
+        "volume_24h_usd": 141.73
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "fair": {
+      "candidate_count": 1,
+      "most_active_discovered_pool": {
+        "address": "0xfc01837343cfc2a9ddca9e8a0a19825f6b2f0460",
+        "venue": "uniswap",
+        "volume_24h_usd": 124.62
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "aero9401": {
+      "candidate_count": 30,
+      "most_active_discovered_pool": {
+        "address": "0xdfe5f275020def30993f042174fc2d335678b626",
+        "venue": "aerodrome",
+        "volume_24h_usd": 406564.05
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "kellyclaude": {
+      "candidate_count": 4,
+      "most_active_discovered_pool": {
+        "address": "0x7eac33d5641697366eaec3234147fd98ba25f01acca66a51a48bd129fc532145",
+        "venue": "uniswap",
+        "volume_24h_usd": 301.18
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "wsteth": {
+      "candidate_count": 30,
+      "most_active_discovered_pool": {
+        "address": "0x20e068d76f9e90b90604500b84c7e19dcb923e7e",
+        "venue": "uniswap",
+        "volume_24h_usd": 574585.02
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "drv": {
+      "candidate_count": 18,
+      "most_active_discovered_pool": {
+        "address": "0xa75f386c129f0478d61d1692ee7cc71beb468d92",
+        "venue": "aerodrome",
+        "volume_24h_usd": 297226.91
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "bstonk": {
+      "candidate_count": 3,
+      "most_active_discovered_pool": {
+        "address": "0xc9786476d2492eb8ddb2ebf8b4b69e227e1f31397c790d877541ab0ed5cf5ee2",
+        "venue": "uniswap",
+        "volume_24h_usd": 1715.02
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "tao": {
+      "candidate_count": 9,
+      "most_active_discovered_pool": {
+        "address": "0x82dd34c6631c286cdd1db16f2c232f60e402dd5a",
+        "venue": "uniswap",
+        "volume_24h_usd": 127013.83
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "kta": {
+      "candidate_count": 11,
+      "most_active_discovered_pool": {
+        "address": "0xd9edc75a3a797ec92ca370f19051babebfb2edee",
+        "venue": "aerodrome",
+        "volume_24h_usd": 244871.68
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "check": {
+      "candidate_count": 8,
+      "most_active_discovered_pool": {
+        "address": "0x3c4384f3664b37a3cb5a5cb3452b4b4a3aa1256f",
+        "venue": "aerodrome",
+        "volume_24h_usd": 10829.27
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "russell": {
+      "candidate_count": 5,
+      "most_active_discovered_pool": {
+        "address": "0xea8b7ed6170e0ea3703dde6b496b065a8ececd7b",
+        "venue": "uniswap",
+        "volume_24h_usd": 12429.89
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "auki": {
+      "candidate_count": 7,
+      "most_active_discovered_pool": {
+        "address": "0xf9d4c71782ca272c20593f4ceb557e3b863aff4f",
+        "venue": "pancakeswap",
+        "volume_24h_usd": 20030.56
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "rsc": {
+      "candidate_count": 5,
+      "most_active_discovered_pool": {
+        "address": "0x5f829d89c86c47e53d5fa99224af8bd24f80c53f",
+        "venue": "aero",
+        "volume_24h_usd": 13662.55
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "kntq": {
+      "candidate_count": 5,
+      "most_active_discovered_pool": {
+        "address": "0x2acfe5952ea0e78c73ea7ca5d709c3c1c13ab661",
+        "venue": "aero",
+        "volume_24h_usd": 5188528.49
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "llyc": {
+      "candidate_count": 2,
+      "most_active_discovered_pool": {
+        "address": "0x2b7ee4623ec6afbc1e587b2668c0ed8f3ff44949",
+        "venue": "aero",
+        "volume_24h_usd": 33599.69
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "portal": {
+      "candidate_count": 3,
+      "most_active_discovered_pool": {
+        "address": "0x428233329c654a21130b66d93074dbf742e7d709",
+        "venue": "aero",
+        "volume_24h_usd": 238153.82
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "intcc": {
+      "candidate_count": 2,
+      "most_active_discovered_pool": {
+        "address": "0x3d384288fa79b51de882b06b617ab7989ccad4f3",
+        "venue": "aero",
+        "volume_24h_usd": 184576.16
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "cookie": {
+      "candidate_count": 9,
+      "most_active_discovered_pool": {
+        "address": "0x1c75709e20d203e8de915d0a1ac8dc4e40fe3d29",
+        "venue": "aero",
+        "volume_24h_usd": 155109.62
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "ethfi": {
+      "candidate_count": 8,
+      "most_active_discovered_pool": {
+        "address": "0x3de2a8642859649d22d4a6f6a87b1441c51fdf8bf2bcd8864628a6a0f7119843",
+        "venue": "uniswap",
+        "volume_24h_usd": 15417.75
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "slc": {
+      "candidate_count": 3,
+      "most_active_discovered_pool": {
+        "address": "0x2adfe80a0bb02854897c4fbab9c12bd0edd8e3ed",
+        "venue": "aerodrome",
+        "volume_24h_usd": 26234.52
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "mezo": {
+      "candidate_count": 5,
+      "most_active_discovered_pool": {
+        "address": "0x7507518c567c185632e95ca80114ce9a660b6943",
+        "venue": "aero",
+        "volume_24h_usd": 13284.94
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "cbeth": {
+      "candidate_count": 30,
+      "most_active_discovered_pool": {
+        "address": "0x5e3c5083f27654fac92126cb3fbd8773306cd90d",
+        "venue": "aero",
+        "volume_24h_usd": 1592227.35
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "openx": {
+      "candidate_count": 2,
+      "most_active_discovered_pool": {
+        "address": "0x7ad1db1b8a8ce3040bc1807d7af6a8bc88584600",
+        "venue": "uniswap",
+        "volume_24h_usd": 894.98
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "avnt": {
+      "candidate_count": 17,
+      "most_active_discovered_pool": {
+        "address": "0x67b3cf9f0b878eac7aa6cc118cd17f4fce7bceac",
+        "venue": "aero",
+        "volume_24h_usd": 292248.17
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "litkey": {
+      "candidate_count": 5,
+      "most_active_discovered_pool": {
+        "address": "0x70ec92037d0e3b0426f9f33bd1883e4a87432a20",
+        "venue": "hydrex",
+        "volume_24h_usd": 67.53
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "riz": {
+      "candidate_count": 5,
+      "most_active_discovered_pool": {
+        "address": "0x6ab2e91b763f50ae3d313b311a417b50cbec08f7",
+        "venue": "uniswap",
+        "volume_24h_usd": 1445.49
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "zfi": {
+      "candidate_count": 6,
+      "most_active_discovered_pool": {
+        "address": "0xc6f63e4bea6682aa502ed94c1301b56230fc03d2",
+        "venue": "uniswap",
+        "volume_24h_usd": 7332.3
+      },
+      "excluded_external_oracle_pools": []
+    },
+    "imgn": {
+      "candidate_count": 0,
+      "most_active_discovered_pool": null,
+      "excluded_external_oracle_pools": []
+    }
+  }
+}

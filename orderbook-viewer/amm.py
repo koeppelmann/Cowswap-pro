@@ -7,6 +7,7 @@ import time
 import urllib.request
 from pathlib import Path
 from funding import endpoint, selector, simple, aggregate, decode, MULTICALL, WETH, addr, word, symbol_value
+import networks
 
 from ethereum_crypto import keccak256
 
@@ -81,7 +82,11 @@ def abi_array(raw,index):
     return [int.from_bytes(raw[offset+32+n*32:offset+64+n*32],'big') for n in range(count)]
 
 
-def collect_markers(metadata,prices,pairs,block_number,block_hash,workdir):
+def collect_markers(metadata,prices,pairs,block_number,block_hash,workdir,network='mainnet'):
+    cfg=networks.get(network)
+    usdc=cfg['usdc'].lower();weth=cfg.get('weth',WETH).lower()
+    # mainnet keeps the root frozen survey; other chains load config/<network>/amm-catalog.json.
+    catalog_path=CATALOG if network=='mainnet' else networks.config_dir(network)/'amm-catalog.json'
     workdir=Path(workdir);workdir.mkdir(parents=True,exist_ok=True)
     unavailable=lambda reason:{'status':'unavailable','reason':reason,'block':block_number,'block_hash':block_hash}
     result={p['id']:unavailable('No verified AMM in surveyed venues') for p in pairs}
@@ -91,7 +96,7 @@ def collect_markers(metadata,prices,pairs,block_number,block_hash,workdir):
         if remaining<=0:raise TimeoutError('amm_collection_budget')
         raw=json.dumps({'jsonrpc':'2.0','id':1,'method':method,'params':params},separators=(',',':')).encode()
         opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        with opener.open(urllib.request.Request(url,data=raw,headers={'Content-Type':'application/json'}),timeout=min(5,remaining)) as response:
+        with opener.open(urllib.request.Request(url,data=raw,headers={'Content-Type':'application/json','User-Agent':'Mozilla/5.0'}),timeout=min(5,remaining)) as response:
             body=response.read(8*1024*1024+1)
         if len(body)>8*1024*1024:raise ValueError('amm_response_size')
         decoded=json.loads(body)
@@ -99,7 +104,7 @@ def collect_markers(metadata,prices,pairs,block_number,block_hash,workdir):
         if decoded.get('error') or decoded.get('id')!=1 or decoded.get('jsonrpc')!='2.0':raise RuntimeError('amm_rpc_unavailable')
         return decoded['result']
     try:
-        url=endpoint();catalog=json.loads(CATALOG.read_bytes());pin=hex(block_number)
+        url=endpoint() if network=='mainnet' else networks.rpc_url(network);catalog=json.loads(catalog_path.read_bytes());pin=hex(block_number)
         for pid,survey in catalog.get('survey',{}).items():
             if pid in result and survey.get('unavailable_reason'):result[pid]=unavailable(survey['unavailable_reason'])
         header=rpc(url,'eth_getBlockByNumber',[pin,False],evidence)
@@ -167,13 +172,13 @@ def collect_markers(metadata,prices,pairs,block_number,block_hash,workdir):
             except (ValueError,AssertionError,TypeError,UnicodeError):return t[:8]
         def rate(t):
             if t in derived_rates:return derived_rates[t]
-            ref=prices.get(t,prices.get(WETH) if t==ETH else None)
-            if ref is None or decimals.get(t) is None:return None
-            return Fraction(int(ref)*10**decimals[t],int(prices[USDC])*10**6)
+            ref=prices.get(t,prices.get(weth) if t==ETH else None)
+            if ref is None or decimals.get(t) is None or not prices.get(usdc):return None
+            return Fraction(int(ref)*10**decimals[t],int(prices[usdc])*10**6)
         for reference in catalog.get('quote_references',[]):
             try:
                 base=reference['base_token'];coins=v4_key(reference);i=coins.index(base);quote=coins[1-i]
-                if quote!=USDC:continue
+                if quote!=usdc:continue
                 sqrt,_,_=v4_state(reference,answers)
                 derived_rates[base]=spot_v3(sqrt,decimals[coins[0]],decimals[coins[1]],i)
             except (ValueError,KeyError,TypeError):continue

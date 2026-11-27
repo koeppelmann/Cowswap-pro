@@ -150,7 +150,7 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
         for p in pairs:p.pop('twap_schedules',None)
         twap_coverage={'status':'unavailable'}
     if cfg['amm']:
-        try:markers=collect_markers(metadata,prices,pairs,state['reference_state']['block_number'],state['block_hash'],work/'amm')
+        try:markers=collect_markers(metadata,prices,pairs,state['reference_state']['block_number'],state['block_hash'],work/'amm',network)
         except Exception:markers={}
     else:
         markers={}
