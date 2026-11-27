@@ -28,13 +28,14 @@ def project_schedule(schedule,pair,metadata,prices,stable_tokens,family_rates,us
     quote_value=Fraction(raw_quote,10**metadata[quote]['decimals'])*rate
     base_atoms=base_human*10**pair['base_decimals'];slice_base=base_atoms.numerator//base_atoms.denominator
     if slice_base<=0 or quote_value<=0:return None
-    # The $ SIZE is the token amount valued at its reference (CoW) price — NOT the signed
-    # limit. A TWAP with a deliberately low limit ("sell at any price") must still report its
-    # true market value, so the $ figures reflect what the tokens are worth, not the proceeds
-    # at the limit. normalized_price stays the signed limit (shown separately as the limit).
-    base_rate=quote_rate(actual,metadata,prices,usdc,weth)
-    size_value=Fraction(raw_base,10**metadata[actual]['decimals'])*base_rate if base_rate is not None else quote_value
-    row={**schedule,'side':side,'normalized_price':text(quote_value/base_human),'base_token':actual,'base_symbol':metadata[actual]['symbol'],'quote_token':quote,'quote_symbol':metadata[quote]['symbol'],'quote_is_stable':quote in stable_tokens,'slice_base_atoms':str(slice_base),'remaining_base_atoms':str(slice_base*count),'slice_native_base_atoms':str(raw_base),'remaining_native_base_atoms':str(raw_base*count),'native_base_decimals':metadata[actual]['decimals'],'slice_quote_atoms':str(raw_quote),'remaining_quote_atoms':str(raw_quote*count),'slice_usdc_equivalent':text(size_value),'remaining_usdc_equivalent':text(size_value*count),'slice_limit_usdc_equivalent':text(quote_value),'base_conversion':text(conversion),'volume_kind':'Scheduled at signed limit, not funded executable depth'}
+    # The SIZE is what the order actually SELLS: each part sells part_sell of sell_token, whichever
+    # side of the pair that is (so for a buy, the size is the stablecoin being spent). It is valued
+    # at the sell token's reference (CoW) price — not the signed limit, and not the bought leg — so
+    # a deliberately low limit ("sell at any price") still reports true market value. normalized_price
+    # stays the signed limit (shown separately), in the pair's base terms for the chart.
+    sell_rate=quote_rate(sell,metadata,prices,usdc,weth)
+    size_value=Fraction(part_sell,10**metadata[sell]['decimals'])*sell_rate if sell_rate is not None else quote_value
+    row={**schedule,'side':side,'normalized_price':text(quote_value/base_human),'base_token':actual,'base_symbol':metadata[actual]['symbol'],'quote_token':quote,'quote_symbol':metadata[quote]['symbol'],'quote_is_stable':quote in stable_tokens,'slice_base_atoms':str(slice_base),'remaining_base_atoms':str(slice_base*count),'sold_token':sell,'sold_symbol':metadata[sell]['symbol'],'sold_decimals':metadata[sell]['decimals'],'slice_sold_atoms':str(part_sell),'remaining_sold_atoms':str(part_sell*count),'slice_quote_atoms':str(raw_quote),'remaining_quote_atoms':str(raw_quote*count),'slice_usdc_equivalent':text(size_value),'remaining_usdc_equivalent':text(size_value*count),'slice_limit_usdc_equivalent':text(quote_value),'base_conversion':text(conversion),'volume_kind':'Scheduled at signed limit, not funded executable depth'}
     return row
 
 

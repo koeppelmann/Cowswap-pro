@@ -92,7 +92,7 @@ def decode_api_parent(record,chain_id=1):
         bytes.fromhex(transaction[2:])
     row=decode_created({'data':'0x'+encoded.hex(),'topics':[CREATED,'0x'+(b'\0'*12+owner).hex()],
                         'transactionHash':transaction,'blockNumber':'0x0','logIndex':'0x0'})
-    row.update(creation_block=None,event_index=None,discovery_source='public_programmatic_index')
+    row.update(creation_block=None,event_index=None,discovery_source='public_programmatic_index',event_id=record.get('eventId'))
     return row
 
 
@@ -109,7 +109,10 @@ def merge_candidates(retained,events,candidates,chain_id=1):
         try:row=decode_created(log)
         except (ValueError,IndexError,KeyError,OverflowError):
             invalid_events+=1;continue
-        if row:latest[row['id']]=row
+        if row:
+            prior=latest.get(row['id'])
+            if prior and prior.get('event_id') and not row.get('event_id'):row['event_id']=prior['event_id']
+            latest[row['id']]=row
     return list(latest.values()),invalid_events,invalid_api
 
 
@@ -256,10 +259,14 @@ def collect_twap_schedules(metadata,block_number,block_hash,workdir,cache_root=N
             row['funding_status']='unknown' if balance is None or allowance is None else 'balance_covers_next_slice' if min(balance,allowance)>=int(row['part_sell_atoms']) else 'requires_funding'
             row['funding_note']='Observed wallet budget may be shared with other orders; future funding or hooks are not guaranteed.'
             cow_base='https://explorer.cow.fi/'+(cow_prefix+'/' if cow_prefix else '')
-            # CoW Explorer keys a TWAP order page on the ComposableCoW conditional-order
-            # hash in decimal (keccak256(abi.encode(params)) == schedule_hash); the owner
-            # page only lists history. Link straight to the TWAP order, keep the owner too.
-            row['explorer_url']=cow_base+'twap/'+str(int(row['schedule_hash'],16));row['owner_url']=cow_base+'address/'+row['owner'];row['creation_url']=token_base+'/tx/'+row['creation_tx'] if row['creation_tx'] else None;row['current_child_posted']=True if row['current_child_filled'] else None
+            # CoW Explorer keys a TWAP order page on the indexer's decimal eventId (which
+            # embeds the chain id + block), /twap/<eventId> — NOT the order hash. It comes from
+            # the programmatic-orders API; for parents only seen on-chain we fall back to the
+            # owner page (the hash-as-decimal form the explorer does not resolve).
+            event_id=row.get('event_id')
+            row['owner_url']=cow_base+'address/'+row['owner']
+            if isinstance(event_id,str) and event_id.isdigit():row['explorer_url']=cow_base+'twap/'+event_id
+            row['creation_url']=token_base+'/tx/'+row['creation_tx'] if row['creation_tx'] else None;row['current_child_posted']=True if row['current_child_filled'] else None
             output.append({k:v for k,v in row.items() if not k.startswith('_')})
         end=rpc(url,'eth_getBlockByNumber',[hex(block_number),False])
         if end['hash'].lower()!=block_hash.lower():raise ValueError('twap_reorg')
