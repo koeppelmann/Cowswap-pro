@@ -28,7 +28,13 @@ def project_schedule(schedule,pair,metadata,prices,stable_tokens,family_rates,us
     quote_value=Fraction(raw_quote,10**metadata[quote]['decimals'])*rate
     base_atoms=base_human*10**pair['base_decimals'];slice_base=base_atoms.numerator//base_atoms.denominator
     if slice_base<=0 or quote_value<=0:return None
-    row={**schedule,'side':side,'normalized_price':text(quote_value/base_human),'base_token':actual,'base_symbol':metadata[actual]['symbol'],'quote_token':quote,'quote_symbol':metadata[quote]['symbol'],'quote_is_stable':quote in stable_tokens,'slice_base_atoms':str(slice_base),'remaining_base_atoms':str(slice_base*count),'slice_quote_atoms':str(raw_quote),'remaining_quote_atoms':str(raw_quote*count),'slice_usdc_equivalent':text(quote_value),'remaining_usdc_equivalent':text(quote_value*count),'base_conversion':text(conversion),'volume_kind':'Scheduled at signed limit, not funded executable depth'}
+    # The $ SIZE is the token amount valued at its reference (CoW) price — NOT the signed
+    # limit. A TWAP with a deliberately low limit ("sell at any price") must still report its
+    # true market value, so the $ figures reflect what the tokens are worth, not the proceeds
+    # at the limit. normalized_price stays the signed limit (shown separately as the limit).
+    base_rate=quote_rate(actual,metadata,prices,usdc,weth)
+    size_value=Fraction(raw_base,10**metadata[actual]['decimals'])*base_rate if base_rate is not None else quote_value
+    row={**schedule,'side':side,'normalized_price':text(quote_value/base_human),'base_token':actual,'base_symbol':metadata[actual]['symbol'],'quote_token':quote,'quote_symbol':metadata[quote]['symbol'],'quote_is_stable':quote in stable_tokens,'slice_base_atoms':str(slice_base),'remaining_base_atoms':str(slice_base*count),'slice_quote_atoms':str(raw_quote),'remaining_quote_atoms':str(raw_quote*count),'slice_usdc_equivalent':text(size_value),'remaining_usdc_equivalent':text(size_value*count),'slice_limit_usdc_equivalent':text(quote_value),'base_conversion':text(conversion),'volume_kind':'Scheduled at signed limit, not funded executable depth'}
     return row
 
 

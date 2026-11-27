@@ -112,7 +112,7 @@
   function placeHover(hover,event){hover.hidden=false;hover.style.left=Math.max(8,Math.min(event.clientX+14,window.innerWidth-hover.offsetWidth-8))+'px';hover.style.top=Math.max(8,Math.min(event.clientY+14,window.innerHeight-hover.offsetHeight-8))+'px';}
   function showTwapHover(row,event){
     const base=$('depth').value==='base',v=twapVolumes(row,base),quantity=n=>base?compact(n)+' '+symbol():'$'+compact(n),hover=$('ammHover');hover.classList.add('twap-hover');
-    hover.textContent='TWAP '+(row.side==='bid'?'buy':'sell')+' · '+money(row.normalized_price)+' / '+symbol()+'\nRemaining '+quantity(v.total)+(base?'':' at limit')+' · '+row.remaining_parts+' swaps\nOne swap '+quantity(v.slice)+(base?'':' at limit')+(base?'':'\n'+compact(Number(row.remaining_base_atoms)/10**pair().base_decimals)+' '+symbol()+' remaining · '+compact(Number(row.slice_base_atoms)/10**pair().base_decimals)+' per swap')+'\n'+twapFunding(row)+'\nScheduled, not funded depth · click for details';placeHover(hover,event);
+    hover.textContent='TWAP '+(row.side==='bid'?'buy':'sell')+' · '+money(row.normalized_price)+' / '+symbol()+'\nRemaining '+quantity(v.total)+' · '+row.remaining_parts+' swaps\nOne swap '+quantity(v.slice)+(base?'':'\n'+compact(Number(row.remaining_base_atoms)/10**pair().base_decimals)+' '+symbol()+' remaining · '+compact(Number(row.slice_base_atoms)/10**pair().base_decimals)+' per swap')+'\n'+twapFunding(row)+'\nScheduled, not funded depth · click for details';placeHover(hover,event);
   }
   function relativeTime(timestamp,now=Date.now()/1000){
     const delta=Number(timestamp)-now;if(!timestamp||!Number.isFinite(delta))return 'Not scheduled';
@@ -134,8 +134,8 @@
     const core=document.createElement('div');core.className='twap-core';root.append(core);
     const total=Number(row.slice_usdc_equivalent)*Number(row.total_parts);
     for(const [label,value,sub,title] of [
-      ['Total scheduled',money(total),money(row.remaining_usdc_equivalent)+' in eligible swaps remaining','Original schedule at its signed limit. Remaining excludes missed, expired and filled current slices; it is not a lifetime fill tally.'],
-      ['Per swap',money(row.slice_usdc_equivalent),baseAmount(row.slice_base_atoms)+' at limit','Quote value at the signed limit; actual execution may receive a better price.'],
+      ['Total scheduled',money(total),money(row.remaining_usdc_equivalent)+' in eligible swaps remaining','Scheduled tokens valued at the CoW reference price (not the signed limit — a TWAP can set any limit). Remaining excludes missed, expired and filled current slices; it is not a lifetime fill tally.'],
+      ['Per swap',money(row.slice_usdc_equivalent),baseAmount(row.slice_base_atoms)+' per swap','Reference (CoW) value of the tokens in one swap. The signed limit is shown separately as the limit price.'],
       ['Swaps remaining',Number(row.remaining_parts).toLocaleString(), 'of '+Number(row.total_parts).toLocaleString()+' scheduled','Remaining eligible swaps, not the number of separate TWAP schedules.']
     ]){const card=document.createElement('div');card.className='twap-stat';card.title=title;const name=document.createElement('span');name.className='detail-label';name.textContent=label;const main=document.createElement('strong');main.textContent=value;const note=document.createElement('small');note.textContent=sub;card.append(name,main,note);core.append(card);}
     const info=document.createElement('div');info.className='twap-info';root.append(info);
