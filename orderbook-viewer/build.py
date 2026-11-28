@@ -56,10 +56,18 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
     cfg=networks.get(network);fam=cfg['eth_family']
     usdc=cfg['usdc'].lower();weth=cfg.get('weth',WETH).lower()
     work=Path(work);source_dir=Path(source_dir) if source_dir else work/'source'
-    if not source_dir.exists():collect(source_dir,network)
-    if funding_dir is None:
+    if not cfg.get('evm',True):
+        # Solana (non-EVM): a dedicated collector emits the same intermediate files with a
+        # synthetic fully-funded state — no eth_call funding, TWAP or AMM machinery applies.
+        import solana_source
+        funding_dir=Path(funding_dir) if funding_dir else work/'funding'
+        if not (funding_dir/'funding-state.json').exists():solana_source.collect(source_dir,funding_dir,network)
+        state=json.loads((funding_dir/'funding-state.json').read_bytes());conversions=json.loads((funding_dir/'eth-conversions.json').read_bytes())
+    elif funding_dir is None:
+        if not source_dir.exists():collect(source_dir,network)
         funding_dir=work/'funding';state,conversions=read_funding(source_dir,funding_dir,network)
     else:
+        if not source_dir.exists():collect(source_dir,network)
         funding_dir=Path(funding_dir);state=json.loads((funding_dir/'funding-state.json').read_bytes());conversions=json.loads((funding_dir/'eth-conversions.json').read_bytes())
     # Mainnet's token set is curated, so any getter error is a real problem. Dynamic
     # networks read arbitrary user-chosen tokens, where a single non-standard token's
@@ -75,7 +83,8 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
     # Freshness guard: the auction's reference block must be recent. Checked here, before
     # the slower TWAP/AMM collection, so build latency doesn't count against the auction's
     # age (testnets get a wider window via max_staleness).
-    ref=state['reference_state'];assert -60<=time.time()-ref['timestamp']<=cfg.get('max_staleness',900)
+    ref=state['reference_state']
+    if cfg.get('evm',True):assert -60<=time.time()-ref['timestamp']<=cfg.get('max_staleness',900)
     orders=state['orders']
     # Mainnet keeps its curated static book + allocator's built-in constants (unchanged);
     # other networks derive ranked pairs and pass their own stables + USD anchor with the
@@ -99,10 +108,13 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
     # programmatic-orders index and revalidated on-chain (ComposableCoW + the TWAP
     # handler are at the same address on every CoW network). Runs on every network;
     # defensively wrapped so a TWAP failure degrades to no schedules, never a failed book.
-    try:
-        twaps=collect_twap_schedules(metadata,state['reference_state']['block_number'],state['block_hash'],work/'twap',cache_root=work.parent,network=network)
-    except Exception:
-        twaps={'schedules':[],'metadata':{},'coverage':{'status':'unavailable'}}
+    if cfg.get('twap',True):
+        try:
+            twaps=collect_twap_schedules(metadata,state['reference_state']['block_number'],state['block_hash'],work/'twap',cache_root=work.parent,network=network)
+        except Exception:
+            twaps={'schedules':[],'metadata':{},'coverage':{'status':'unavailable'}}
+    else:
+        twaps={'schedules':[],'metadata':{},'coverage':{'status':'not_applicable'}}
     metadata.update(twaps.get('metadata',{}))
     families=set();rates={ETH:Fraction(1),weth:Fraction(1)} if fam else {}
     details=[dict(token=t,symbol=s,eth_per_token='1',source='1:1 ETH denomination')for t,s in [(ETH,'ETH'),(weth,'WETH')]]
@@ -158,4 +170,4 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
     for pair in pairs:
         pair['amm_marker']=markers.get(pair['id'],{'status':'unavailable','reason':'AMM snapshot unavailable' if cfg['amm'] else 'AMM survey not configured for this network','block':state['reference_state']['block_number'],'block_hash':state['block_hash']})
     evidence=dict(auction_id=state['auction_id'],block=ref['block_number'],block_hash=state['block_hash'],source_sha256=digest(source_dir/'sanitized-orders.json'),funding_sha256=digest(funding_dir/'funding-state.json'),conversions_sha256=digest(funding_dir/'eth-conversions.json'))
-    return dict(schema='cowpro_live_depth_v1',network=network,chain_id=cfg['chain_id'],auction_id=state['auction_id'],block=ref['block_number'],block_hash=state['block_hash'],as_of_timestamp=ref['timestamp'],native_eth=ETH,metadata=metadata,verified_limit_orders=len(orders),classification_excluded=sum(source.get('classification_summary',{}).get('excluded_candidates',{}).values()),pairs=pairs,twap_coverage=twap_coverage,modes=pairs[0]['modes'],scope='Live cached auction limits; canonical same-block wallet/approval budgets allocated once per view. Hook-conditional funding excluded. '+('ETH conversion provenance in asset details. ' if fam else '')+('TWAP overlays are scheduled flow, not funded executable depth. ' if twap_coverage.get('status')=='available' else '')+'No full settlement guarantee.',snapshot_evidence=evidence,generated_at=time.time(),refresh_seconds=300)
+    return dict(schema='cowpro_live_depth_v1',network=network,chain_id=cfg['chain_id'],auction_id=state['auction_id'],block=ref['block_number'],block_hash=state['block_hash'],as_of_timestamp=ref['timestamp'],native_eth=ETH,metadata=metadata,verified_limit_orders=len(orders),classification_excluded=sum(source.get('classification_summary',{}).get('excluded_candidates',{}).values()),pairs=pairs,twap_coverage=twap_coverage,modes=pairs[0]['modes'],scope='Live cached auction limits; canonical same-block wallet/approval budgets allocated once per view. Hook-conditional funding excluded. '+('ETH conversion provenance in asset details. ' if fam else '')+('TWAP overlays are scheduled flow, not funded executable depth. ' if twap_coverage.get('status')=='available' else '')+'No full settlement guarantee.',snapshot_evidence=evidence,generated_at=time.time(),refresh_seconds=300,evm=cfg.get('evm',True),accounts=state.get('accounts',{}))

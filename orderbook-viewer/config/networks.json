@@ -2,6 +2,7 @@
   "_doc": "Per-network config for the multichain order-book viewer. mainnet keeps its rich static book/catalog (config/mainnet/) with the ETH-family aggregation, LST conversions and AMM markers. Other chains derive their tradeable base tokens dynamically from each live CoW auction + on-chain metadata; only the USD-stablecoin set (bid/ask sides) and a 6-decimal USD anchor are curated here (every address verified on-chain and present in the live auction). settlement/relayer/multicall are the same address on all CoW chains, so they stay in funding.py.",
   "order": [
     "mainnet",
+    "solana",
     "gnosis",
     "arbitrum",
     "base",
@@ -306,6 +307,27 @@
         "0x1af3f329e8be154074d8769d1ffa4ee058b1dbc3": {
           "symbol": "DAI",
           "decimals": 18
+        }
+      }
+    },
+    "solana": {
+      "label": "Solana",
+      "slug": "solana",
+      "chain_id": null,
+      "native_symbol": "SOL",
+      "usdc": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "eth_family": false,
+      "amm": false,
+      "evm": false,
+      "twap": false,
+      "stables": {
+        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": {
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB": {
+          "symbol": "USDT",
+          "decimals": 6
         }
       }
     }
