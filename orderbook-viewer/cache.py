@@ -125,7 +125,7 @@ class SnapshotCache:
             target=self.root/'snapshots'/(str(int(time.time()))+'-'+digest[:16]+'.json')
             self._atomic(target,raw)
             link=self.outdir/('book-'+uuid.uuid4().hex+'.tmp');link.symlink_to(target.resolve());os.replace(link,self.outdir/'orderbook.json')
-            self._state.update(last_success=time.time(),snapshot_id=digest,last_error=None)
+            self._state.update(last_success=time.time(),snapshot_id=digest,last_error=None,summary=book.get('summary'))
             for path in sorted((self.root/'snapshots').glob('*.json'),key=lambda p:p.stat().st_mtime,reverse=True)[24:]:path.unlink()
             return True
         except Exception as error:

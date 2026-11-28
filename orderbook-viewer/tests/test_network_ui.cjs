@@ -7,8 +7,8 @@ const assets=path.join(__dirname,'../assets');
 const mainnet={key:'mainnet',chain_id:1,label:'Ethereum'},base={key:'base',chain_id:8453,label:'Base'};
 function harness(){
   const nodes=new Map();
-  const element=()=>({classList:{toggle(){},add(){}},parentElement:{classList:{toggle(){},add(){}}},value:'',textContent:'',inert:false,options:[],replaceChildren(){this.options=[];},append(o){this.options.push(o);if(!this.value)this.value=o.value;}});
-  const document={getElementById(id){if(!nodes.has(id))nodes.set(id,element());return nodes.get(id);},createElement:element};
+  const element=()=>({classList:{toggle(){},add(){}},parentElement:{classList:{toggle(){},add(){}}},value:'',textContent:'',inert:false,options:[],addEventListener(){},replaceChildren(){this.options=[];},append(...o){this.options.push(...o);if(!this.value&&o[0]&&o[0].value)this.value=o[0].value;}});
+  const document={getElementById(id){if(!nodes.has(id))nodes.set(id,element());return nodes.get(id);},createElement:element,createTextNode:text=>({textContent:text})};
   const pending=[];
   const context={document,window:{},URLSearchParams,AbortController,setTimeout,clearTimeout,Date,console,location:{search:'?token=test&quote=SECOND'},fetch:(url,options)=>new Promise(resolve=>pending.push({url,options,resolve})),CowProTakeUI:{clearOrder(){}},history:{}};
   vm.createContext(context);

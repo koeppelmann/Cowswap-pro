@@ -169,5 +169,17 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
         markers={}
     for pair in pairs:
         pair['amm_marker']=markers.get(pair['id'],{'status':'unavailable','reason':'AMM snapshot unavailable' if cfg['amm'] else 'AMM survey not configured for this network','block':state['reference_state']['block_number'],'block_hash':state['block_hash']})
+    # Per-network summary for the network picker: funded buy/sell volume (the same
+    # allocated-USD the token picker shows per pair, totalled), unique limit-order count,
+    # and active TWAP parents. Cross-base orders can count on both sides (rare: most trade
+    # a base against a stable), so these are indicative network totals.
+    buy_vol=sell_vol=0.0
+    for p in pairs:
+        emode=p['modes']['enriched'];pref=float(p['reference_usdc_equivalent']) if p.get('reference_available') is not False else None;qrates=emode['quote_usdc_equivalent_rates']
+        for o in emode['normalized_orders']:
+            if int(o['allocated_sell_atoms'])<=0:continue
+            if o['side']=='bid':buy_vol+=int(o['allocated_quote_atoms'])/10**int(metadata[o['quote_token']]['decimals'])*float(qrates.get(o['quote_token'],0) or 0)
+            elif pref is not None:sell_vol+=int(o['allocated_base_atoms'])/10**int(p['base_decimals'])*pref
+    summary={'limit_orders':len(orders),'buy_volume_usd':buy_vol,'sell_volume_usd':sell_vol,'twaps':twap_coverage.get('active_schedule_count') or twap_coverage.get('plotted_schedule_count') or 0,'pair_count':len(pairs)}
     evidence=dict(auction_id=state['auction_id'],block=ref['block_number'],block_hash=state['block_hash'],source_sha256=digest(source_dir/'sanitized-orders.json'),funding_sha256=digest(funding_dir/'funding-state.json'),conversions_sha256=digest(funding_dir/'eth-conversions.json'))
-    return dict(schema='cowpro_live_depth_v1',network=network,chain_id=cfg['chain_id'],auction_id=state['auction_id'],block=ref['block_number'],block_hash=state['block_hash'],as_of_timestamp=ref['timestamp'],native_eth=ETH,metadata=metadata,verified_limit_orders=len(orders),classification_excluded=sum(source.get('classification_summary',{}).get('excluded_candidates',{}).values()),pairs=pairs,twap_coverage=twap_coverage,modes=pairs[0]['modes'],scope='Live cached auction limits; canonical same-block wallet/approval budgets allocated once per view. Hook-conditional funding excluded. '+('ETH conversion provenance in asset details. ' if fam else '')+('TWAP overlays are scheduled flow, not funded executable depth. ' if twap_coverage.get('status')=='available' else '')+'No full settlement guarantee.',snapshot_evidence=evidence,generated_at=time.time(),refresh_seconds=300,evm=cfg.get('evm',True),accounts=state.get('accounts',{}))
+    return dict(schema='cowpro_live_depth_v1',network=network,chain_id=cfg['chain_id'],auction_id=state['auction_id'],block=ref['block_number'],block_hash=state['block_hash'],as_of_timestamp=ref['timestamp'],native_eth=ETH,metadata=metadata,verified_limit_orders=len(orders),classification_excluded=sum(source.get('classification_summary',{}).get('excluded_candidates',{}).values()),pairs=pairs,twap_coverage=twap_coverage,modes=pairs[0]['modes'],scope='Live cached auction limits; canonical same-block wallet/approval budgets allocated once per view. Hook-conditional funding excluded. '+('ETH conversion provenance in asset details. ' if fam else '')+('TWAP overlays are scheduled flow, not funded executable depth. ' if twap_coverage.get('status')=='available' else '')+'No full settlement guarantee.',snapshot_evidence=evidence,generated_at=time.time(),refresh_seconds=300,evm=cfg.get('evm',True),accounts=state.get('accounts',{}),summary=summary)

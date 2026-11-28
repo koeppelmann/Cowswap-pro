@@ -4,7 +4,7 @@
   let data, selectedTwap=null, selectedUid=null, bookView=null, bookResetPending=false, bookFrame=0, activeBookUid=null, latestRows=[], chartEventsBound=false, yClamp=false,userViewport=null,applyingSnapshot=false,lastSnapshotId=null,polling=false;
   // Multichain: all book/status/refresh fetches are prefixed with the selected network
   // (books live at <network>/…); explorer/swap links use that network's chain context.
-  let NET=null,networkEpoch=0,networkController=null,transitioning=false;
+  let NET=null,networkEpoch=0,networkController=null,transitioning=false,networkManifest=[],networkSummaries={};
   const FALLBACK_NET={key:'mainnet',label:'Ethereum',slug:'mainnet',chain_id:1,cow_explorer:'',token_explorer:'https://etherscan.io'};
   const api=(p,net=NET)=>(net?net.key+'/':'')+p;
   // Solana mints/accounts are case-sensitive base58 but the pipeline lowercases them; the
@@ -49,6 +49,30 @@
     $('tokenPickerOpen').addEventListener('click',()=>{renderTokenPicker();$('tokenPicker').showModal();$('tokenSearch').focus();});$('tokenPickerClose').addEventListener('click',()=>$('tokenPicker').close());
     for(const id of ['tokenSearch','tokenSort','tokenTwapOnly'])$(id).addEventListener(id==='tokenSearch'?'input':'change',renderTokenPicker);
     $('tokenPicker').addEventListener('click',e=>{if(e.target===$('tokenPicker')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
+  }
+  function updateNetworkButton(){const open=$('networkPickerOpen');if(!open)return;open.replaceChildren(document.createTextNode((NET?NET.label:'Network')+' '));const a=document.createElement('span');a.textContent='⌄';open.append(a);}
+  function renderNetworkPicker(){
+    updateNetworkButton();const body=$('networkPickerRows');if(!body)return;body.replaceChildren();
+    const num=v=>v==null?'—':'$'+compact(v);
+    for(const n of networkManifest){
+      const s=networkSummaries[n.key],tr=document.createElement('tr');tr.classList.toggle('is-selected',Boolean(NET&&n.key===NET.key));
+      const nameTd=document.createElement('td'),button=document.createElement('button');button.dataset.net=n.key;button.textContent=n.label;
+      button.addEventListener('click',()=>{$('networkPicker').close();if(NET&&n.key===NET.key){$('networkPickerOpen').focus();return;}$('network').value=n.key;loadNetwork(true,n);$('networkPickerOpen').focus();});
+      nameTd.append(button);tr.append(nameTd);
+      const cells=s?[[s.limit_orders??'—',''],[num(s.buy_volume_usd),'bid'],[num(s.sell_volume_usd),'ask'],[s.twaps||'—',s.twaps?'picker-twaps':'']]:[['…',''],['…','bid'],['…','ask'],['…','']];
+      for(const [v,cls] of cells){const td=document.createElement('td');td.textContent=v;td.className=cls;tr.append(td);}
+      tr.addEventListener('click',e=>{if(e.target!==button)button.click();});body.append(tr);
+    }
+    $('networkPickerCount').textContent=networkManifest.length+' networks';
+  }
+  async function loadNetworkSummaries(){
+    await Promise.all(networkManifest.map(async n=>{try{const r=await fetch(api('status.json',n),{cache:'no-store'});if(r.ok){const st=await r.json();if(st&&st.summary)networkSummaries[n.key]=st.summary;}}catch{}}));
+  }
+  function bindNetworkPicker(){
+    const open=$('networkPickerOpen');if(!open)return;
+    open.addEventListener('click',async()=>{renderNetworkPicker();$('networkPicker').showModal();await loadNetworkSummaries();if($('networkPicker').open)renderNetworkPicker();});
+    const close=$('networkPickerClose');if(close)close.addEventListener('click',()=>$('networkPicker').close());
+    $('networkPicker').addEventListener('click',e=>{if(e.target===$('networkPicker')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
   }
   function updateURL(){const url=new URL(location.href);url.search='';if(NET)url.searchParams.set('chain',NET.key);url.searchParams.set('token',pair().id);if($('market').value!=='all')url.searchParams.set('quote',data.metadata[$('market').value].symbol);history.replaceState(null,'',url);}
   function selectPair(){renderTokenPicker();userViewport=null;const p=pair();renderConversions();$('window').value='quotes';$('depth').querySelector('[value=base]').textContent=p.base_symbol;$('reference').textContent=p.reference_available===false?'—':money(p.reference_usdc_equivalent);$('reference').title=p.reference_available===false?'Reference unavailable in latest auction':p.reference_usdc_equivalent+' USDC-equivalent per '+p.base_symbol;resetSelection();markets();if(p.default_quote&&[...$('market').options].some(o=>o.value===p.default_quote))$('market').value=p.default_quote;render();updateURL();}
@@ -399,7 +423,7 @@
     let next;
     try{next=await initialSnapshot(net,signal);}catch{if(epoch===networkEpoch){transitioning=false;$('orderDetail').inert=false;$('network').value=NET.key;}return;}
     if(epoch!==networkEpoch)return;
-    NET=net;window.CowProNet=net;data=next;lastSnapshotId=null;
+    NET=net;window.CowProNet=net;data=next;lastSnapshotId=null;updateNetworkButton();
     transitioning=false;$('orderDetail').inert=false;
     $('timestamp').textContent=new Date(data.as_of_timestamp*1000).toISOString().slice(0,19).replace('T',' ')+' UTC';$('auction').textContent=data.auction_id.toLocaleString();
     $('pair').replaceChildren();for(const p of data.pairs){const o=document.createElement('option');o.value=p.id;o.textContent=p.label||p.base_symbol;$('pair').append(o);}
@@ -415,11 +439,13 @@
   async function start(){
     let manifest=[];try{const m=await fetch('networks.json',{cache:'no-store'});if(m.ok)manifest=await m.json();}catch{}
     if(!Array.isArray(manifest)||!manifest.length)manifest=[FALLBACK_NET];
+    networkManifest=manifest;
     const wanted=new URLSearchParams(location.search).get('chain');
     NET=manifest.find(n=>n.key===wanted)||manifest[0];
     const sel=$('network');sel.replaceChildren();for(const n of manifest){const o=document.createElement('option');o.value=n.key;o.textContent=n.label;sel.append(o);}
     sel.value=NET.key;if(manifest.length>1)sel.closest('.network-filter').classList.remove('hidden');
     sel.addEventListener('change',()=>loadNetwork(true,manifest.find(n=>n.key===sel.value)||manifest[0]));
+    bindNetworkPicker();updateNetworkButton();if(manifest.length>1)loadNetworkSummaries();
     document.querySelector('main').addEventListener('click',event=>{if(transitioning&&event.target!==sel){event.preventDefault();event.stopImmediatePropagation();}},true);
     $('pair').title='Funded order count and allocated buy/sell volume in USDC-equivalent for each asset’s default quote view. TWAP schedules are counted separately and excluded from these volumes.';
     $('pair').addEventListener('change',selectPair);bindTokenPicker();
