@@ -102,6 +102,12 @@ def build_snapshot(work,*,source_dir=None,funding_dir=None,network='mainnet'):
         # read succeeded. A single reverting/garbage token is dropped, not fatal.
         readable={(g['owner'].lower(),g['sell_token'].lower()) for g in state['groups'] if g.get('balance_atoms') is not None and g.get('allowance_atoms') is not None}
         orders=[o for o in orders if o['sellToken'].lower() in state['metadata'] and o['buyToken'].lower() in state['metadata'] and (o['sellToken'].lower()==ETH or (o['owner'].lower(),o['sellToken'].lower()) in readable)]
+        # A transient pinned-block read failure (e.g. Arbitrum's fast archive pruning reverting
+        # every token's metadata/funding read) can filter out ALL limit orders while the auction
+        # clearly had them. Treat that as a failed refresh so the last-good book is retained,
+        # rather than publishing a near-empty book. (A genuinely limit-order-free auction has no
+        # selected orders to begin with, so TWAP-only networks are unaffected.)
+        assert not (state['orders'] and not orders), 'all limit orders filtered — transient read failure'
         template={'metadata':{},'pairs':derive_pairs(orders,state['metadata'],stables,prices)}
     metadata={**template.get('metadata',{}),**state['metadata']}
     # TWAP overlay: active TWAP parents are discovered per chainId from CoW's
